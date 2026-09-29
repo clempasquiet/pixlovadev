@@ -343,27 +343,32 @@ describe.skipIf(skipDatabaseTests)('Players, appairage, Displays et remplacement
 
     it('refuse une sortie déjà occupée, y compris sous concurrence', async () => {
       const [b1] = await outputs(playerB.playerId!);
-      const extra = (
-        await owner.post('/displays', {
-          site_id: org.siteId,
-          name: 'Extra',
-          width: 800,
-          height: 600,
-        })
-      ).json().id;
-      const results = await Promise.all([assign(extra, b1!.id), assign(display2, b1!.id)]);
+      // Deux Displays dédiés : l’issue de la course ne modifie pas l’état des autres tests.
+      const [extraA, extraB] = await Promise.all(
+        ['Extra A', 'Extra B'].map(
+          async (name) =>
+            (
+              await owner.post('/displays', {
+                site_id: org.siteId,
+                name,
+                width: 800,
+                height: 600,
+              })
+            ).json().id as string,
+        ),
+      );
+      const results = await Promise.all([assign(extraA!, b1!.id), assign(extraB!, b1!.id)]);
       // L’une affecte b1 ; l’autre est refusée explicitement, sans voler l’affectation.
       expect(results.filter((r) => r.statusCode < 300)).toHaveLength(1);
       expect(results.filter((r) => r.json().error?.code === 'ASSIGNMENT_CONFLICT')).toHaveLength(1);
-      // Remise en état : Display 2 revient sur A2, Extra libère b1.
-      const winner = results.findIndex((r) => r.statusCode < 300);
-      if (winner === 1) {
-        const [, a2] = await outputs(playerA.playerId!);
-        await assign(display2, a2!.id);
-      } else {
-        await owner.delete(`/displays/${extra}/assignment`);
+      // Une sortie occupée n’est pas prise par un Display déjà affecté ailleurs.
+      const moved = await assign(display2, b1!.id);
+      expect(moved.json().error?.code).toBe('ASSIGNMENT_CONFLICT');
+      const winner = results.findIndex((r) => r.statusCode < 300) === 0 ? extraA! : extraB!;
+      await owner.delete(`/displays/${winner}/assignment`);
+      for (const extra of [extraA!, extraB!]) {
+        await owner.patch(`/displays/${extra}`, { lifecycle_status: 'inactive' });
       }
-      await owner.patch(`/displays/${extra}`, { lifecycle_status: 'inactive' });
     });
 
     it('remplace le Player du Display 1 : même display_id, génération incrémentée, historique conservé, autre sortie intacte', async () => {
