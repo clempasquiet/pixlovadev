@@ -1,0 +1,239 @@
+[
+  {
+    "name": "screenshot-valid",
+    "file": "commands/screenshot-valid.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "execute"
+    }
+  },
+  {
+    "name": "duplicate-after-ack",
+    "file": "commands/duplicate-after-ack.json",
+    "now": "2026-09-29T19:00:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {
+        "cccccccc-cccc-4ccc-8ccc-000000000001": "33e06efbf729002c3bfbb24fcbc9357d11dba99ff6d4c43d00dc974aed24b445"
+      },
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "duplicate"
+    }
+  },
+  {
+    "name": "same-id-other-content",
+    "file": "commands/same-id-other-content.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {
+        "cccccccc-cccc-4ccc-8ccc-000000000001": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "COMMAND_CONFLICT"
+    }
+  },
+  {
+    "name": "expired",
+    "file": "commands/expired.json",
+    "now": "2026-09-29T18:05:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "COMMAND_EXPIRED"
+    }
+  },
+  {
+    "name": "old-assignment",
+    "file": "commands/old-assignment.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "3"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "STALE_ASSIGNMENT"
+    }
+  },
+  {
+    "name": "screenshot-unsupported",
+    "file": "commands/screenshot-unsupported.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "unsupported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "CAPABILITY_UNSUPPORTED"
+    }
+  },
+  {
+    "name": "reboot-unqualified-platform",
+    "file": "commands/reboot-unqualified-platform.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "CAPABILITY_UNSUPPORTED"
+    }
+  },
+  {
+    "name": "signed-with-manifest-key",
+    "file": "commands/signed-with-manifest-key.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "UNKNOWN_KEY"
+    }
+  },
+  {
+    "name": "manifest-envelope-type",
+    "file": "commands/manifest-envelope-type.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "ENVELOPE_INVALID"
+    }
+  },
+  {
+    "name": "unknown-command-type",
+    "file": "commands/unknown-command-type.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "SCHEMA_INVALID"
+    }
+  },
+  {
+    "name": "lifetime-too-long",
+    "file": "commands/lifetime-too-long.json",
+    "now": "2026-09-29T18:01:00Z",
+    "context": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "assignments": {
+        "33333333-3333-4333-8333-333333333333": "2"
+      },
+      "seen": {},
+      "capabilities": {
+        "reboot_host": "unsupported",
+        "screenshot": "supported"
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "COMMAND_WINDOW_INVALID"
+    }
+  }
+]

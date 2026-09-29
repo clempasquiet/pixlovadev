@@ -17,13 +17,14 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 |---|---|---|
 | [ADR-001](adr/0001-outillage-workspace-versions.md) | Node 24, pnpm workspaces, TypeScript, Rust épinglés | L00 |
 | [ADR-002](adr/0002-backend-api-orm-jobs.md) | Fastify, Drizzle, PostgreSQL, BullMQ + outbox, listeners public/interne | L00 |
+| [ADR-003](adr/0003-contrats-signature-fixtures.md) | Contrats TypeBox/JSON Schema, JCS + Ed25519, fixtures TypeScript/Rust | L00 |
 
 ## À traiter par lot
 
 | Décision | Responsable du lot | Livrable |
 |---|---|---|
 | Renderer, IPC et profils Linux/Windows | L00 puis L06-N | Prototype mesuré, ADR, matrice de compatibilité |
-| Schémas JSON, signature et fixtures communes | L00 puis L05/L06 | Contrats versionnés et tests croisés |
+| Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
 | Scopes de contenu et matrice RBAC détaillée | L01 | ADR, permissions et tests multi-tenant |
 | Limites de médias, cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
 | Prix, quotas, grâce, downgrade et annulation sans sélection | L08 | Matrice des transitions ; validation produit avant activation payante |

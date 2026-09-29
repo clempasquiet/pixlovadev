@@ -1,0 +1,698 @@
+[
+  {
+    "name": "valid-led-2688x672",
+    "file": "manifests/valid-led-2688x672.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "accept"
+    }
+  },
+  {
+    "name": "valid-rotated-key",
+    "file": "manifests/valid-rotated-key.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "accept"
+    }
+  },
+  {
+    "name": "valid-key-order",
+    "file": "manifests/valid-key-order.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "accept"
+    }
+  },
+  {
+    "name": "valid-max-version",
+    "file": "manifests/valid-max-version.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "accept"
+    }
+  },
+  {
+    "name": "duplicate-identical",
+    "file": "manifests/duplicate-identical.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "182",
+          "highest_version_hash": "cee0c6434b5f56d3dbbd4ea1868a63e3410b75ef69f0de401c9cf801cbf63847"
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "duplicate"
+    }
+  },
+  {
+    "name": "same-version-other-hash",
+    "file": "manifests/same-version-other-hash.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "182",
+          "highest_version_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "VERSION_CONFLICT"
+    }
+  },
+  {
+    "name": "replayed-older-version",
+    "file": "manifests/replayed-older-version.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "183",
+          "highest_version_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "VERSION_REPLAYED"
+    }
+  },
+  {
+    "name": "stale-assignment",
+    "file": "manifests/stale-assignment.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "3",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "STALE_ASSIGNMENT"
+    }
+  },
+  {
+    "name": "assignment-ahead",
+    "file": "manifests/assignment-ahead.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "1",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "ASSIGNMENT_AHEAD"
+    }
+  },
+  {
+    "name": "activation-window-expired",
+    "file": "manifests/activation-window-expired.json",
+    "now": "2026-10-06T18:00:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "ACTIVATION_WINDOW_EXPIRED"
+    }
+  },
+  {
+    "name": "wrong-organization",
+    "file": "manifests/wrong-organization.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "WRONG_ORGANIZATION"
+    }
+  },
+  {
+    "name": "wrong-display",
+    "file": "manifests/wrong-display.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ok",
+      "decision": "reject",
+      "code": "WRONG_DISPLAY"
+    }
+  },
+  {
+    "name": "tampered-payload",
+    "file": "manifests/tampered-payload.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SIGNATURE_INVALID"
+    }
+  },
+  {
+    "name": "duplicate-key",
+    "file": "manifests/duplicate-key.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "MALFORMED_JSON"
+    }
+  },
+  {
+    "name": "truncated",
+    "file": "manifests/truncated.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "MALFORMED_JSON"
+    }
+  },
+  {
+    "name": "number-out-of-range",
+    "file": "manifests/number-out-of-range.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "MALFORMED_JSON"
+    }
+  },
+  {
+    "name": "lone-surrogate",
+    "file": "manifests/lone-surrogate.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "MALFORMED_JSON"
+    }
+  },
+  {
+    "name": "untrusted-key",
+    "file": "manifests/untrusted-key.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "UNKNOWN_KEY"
+    }
+  },
+  {
+    "name": "malleable-signature",
+    "file": "manifests/malleable-signature.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SIGNATURE_INVALID"
+    }
+  },
+  {
+    "name": "command-envelope-type",
+    "file": "manifests/command-envelope-type.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ENVELOPE_INVALID"
+    }
+  },
+  {
+    "name": "non-canonical-signature",
+    "file": "manifests/non-canonical-signature.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "ENVELOPE_INVALID"
+    }
+  },
+  {
+    "name": "unsupported-schema",
+    "file": "manifests/unsupported-schema.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "UNSUPPORTED_SCHEMA"
+    }
+  },
+  {
+    "name": "unknown-property",
+    "file": "manifests/unknown-property.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SCHEMA_INVALID"
+    }
+  },
+  {
+    "name": "window-invalid",
+    "file": "manifests/window-invalid.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "WINDOW_INVALID"
+    }
+  },
+  {
+    "name": "invalid-calendar-date",
+    "file": "manifests/invalid-calendar-date.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "WINDOW_INVALID"
+    }
+  },
+  {
+    "name": "duplicate-asset",
+    "file": "manifests/duplicate-asset.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "DUPLICATE_ASSET_ID"
+    }
+  },
+  {
+    "name": "unknown-asset",
+    "file": "manifests/unknown-asset.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "UNKNOWN_ASSET"
+    }
+  },
+  {
+    "name": "asset-kind-mismatch",
+    "file": "manifests/asset-kind-mismatch.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "ASSET_KIND_MISMATCH"
+    }
+  },
+  {
+    "name": "unknown-content-in-timeline",
+    "file": "manifests/unknown-content-in-timeline.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "UNKNOWN_CONTENT"
+    }
+  },
+  {
+    "name": "playlist-references-playlist",
+    "file": "manifests/playlist-references-playlist.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "INVALID_REFERENCE"
+    }
+  },
+  {
+    "name": "composition-cycle",
+    "file": "manifests/composition-cycle.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "CONTENT_CYCLE"
+    }
+  },
+  {
+    "name": "timeline-overlap",
+    "file": "manifests/timeline-overlap.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "TIMELINE_OVERLAP"
+    }
+  },
+  {
+    "name": "timeline-outside-window",
+    "file": "manifests/timeline-outside-window.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "TIMELINE_INTERVAL_INVALID"
+    }
+  },
+  {
+    "name": "priority-out-of-band",
+    "file": "manifests/priority-out-of-band.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "PRIORITY_OUT_OF_BAND"
+    }
+  },
+  {
+    "name": "fallback-unknown",
+    "file": "manifests/fallback-unknown.json",
+    "now": "2026-09-29T18:01:00Z",
+    "local": {
+      "organization_id": "55555555-5555-4555-8555-555555555555",
+      "player_id": "66666666-6666-4666-8666-666666666666",
+      "displays": {
+        "33333333-3333-4333-8333-333333333333": {
+          "assignment_generation": "2",
+          "highest_version": "181",
+          "highest_version_hash": null
+        }
+      }
+    },
+    "expect": {
+      "verification": "SEMANTIC_INVALID",
+      "reason": "UNKNOWN_CONTENT"
+    }
+  }
+]

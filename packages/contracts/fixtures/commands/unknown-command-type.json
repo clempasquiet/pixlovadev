@@ -1,0 +1,21 @@
+{
+  "protected": {
+    "type": "SIGNAGE_COMMAND_V1",
+    "alg": "Ed25519",
+    "kid": "test-command-a"
+  },
+  "payload": {
+    "command_id": "cccccccc-cccc-4ccc-8ccc-000000000001",
+    "organization_id": "55555555-5555-4555-8555-555555555555",
+    "player_id": "66666666-6666-4666-8666-666666666666",
+    "display_id": "33333333-3333-4333-8333-333333333333",
+    "assignment_generation": "2",
+    "type": "RUN_SHELL",
+    "issued_at": "2026-09-29T18:00:00Z",
+    "expires_at": "2026-09-29T18:05:00Z",
+    "params": {
+      "cmd": "rm -rf /"
+    }
+  },
+  "signature": "ZIT5FsgjDwTyvtm4oOecNtZBfjK7QNZUQe2RqsVKsrvpZB0ZInADBxIRBvXQ8NeNt6kdfszl2qbP92BlLfoaBQ"
+}

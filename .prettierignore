@@ -9,3 +9,6 @@ coverage/
 **/generated/
 **/migrations/meta/
 .github/
+# Artefacts générés (contrats) : octets vérifiés par les tests, jamais reformatés.
+packages/contracts/schemas/
+packages/contracts/fixtures/
