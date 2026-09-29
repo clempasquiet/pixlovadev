@@ -14,6 +14,23 @@ jobs:
     name: TypeScript (lint, build, tests)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        # Base éphémère de test uniquement (aucune donnée réelle) ; digest à épingler avec L09-I.
+        image: postgres:16
+        env:
+          POSTGRES_USER: pixlova_ci
+          POSTGRES_PASSWORD: pixlova_ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pixlova_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PIXLOVA_TEST_DATABASE_URL: postgres://pixlova_ci:pixlova_ci@localhost:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,6 +49,11 @@ jobs:
       - run: pnpm run build
       - run: pnpm run typecheck
       - run: pnpm run test
+      - name: Vérifier que les migrations correspondent au schéma Drizzle
+        run: |
+          pnpm --filter @pixlova/db exec drizzle-kit check
+          pnpm --filter @pixlova/db exec drizzle-kit generate
+          test -z "$(git status --porcelain packages/db/migrations)"
 
   rust:
     name: Rust (fmt, clippy, tests)

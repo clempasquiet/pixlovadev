@@ -18,6 +18,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-001](adr/0001-outillage-workspace-versions.md) | Node 24, pnpm workspaces, TypeScript, Rust épinglés | L00 |
 | [ADR-002](adr/0002-backend-api-orm-jobs.md) | Fastify, Drizzle, PostgreSQL, BullMQ + outbox, listeners public/interne | L00 |
 | [ADR-003](adr/0003-contrats-signature-fixtures.md) | Contrats TypeBox/JSON Schema, JCS + Ed25519, fixtures TypeScript/Rust | L00 |
+| [ADR-004](adr/0004-schema-migrations-isolation-tenant.md) | Schéma initial, FK composites, RLS et rôles PostgreSQL, migrations | L00 |
 
 ## À traiter par lot
 
