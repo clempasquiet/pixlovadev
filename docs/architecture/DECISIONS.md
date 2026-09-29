@@ -20,11 +20,17 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-003](adr/0003-contrats-signature-fixtures.md) | Contrats TypeBox/JSON Schema, JCS + Ed25519, fixtures TypeScript/Rust | L00 |
 | [ADR-004](adr/0004-schema-migrations-isolation-tenant.md) | Schéma initial, FK composites, RLS et rôles PostgreSQL, migrations | L00 |
 
+## ADR proposés (en attente de preuves)
+
+| ADR | Sujet | Condition d’acceptation |
+|---|---|---|
+| [ADR-005](adr/0005-renderer-natif-webview.md) | Moteur de rendu TypeScript unique, renderer natif sur WebView système (wry) | Mesures du [protocole de qualification](../quality/QUALIFICATION-RENDU.md) sur Linux et Windows |
+
 ## À traiter par lot
 
 | Décision | Responsable du lot | Livrable |
 |---|---|---|
-| Renderer, IPC et profils Linux/Windows | L00 puis L06-N | Prototype mesuré, ADR, matrice de compatibilité |
+| Renderer, IPC et profils Linux/Windows | L00 (prototype, ADR-005 proposée) puis L06-N | Mesures matérielles, acceptation de l’ADR-005, matrice de compatibilité |
 | Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
 | Scopes de contenu et matrice RBAC détaillée | L01 | ADR, permissions et tests multi-tenant |
 | Limites de médias, cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |

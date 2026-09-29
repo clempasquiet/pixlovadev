@@ -6,12 +6,13 @@ import { ROOT_SCHEMAS, type RootSchemaName } from './schemas/index.js';
  * Limite connue : Ajv génère du code (`new Function`) ; le Player Web, soumis à une CSP
  * sans `unsafe-eval`, utilisera des validateurs précompilés (suivi L06-W).
  */
-const ajv = new Ajv2020({ strict: true, allErrors: false, allowUnionTypes: true });
+let ajv: Ajv2020 | undefined;
 const cache = new Map<RootSchemaName, ValidateFunction>();
 
 export function validator(name: RootSchemaName): ValidateFunction {
   let validate = cache.get(name);
   if (!validate) {
+    ajv ??= new Ajv2020({ strict: true, allErrors: false, allowUnionTypes: true });
     validate = ajv.compile(ROOT_SCHEMAS[name]);
     cache.set(name, validate);
   }

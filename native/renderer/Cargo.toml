@@ -1,0 +1,14 @@
+[package]
+name = "pixlova-renderer"
+version = "0.0.0"
+description = "Prototype du renderer natif pixlova : WebView système (WebKitGTK, WebView2) hébergeant le moteur de rendu partagé."
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+tao = "0.37.1"
+wry = "0.57.0"

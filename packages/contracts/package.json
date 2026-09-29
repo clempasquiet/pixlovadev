@@ -4,6 +4,7 @@
   "private": true,
   "description": "Contrats versionnés pixlova : schémas JSON, signature des enveloppes et règles d’acceptation partagées cloud/Players.",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
