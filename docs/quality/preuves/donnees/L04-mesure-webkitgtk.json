@@ -1,0 +1,642 @@
+{
+  "kind": "pixlova-render-measure",
+  "version": 1,
+  "measured_at": "2026-09-29T23:16:29.027Z",
+  "user_agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+  "fixtures": [
+    {
+      "id": "paysage-1920x1080",
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "fonts": [
+        {
+          "family": "Montserrat",
+          "weight": 800,
+          "loaded": true
+        },
+        {
+          "family": "Inter",
+          "weight": 400,
+          "loaded": true
+        },
+        {
+          "family": "Montserrat",
+          "weight": 900,
+          "loaded": true
+        },
+        {
+          "family": "Roboto Mono",
+          "weight": 400,
+          "loaded": true
+        }
+      ],
+      "images": {
+        "decoded": 2,
+        "failed": 0
+      },
+      "elements": [
+        {
+          "id": "photo-cover",
+          "type": "image",
+          "expected": {
+            "x": 1100,
+            "y": 0,
+            "width": 820,
+            "height": 1080
+          },
+          "measured": {
+            "x": 1100,
+            "y": 0,
+            "width": 820,
+            "height": 1080
+          },
+          "delta": 0
+        },
+        {
+          "id": "photo-contain",
+          "type": "image",
+          "expected": {
+            "x": 60,
+            "y": 620,
+            "width": 640,
+            "height": 400
+          },
+          "measured": {
+            "x": 60,
+            "y": 620,
+            "width": 640,
+            "height": 400
+          },
+          "delta": 0
+        },
+        {
+          "id": "bandeau",
+          "type": "shape",
+          "expected": {
+            "x": 0,
+            "y": 0,
+            "width": 1100,
+            "height": 160
+          },
+          "measured": {
+            "x": 0,
+            "y": 0,
+            "width": 1100,
+            "height": 160
+          },
+          "delta": 0
+        },
+        {
+          "id": "titre",
+          "type": "text",
+          "expected": {
+            "x": 60,
+            "y": 20,
+            "width": 1000,
+            "height": 120
+          },
+          "measured": {
+            "x": 60,
+            "y": 20,
+            "width": 1000,
+            "height": 120
+          },
+          "delta": 0,
+          "lines": 1
+        },
+        {
+          "id": "corps",
+          "type": "text",
+          "expected": {
+            "x": 60,
+            "y": 200,
+            "width": 980,
+            "height": 380
+          },
+          "measured": {
+            "x": 60,
+            "y": 200,
+            "width": 980,
+            "height": 380
+          },
+          "delta": 0,
+          "lines": 4
+        },
+        {
+          "id": "pastille",
+          "type": "shape",
+          "expected": {
+            "x": 860,
+            "y": 640,
+            "width": 200,
+            "height": 200
+          },
+          "measured": {
+            "x": 860,
+            "y": 640,
+            "width": 200,
+            "height": 200
+          },
+          "delta": 0
+        },
+        {
+          "id": "remise",
+          "type": "text",
+          "expected": {
+            "x": 847.06,
+            "y": 627.06,
+            "width": 225.89,
+            "height": 225.89
+          },
+          "measured": {
+            "x": 847.06,
+            "y": 627.06,
+            "width": 225.89,
+            "height": 225.89
+          },
+          "delta": 0
+        },
+        {
+          "id": "qr",
+          "type": "qr",
+          "expected": {
+            "x": 1520,
+            "y": 780,
+            "width": 280,
+            "height": 280
+          },
+          "measured": {
+            "x": 1520,
+            "y": 780,
+            "width": 280,
+            "height": 280
+          },
+          "delta": 0
+        },
+        {
+          "id": "heure",
+          "type": "clock",
+          "expected": {
+            "x": 700,
+            "y": 20,
+            "width": 380,
+            "height": 120
+          },
+          "measured": {
+            "x": 700,
+            "y": 20,
+            "width": 380,
+            "height": 120
+          },
+          "delta": 0,
+          "text": "11:30"
+        },
+        {
+          "id": "cadre",
+          "type": "shape",
+          "expected": {
+            "x": 720,
+            "y": 860,
+            "width": 320,
+            "height": 180
+          },
+          "measured": {
+            "x": 720,
+            "y": 860,
+            "width": 320,
+            "height": 180
+          },
+          "delta": 0
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "portrait-1080x1920",
+      "canvas": {
+        "width": 1080,
+        "height": 1920
+      },
+      "fonts": [
+        {
+          "family": "Playfair Display",
+          "weight": 700,
+          "loaded": true
+        },
+        {
+          "family": "Open Sans",
+          "weight": 400,
+          "loaded": true
+        },
+        {
+          "family": "Roboto Mono",
+          "weight": 600,
+          "loaded": true
+        }
+      ],
+      "images": {
+        "decoded": 1,
+        "failed": 0
+      },
+      "elements": [
+        {
+          "id": "visuel",
+          "type": "image",
+          "expected": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1180
+          },
+          "measured": {
+            "x": 0,
+            "y": 0,
+            "width": 1080,
+            "height": 1180
+          },
+          "delta": 0
+        },
+        {
+          "id": "titre",
+          "type": "text",
+          "expected": {
+            "x": 80,
+            "y": 1240,
+            "width": 920,
+            "height": 240
+          },
+          "measured": {
+            "x": 80,
+            "y": 1240,
+            "width": 920,
+            "height": 240
+          },
+          "delta": 0,
+          "lines": 2
+        },
+        {
+          "id": "detail",
+          "type": "text",
+          "expected": {
+            "x": 80,
+            "y": 1500,
+            "width": 620,
+            "height": 240
+          },
+          "measured": {
+            "x": 80,
+            "y": 1500,
+            "width": 620,
+            "height": 240
+          },
+          "delta": 0,
+          "lines": 2
+        },
+        {
+          "id": "qr",
+          "type": "qr",
+          "expected": {
+            "x": 760,
+            "y": 1480,
+            "width": 240,
+            "height": 240
+          },
+          "measured": {
+            "x": 760,
+            "y": 1480,
+            "width": 240,
+            "height": 240
+          },
+          "delta": 0
+        },
+        {
+          "id": "pied",
+          "type": "shape",
+          "expected": {
+            "x": 0,
+            "y": 1800,
+            "width": 1080,
+            "height": 120
+          },
+          "measured": {
+            "x": 0,
+            "y": 1800,
+            "width": 1080,
+            "height": 120
+          },
+          "delta": 0
+        },
+        {
+          "id": "code",
+          "type": "text",
+          "expected": {
+            "x": 80,
+            "y": 1810,
+            "width": 920,
+            "height": 100
+          },
+          "measured": {
+            "x": 80,
+            "y": 1810,
+            "width": 920,
+            "height": 100
+          },
+          "delta": 0,
+          "lines": 1
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "led-2688x672",
+      "canvas": {
+        "width": 2688,
+        "height": 672
+      },
+      "fonts": [
+        {
+          "family": "Montserrat",
+          "weight": 900,
+          "loaded": true
+        }
+      ],
+      "images": {
+        "decoded": 1,
+        "failed": 0
+      },
+      "elements": [
+        {
+          "id": "logo",
+          "type": "image",
+          "expected": {
+            "x": 48,
+            "y": 96,
+            "width": 480,
+            "height": 480
+          },
+          "measured": {
+            "x": 48,
+            "y": 96,
+            "width": 480,
+            "height": 480
+          },
+          "delta": 0
+        },
+        {
+          "id": "message",
+          "type": "text",
+          "expected": {
+            "x": 600,
+            "y": 60,
+            "width": 1300,
+            "height": 552
+          },
+          "measured": {
+            "x": 600,
+            "y": 60,
+            "width": 1300,
+            "height": 552
+          },
+          "delta": 0,
+          "lines": 2
+        },
+        {
+          "id": "prix-fond",
+          "type": "shape",
+          "expected": {
+            "x": 1940,
+            "y": 96,
+            "width": 700,
+            "height": 480
+          },
+          "measured": {
+            "x": 1940,
+            "y": 96,
+            "width": 700,
+            "height": 480
+          },
+          "delta": 0
+        },
+        {
+          "id": "prix",
+          "type": "text",
+          "expected": {
+            "x": 1940,
+            "y": 96,
+            "width": 700,
+            "height": 480
+          },
+          "measured": {
+            "x": 1940,
+            "y": 96,
+            "width": 700,
+            "height": 480
+          },
+          "delta": 0,
+          "lines": 2
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "led-3840x480",
+      "canvas": {
+        "width": 3840,
+        "height": 480
+      },
+      "fonts": [
+        {
+          "family": "Roboto",
+          "weight": 500,
+          "loaded": true
+        },
+        {
+          "family": "Inter",
+          "weight": 400,
+          "loaded": true
+        }
+      ],
+      "images": {
+        "decoded": 0,
+        "failed": 0
+      },
+      "elements": [
+        {
+          "id": "defilant",
+          "type": "text",
+          "expected": {
+            "x": 60,
+            "y": 40,
+            "width": 2600,
+            "height": 400
+          },
+          "measured": {
+            "x": 60,
+            "y": 40,
+            "width": 2600,
+            "height": 400
+          },
+          "delta": 0,
+          "lines": 1
+        },
+        {
+          "id": "heure",
+          "type": "clock",
+          "expected": {
+            "x": 2760,
+            "y": 40,
+            "width": 1020,
+            "height": 200
+          },
+          "measured": {
+            "x": 2760,
+            "y": 40,
+            "width": 1020,
+            "height": 200
+          },
+          "delta": 0,
+          "text": "11:30"
+        },
+        {
+          "id": "date",
+          "type": "clock",
+          "expected": {
+            "x": 2760,
+            "y": 260,
+            "width": 1020,
+            "height": 180
+          },
+          "measured": {
+            "x": 2760,
+            "y": 260,
+            "width": 1020,
+            "height": 180
+          },
+          "delta": 0,
+          "text": "jeudi 15 janvier 2026"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "totem-768x2304",
+      "canvas": {
+        "width": 768,
+        "height": 2304
+      },
+      "fonts": [
+        {
+          "family": "Open Sans",
+          "weight": 800,
+          "loaded": true
+        },
+        {
+          "family": "Roboto",
+          "weight": 400,
+          "loaded": true
+        },
+        {
+          "family": "Inter",
+          "weight": 700,
+          "loaded": true
+        }
+      ],
+      "images": {
+        "decoded": 1,
+        "failed": 0
+      },
+      "elements": [
+        {
+          "id": "affiche",
+          "type": "image",
+          "expected": {
+            "x": 0,
+            "y": 0,
+            "width": 768,
+            "height": 1024
+          },
+          "measured": {
+            "x": 0,
+            "y": 0,
+            "width": 768,
+            "height": 1024
+          },
+          "delta": 0
+        },
+        {
+          "id": "titre",
+          "type": "text",
+          "expected": {
+            "x": 48,
+            "y": 1080,
+            "width": 672,
+            "height": 300
+          },
+          "measured": {
+            "x": 48,
+            "y": 1080,
+            "width": 672,
+            "height": 300
+          },
+          "delta": 0,
+          "lines": 2
+        },
+        {
+          "id": "programme",
+          "type": "text",
+          "expected": {
+            "x": 48,
+            "y": 1400,
+            "width": 672,
+            "height": 560
+          },
+          "measured": {
+            "x": 48,
+            "y": 1400,
+            "width": 672,
+            "height": 560
+          },
+          "delta": 0,
+          "lines": 4
+        },
+        {
+          "id": "vertical",
+          "type": "text",
+          "expected": {
+            "x": 6,
+            "y": 1750,
+            "width": 120,
+            "height": 700
+          },
+          "measured": {
+            "x": 6,
+            "y": 1750,
+            "width": 120,
+            "height": 700
+          },
+          "delta": 0
+        },
+        {
+          "id": "barre",
+          "type": "shape",
+          "expected": {
+            "x": 640,
+            "y": 2000,
+            "width": 128,
+            "height": 304
+          },
+          "measured": {
+            "x": 640,
+            "y": 2000,
+            "width": 128,
+            "height": 304
+          },
+          "delta": 0
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

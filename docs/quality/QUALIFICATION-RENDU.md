@@ -36,6 +36,17 @@ Pour chaque runtime candidat, 60 secondes par scénario :
 
 Pendant l’exécution, observer l’écran : défilement fluide de la vidéo, absence de déchirure ou de clignotement, texte net, QR code lisible par un téléphone, horloge à l’heure du fuseau attendu, rotation portrait dans le bon sens, bandeaux LED sans déformation.
 
+## Comparer une composition entre moteurs (L04)
+
+Le mode `measure` rend les compositions de référence de `apps/render-lab/src/fixtures.ts` et relève leur géométrie, leurs polices et leurs lignes de texte. Sur le runtime à qualifier :
+
+```sh
+target/release/pixlova-renderer --lab-dir apps/render-lab/dist --query measure --out mesure-natif.json --windowed
+pnpm --filter @pixlova/render-lab run compare-render "$PWD/docs/quality/preuves/donnees/L04-mesure-chromium.json" "$PWD/mesure-natif.json"
+```
+
+Le résultat attendu est « identique (tolérance 1 px) ». Joindre `mesure-natif.json` et la sortie de la comparaison. Méthode et premier résultat : [L04-comparaison-rendu](preuves/L04-comparaison-rendu.md).
+
 ## Rapporter
 
 Pour chaque couple profil × runtime, joindre au ticket L06-N (ou à la PR de qualification) :

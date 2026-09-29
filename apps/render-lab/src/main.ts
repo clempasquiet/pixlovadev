@@ -1,6 +1,8 @@
 import type { ManifestContent } from '@pixlova/contracts';
 import { mountStage, renderContent, type Rendered } from '@pixlova/render-engine/dom';
+import '@pixlova/render-engine/fonts.css';
 import { generateAssets } from './assets.js';
+import { measureAll, type MeasureReport } from './measure.js';
 import { environment, firstFrame, probeCodecs, sampleFrames } from './metrics.js';
 import { scenarios, type Scenario } from './scenarios.js';
 
@@ -16,6 +18,8 @@ interface ScenarioResult {
 
 interface LabState {
   status: 'idle' | 'running' | 'done';
+  /** Mode `measure` : relevé géométrique des compositions de référence (ADR-010). */
+  measure?: MeasureReport;
   results: {
     lab_version: string;
     measured_at: string;
@@ -138,4 +142,15 @@ document.querySelector('#download')!.addEventListener('click', () => {
   link.click();
 });
 
-if (params.has('auto')) void run(params.get('scenario'));
+async function measure(only: string | null): Promise<void> {
+  window.__PIXLOVA_LAB__.status = 'running';
+  panel.hidden = true;
+  const assets = await generateAssets(null);
+  const report = await measureAll(surface, assets, only);
+  window.__PIXLOVA_LAB__ = { status: 'done', results: null, measure: report };
+  output.textContent = JSON.stringify(report, null, 2);
+  window.ipc?.postMessage(output.textContent);
+}
+
+if (params.has('measure')) void measure(params.get('fixture'));
+else if (params.has('auto')) void run(params.get('scenario'));

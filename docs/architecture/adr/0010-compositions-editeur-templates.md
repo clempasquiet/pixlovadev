@@ -92,7 +92,7 @@ Seules les versions publiées exigent la suppression forcée (`content.force_del
 
 ### Preuve de rendu identique
 
-- Des **fixtures de composition résolues** (`@pixlova/render-engine/fixtures`) couvrent paysage, portrait, bandeaux LED 2688×672 et 3840×480, et totem 768×2304. Elles combinent texte, formes, QR Code, horloge figée, images `contain`/`cover` et rotations.
+- Des **fixtures de composition résolues** (`apps/render-lab/src/fixtures.ts`) couvrent paysage, portrait, bandeaux LED 2688×672 et 3840×480, et totem 768×2304. Elles combinent texte, formes, QR Code, horloge figée, images `contain`/`cover` et rotations.
 - Le banc de rendu, en mode `measure`, rend chaque fixture à l’échelle 1 et relève :
   - la géométrie de chaque élément ;
   - la disponibilité des polices ;

@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run test/scenarios.test.ts test/metrics.test.ts",
-    "test:browser": "vitest run test/lab.browser.test.ts"
+    "test:browser": "vitest run test/lab.browser.test.ts test/measure.browser.test.ts",
+    "compare-render": "node scripts/compare-render.mjs"
   },
   "dependencies": {
     "@pixlova/contracts": "workspace:*",
