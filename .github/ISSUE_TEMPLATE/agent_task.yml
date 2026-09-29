@@ -1,0 +1,39 @@
+name: Lot de développement
+description: Travail limité, testable et relié au cahier des charges.
+title: "[Lot] "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Résultat attendu et périmètre
+      description: Décrire le comportement livré, les limites du lot et les composants concernés.
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Exigences et décisions
+      description: IDs du cahier des charges, chapitres utiles, ADR et hypothèses encore ouvertes.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dépendances et coordination
+      description: Tickets préalables, contrats partagés et responsable de la session.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères de recette
+      description: Résultats observables, tests pertinents et preuves à conserver.
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Migration, exploitation et retour arrière
+      description: Indiquer « sans objet » lorsque justifié.
+    validations:
+      required: true

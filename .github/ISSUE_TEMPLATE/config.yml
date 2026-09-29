@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Guide des agents
+    url: https://github.com/clempasquiet/pixlovadev/blob/main/docs/agents/START_HERE.md
+    about: Lire les consignes et le backlog avant de commencer.

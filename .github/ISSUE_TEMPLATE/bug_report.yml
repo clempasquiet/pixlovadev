@@ -1,0 +1,23 @@
+name: Anomalie
+description: Reproduction, comportement attendu et impact.
+title: "[Bug] "
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction et environnement
+      description: Étapes, version, OS, navigateur ou matériel. Aucun secret ni donnée client.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Résultat observé et attendu
+      description: Impact et exigence concernée si connue.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Preuves expurgées
+      description: Logs, captures, test en échec et contournement éventuel.

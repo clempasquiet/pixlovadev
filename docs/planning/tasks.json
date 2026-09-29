@@ -1,0 +1,476 @@
+[
+  {
+    "id": "L00",
+    "title": "Fondations du monorepo, décisions et contrats partagés",
+    "depends": [],
+    "chapters": [
+      1,
+      3,
+      12,
+      14,
+      15,
+      16,
+      17,
+      24
+    ],
+    "requirements": [
+      "PROD-004",
+      "PROD-005",
+      "DOC-020"
+    ],
+    "scope": "Choisir et documenter framework backend, ORM, gestionnaire de packages et versions supportées. Créer le workspace reproductible, les packages de contrats, l’outillage qualité et une CI de build/test. Qualifier le choix de renderer par un prototype minimal sur les profils matériels proposés.",
+    "acceptance": [
+      "ADRs explicites, versions épinglées, installation depuis un clone vierge et commandes documentées.",
+      "Contrats versionnés pour tenant, Display/assignment, capacités Player, manifest, heartbeat et commandes, avec fixtures de compatibilité.",
+      "Premier schéma de données et stratégie migrations/isolation tenant relus ; aucune décision commerciale implicite.",
+      "Prototype renderer décrit ses preuves et limites ; aucun heartbeat simulé présenté comme matériel validé.",
+      "CI applicative pertinente ajoutée ; documentation et contrôles de préparation restent verts."
+    ],
+    "exclusions": "Ne pas construire tous les domaines métier ni provisionner la production. Les décisions commerciales/juridiques restent ouvertes.",
+    "issue": 1
+  },
+  {
+    "id": "L01",
+    "title": "Comptes, organisations, authentification, RBAC et audit",
+    "depends": [
+      "L00"
+    ],
+    "chapters": [
+      4,
+      10,
+      12,
+      16,
+      17
+    ],
+    "requirements": [
+      "PAR-001",
+      "PROD-005",
+      "TST-002"
+    ],
+    "scope": "Implémenter inscription, vérification email, organisations, invitations, sessions, récupération d’accès, rôles V1 et permissions serveur. Fournir le socle d’audit et le dashboard tenant.",
+    "acceptance": [
+      "Création d’organisation Free avec propriétaire ; invitation rejoint l’organisation choisie.",
+      "Permissions tenant et scopes testés sur API, recherche, jobs et accès directs par ID entre deux organisations.",
+      "Sessions, révocation, expiration et récupération d’accès testées sans fuite de secrets.",
+      "Actions sensibles auditées et protections empêchant la perte involontaire du dernier propriétaire.",
+      "Migrations et comptes de recette reproductibles sans données de production."
+    ],
+    "exclusions": "Rôles personnalisés, SSO et SCIM hors V1.",
+    "issue": 2
+  },
+  {
+    "id": "L02",
+    "title": "Displays, slots, appairage et remplacement des Players",
+    "depends": [
+      "L01"
+    ],
+    "chapters": [
+      4,
+      5,
+      11,
+      16,
+      17
+    ],
+    "requirements": [
+      "DSP-002",
+      "DSP-003",
+      "PLY-002",
+      "PLY-003",
+      "PROD-004"
+    ],
+    "scope": "Créer sites/groupes, Displays, installations Player, outputs et affectations historisées. Implémenter appairage à usage unique, quotas/slots et remplacement sans perte de programmation.",
+    "acceptance": [
+      "Appairage expiré, rejoué ou consommé simultanément refusé ; credentials propres au Player.",
+      "Transactions garantissant unicité d’affectation active et contrôle des slots même sous concurrence.",
+      "Remplacement conserve display_id, programmation et historique ; ne révoque pas les autres outputs valides.",
+      "L’ancien output ne reprend pas l’affectation à sa reconnexion ; état hors ligne honnêtement affiché.",
+      "Résolutions libres, timezone, fallback et capacités contrôlés ; aucune facturation implicite."
+    ],
+    "exclusions": "La synchronisation de murs d’écrans et le mapping avancé relèvent de V2.",
+    "issue": 3
+  },
+  {
+    "id": "L03",
+    "title": "Bibliothèque média et pipeline de préparation",
+    "depends": [
+      "L01"
+    ],
+    "chapters": [
+      6,
+      12,
+      14,
+      16,
+      17
+    ],
+    "requirements": [
+      "PAR-003",
+      "TST-002",
+      "TST-052"
+    ],
+    "scope": "Implémenter upload vers stockage privé, validation, traitements asynchrones, versions immuables, dérivés, checksum, quotas, corbeille et restauration. Fournir API et interface de bibliothèque.",
+    "acceptance": [
+      "Upload autorisé tenant, fichiers malformés et formats non supportés traités explicitement.",
+      "Jobs rejouables sans doublons ; manifest ne référence que des variantes prêtes et vérifiées.",
+      "Contrôle des accès aux URLs temporaires ; assets locaux valides indépendants de leur expiration.",
+      "Suppression/restauration tiennent compte des références publiées, de la rétention et des quotas.",
+      "Tests couvrant corruption, échec de worker, stockage inaccessible et reprise."
+    ],
+    "exclusions": "Pas de bibliothèque d’assets payants ni de droits de licence supposés.",
+    "issue": 4
+  },
+  {
+    "id": "L04",
+    "title": "Moteur de rendu partagé, créateur et templates V1",
+    "depends": [
+      "L00",
+      "L03"
+    ],
+    "chapters": [
+      7,
+      12,
+      15,
+      16
+    ],
+    "requirements": [
+      "PROD-002",
+      "PAR-004",
+      "TST-052"
+    ],
+    "scope": "Construire le moteur TypeScript partagé preview/Web/native renderer et le créateur de compositions. Gérer canvas libre, zones, ordre, propriétés, versions publiées et templates selon entitlements.",
+    "acceptance": [
+      "Même fixture de composition rendue dans preview, Web et prototype native avec comparaisons documentées.",
+      "Formats paysage, portrait et LED atypiques validés sans hypothèse 16:9.",
+      "Édition, prévisualisation et publication distinguent brouillon et version immuable.",
+      "Médias manquants, incompatibilités et dépassements de limites refusés avant publication.",
+      "Accès aux templates contrôlé au serveur ; fallback et police/ressources nécessaires empaquetés."
+    ],
+    "exclusions": "Widgets HTML arbitraires, scripting utilisateur et éditeur de mapping V2 exclus.",
+    "issue": 5
+  },
+  {
+    "id": "L05",
+    "title": "Playlists, planning, campagnes, overrides et compilation",
+    "depends": [
+      "L02",
+      "L04"
+    ],
+    "chapters": [
+      8,
+      15,
+      16,
+      17
+    ],
+    "requirements": [
+      "PROD-003",
+      "FON-002",
+      "FON-003",
+      "PAR-005",
+      "PLY-007"
+    ],
+    "scope": "Implémenter versionnement éditorial, programmation avec timezone, ciblage, priorités et compilateur de manifests signés. Le cloud produit des fenêtres UTC déterministes et un graphe complet d’assets.",
+    "acceptance": [
+      "Conflits de priorités, égalités, chevauchements, changement d’heure, minuit et fin d’override couverts par fixtures.",
+      "Publication idempotente avec état désiré/préparé/appliqué distinct ; bascule par Display.",
+      "Préflight des capacités/ressources, signatures et contrats compatibles avant distribution.",
+      "Expiration d’une fenêtre et fallback déterministes ; pas de lecture involontaire d’un contenu expiré.",
+      "Tests de reprise jobs et historique expliquant pourquoi un contenu est sélectionné."
+    ],
+    "exclusions": "Pas de synchronisation multi-machines garantie ni d’acquittement inventé pour un Player hors ligne.",
+    "issue": 6
+  },
+  {
+    "id": "L06-N",
+    "title": "Player natif Rust : cache, rendu, watchdog et mises à jour",
+    "depends": [
+      "L00",
+      "L02"
+    ],
+    "chapters": [
+      5,
+      15,
+      17,
+      19,
+      22
+    ],
+    "requirements": [
+      "PLY-004",
+      "PLY-005",
+      "PLY-007",
+      "TST-052",
+      "TST-053"
+    ],
+    "scope": "Construire agent Rust, stockage SQLite, cache adressé par hash, IPC renderer, téléchargements résilients, démarrage automatique et updates signées avec rollback. Les fixtures de L00 permettent de démarrer ; la recette intégrée utilise les manifests L05.",
+    "acceptance": [
+      "Installation et démarrage Linux/Windows sur profils qualifiés, heartbeat réel non simulé et sortie de rendu observée.",
+      "Manifest incomplet/corrompu, mauvais checksum et update non signée rejetés ; dernière version valide protégée.",
+      "Activation atomique et récupération après coupure brutale pendant préparation/activation.",
+      "24 h de coupure réseau avec cache complet et continuité documentée ; crash renderer récupéré automatiquement.",
+      "Update, échec, rollback et compatibilité SQLite testés ; disque plein et HDMI débranché diagnostiqués."
+    ],
+    "exclusions": "Un build, IPC accepté ou heartbeat seul ne prouve pas la lecture physique. La recette intégrée attend L05 et L04.",
+    "issue": 7
+  },
+  {
+    "id": "L06-W",
+    "title": "Player Web : appairage, rendu et cache navigateur",
+    "depends": [
+      "L00",
+      "L02"
+    ],
+    "chapters": [
+      5,
+      15,
+      17,
+      19
+    ],
+    "requirements": [
+      "PLY-006",
+      "PLY-007",
+      "TST-043"
+    ],
+    "scope": "Construire Player Web avec moteur partagé, identité par installation navigateur, manifests, cache et remontée des capacités. Démarrer sur fixtures puis intégrer L04/L05.",
+    "acceptance": [
+      "Appairage et isolation tenant testés ; effacement de profil traité comme perte d’identité.",
+      "Activation complète d’un manifest et refus des ressources invalides testés.",
+      "Matrice navigateur/OS publiée : codecs, audio/autoplay, plein écran, quotas et persistance.",
+      "Tests quota plein, éviction, fermeture/reprise et cache amorcé hors ligne.",
+      "Interface et documentation expliquent les limites de stockage et de fonctionnement autonome."
+    ],
+    "exclusions": "Aucune garantie universelle de 24 h ou contrôle système équivalent au service natif.",
+    "issue": 8
+  },
+  {
+    "id": "L07",
+    "title": "Supervision, commandes, alertes et observabilité",
+    "depends": [
+      "L05",
+      "L06-N",
+      "L06-W"
+    ],
+    "chapters": [
+      9,
+      17,
+      22
+    ],
+    "requirements": [
+      "PROD-006",
+      "OBS-001",
+      "OBS-003",
+      "OBS-010",
+      "OBS-012"
+    ],
+    "scope": "Fournir dashboard parc et timeline, présence, diagnostics, captures autorisées, commandes traçables et alertes. Instrumenter cloud et Players.",
+    "acceptance": [
+      "Présence, rendu, output et visibilité de la dalle restent des signaux distincts.",
+      "Commandes authentifiées et bornées par TTL avec déduplication, états d’exécution et résultat réel.",
+      "Heartbeat offline à 90 secondes ; alertes temporisées/dédupliquées selon politique documentée.",
+      "Timeline corrèle publication et activation, avec timestamps événement/réception hors ligne.",
+      "Logs expurgés, métriques sans cardinalité incontrôlée et captures datées privées."
+    ],
+    "exclusions": "Proof of Play avancé et captures automatiques V1.5 ; analytics publicitaires V2.",
+    "issue": 9
+  },
+  {
+    "id": "L08",
+    "title": "Abonnements Stripe, entitlements et codes promotionnels",
+    "depends": [
+      "L01",
+      "L02"
+    ],
+    "chapters": [
+      11,
+      12,
+      16,
+      17,
+      19
+    ],
+    "requirements": [
+      "PROD-004",
+      "TST-052",
+      "DOC-020"
+    ],
+    "scope": "Implémenter catalogue configurable, checkout/portail Stripe, projection des droits locaux, quotas, coupons/codes et réconciliation. Documenter prix, délais et règles encore à arbitrer avant activation commerciale.",
+    "acceptance": [
+      "Tests Stripe sandbox : souscription, renouvellement, upgrade, downgrade, annulation, impayé et reprise.",
+      "Signatures webhooks vérifiées ; événements dupliqués ou désordonnés convergent sans double attribution.",
+      "Licences fondées sur organisation et Displays ; choix d’écrans actifs en dépassement explicite.",
+      "Downgrade/annulation ne suppriment ni données ni médias et ne confondent pas résiliation et effacement RGPD.",
+      "Codes expirés, restrictions d’usage, concurrence et remboursement/annulation selon règles actées testés.",
+      "Réconciliation périodique et audit permettent de corriger un webhook perdu."
+    ],
+    "exclusions": "Aucun vrai débit, catalogue production ou prix commercial inventé.",
+    "issue": 10
+  },
+  {
+    "id": "L09-I",
+    "title": "Infrastructure Docker, réseau privé et déploiement de recette",
+    "depends": [
+      "L00"
+    ],
+    "chapters": [
+      12,
+      14,
+      20,
+      22
+    ],
+    "requirements": [
+      "PRA-030",
+      "PRA-032",
+      "PRA-033"
+    ],
+    "scope": "Fournir Docker/Compose et configurations reproductibles pour apps séparées, PostgreSQL, Redis, workers, stockage et Cloudflare Tunnel. Écrire procédures staging, migrations, sauvegardes et rollback.",
+    "acceptance": [
+      "Services à permissions minimales, images épinglées, secrets externes au dépôt et health checks utiles.",
+      "Admin plateforme sur listener privé 8081 ; routes internes inaccessibles par listener/tunnel public.",
+      "Stockage objet privé et limites upload cohérentes avec le transport choisi.",
+      "Démarrage, arrêt propre, reprise des workers, migration et rollback exercés en recette.",
+      "Topologie distingue serveur unique et cible HA ; aucune disponibilité contractuelle inventée."
+    ],
+    "exclusions": "Pas de provisioning payant, DNS réel ni déploiement production automatique dans ce lot sans mandat de déploiement.",
+    "issue": 11
+  },
+  {
+    "id": "L09-A",
+    "title": "Administration privée de la plateforme et support audité",
+    "depends": [
+      "L01"
+    ],
+    "chapters": [
+      12,
+      13,
+      14,
+      16,
+      22
+    ],
+    "requirements": [
+      "PROD-005",
+      "OBS-012",
+      "DOC-021"
+    ],
+    "scope": "Construire interface d’administration séparée et permissions plateforme. Fournir vues organisations/parc/abonnements et outils de support selon APIs disponibles.",
+    "acceptance": [
+      "Authentification plateforme distincte des rôles tenant ; contrôle serveur sur chaque action.",
+      "Aucune route admin sensible publiée par le listener public ; intégration L09-I vérifiée avant clôture.",
+      "Actions support et consultation de diagnostics auditées et limitées au besoin.",
+      "Vues présentent les données réelles ou indisponibles ; pas de commandes factices ni de données simulées en production.",
+      "Opérations de support dangereuses explicites, bornées et traçables."
+    ],
+    "exclusions": "Le rôle Owner d’une organisation n’octroie aucun droit plateforme. Finalisation dépend des APIs métier concernées.",
+    "issue": 12
+  },
+  {
+    "id": "L09-M",
+    "title": "Site pixlova, domaines et parcours commercial",
+    "depends": [
+      "L08"
+    ],
+    "chapters": [
+      2,
+      11,
+      13,
+      24
+    ],
+    "requirements": [
+      "PAR-001",
+      "DOC-010"
+    ],
+    "scope": "Construire site public pixlova, présentation, catalogue issu de la configuration validée, accès inscription/connexion et documentation produit. Préparer stratégie pixlova.com/pixlova.fr après décision du domaine principal.",
+    "acceptance": [
+      "Nom pixlova et deux domaines connus ; domaine canonique/redirections explicités en ADR avant DNS.",
+      "Tarifs et fonctionnalités cohérents avec entitlements, sans promesse de fonction future disponible.",
+      "Parcours mobile/clavier accessible et liens inscription/connexion opérationnels en recette.",
+      "Mentions et confidentialité intégrées après validation des données légales ; aucune identité juridique inventée.",
+      "SEO de base et séparation site/dashboard/admin documentés."
+    ],
+    "exclusions": "Pas de publication DNS, publicité, achat de domaine ou activation paiement réel implicites.",
+    "issue": 13
+  },
+  {
+    "id": "L09-R",
+    "title": "Recette V1, PRA, RGPD, documentation et dossier de livraison",
+    "depends": [
+      "L07",
+      "L08",
+      "L09-I",
+      "L09-A",
+      "L09-M"
+    ],
+    "chapters": [
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "requirements": [
+      "TST-052",
+      "TST-053",
+      "PRA-001",
+      "PRA-020",
+      "GDPR-012",
+      "DOC-021",
+      "DOC-022"
+    ],
+    "scope": "Consolider recette de bout en bout et matériel, tests de panne, restauration, runbooks, rétention et guides. Les exigences sécurité/qualité sont traitées dans chaque lot ; celui-ci rassemble les preuves intégrées.",
+    "acceptance": [
+      "Tous scénarios V1 du chapitre 19 liés à des preuves ; invariants TST-052 bloquants.",
+      "Panne réseau 24 h et endurance native sur profils distribués ; limites Web explicitement qualifiées.",
+      "Exercice restauration base/objets/clés, mesure RPO/RTO, réapplication des effacements et réconciliation Stripe.",
+      "Exports/purges tenant, commandes en attente sur Players offline et durées de conservation documentés.",
+      "Guides utilisateur/admin/install/upgrade/rollback/support, OpenAPI et protocole à jour.",
+      "Dossier version/environnement/risques résiduels prêt pour décision de mise en service."
+    ],
+    "exclusions": "Clôturer ce ticket ne vaut pas autorisation automatique de production ni certification juridique.",
+    "issue": 14
+  },
+  {
+    "id": "V15",
+    "title": "Épic V1.5 : exploitation avancée et intégrations",
+    "depends": [
+      "L09-R"
+    ],
+    "chapters": [
+      18,
+      24
+    ],
+    "requirements": [
+      "DOC-020",
+      "DOC-021"
+    ],
+    "scope": "Après retour terrain V1, découper API publique/webhooks, Proof of Play, rôles personnalisés, diagnostics/captures auto, templates d’organisation, multi-output renforcé et déploiements progressifs/bêta en lots testables.",
+    "acceptance": [
+      "Sous-tickets avec priorités, dépendances, IDs d’exigences et contrat de compatibilité.",
+      "Arbitrages d’entitlements et coûts explicites avant implémentation.",
+      "Chaque sous-lot livré avec tests, migrations, documentation et retour arrière.",
+      "L’épic reste ouvert tant que son périmètre acté n’est pas livré ou explicitement révisé."
+    ],
+    "exclusions": "Ce ticket prépare une version future ; aucune fonction V1.5 déclarée livrée.",
+    "issue": 15
+  },
+  {
+    "id": "V2",
+    "title": "Épic V2 : murs, synchronisation et fonctions entreprise",
+    "depends": [
+      "V15"
+    ],
+    "chapters": [
+      18,
+      24
+    ],
+    "requirements": [
+      "DOC-020",
+      "DOC-021"
+    ],
+    "scope": "Décomposer murs/mapping, synchronisation NTP/PTP, widgets HTML, SSO/SCIM, marque blanche, analytics et engagements entreprise selon décisions produit et essais de faisabilité.",
+    "acceptance": [
+      "Études et prototypes matériels établissent limites de synchronisation réellement mesurées.",
+      "Modèle de menace widgets et authentification entreprise documenté avant activation.",
+      "Sous-tickets bornés, recette, migration, compatibilité et engagements commerciaux validés.",
+      "Aucune promesse SLA ou compatibilité matérielle déduite des seuls prototypes."
+    ],
+    "exclusions": "Hors périmètre de livraison V1.",
+    "issue": 16
+  }
+]

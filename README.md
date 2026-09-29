@@ -43,4 +43,3 @@ La CI vérifie la documentation, les liens locaux, les exemples JSON et la synch
 ## Premiers travaux
 
 Commencer par **L00 — Fondations techniques et contrats**. Le choix final du framework backend, de l’ORM, du moteur de rendu et des profils matériels reste à consigner avant leur implémentation. Le modèle commercial est déjà fixé autour de l’organisation et des licences de **Display**, avec un Player natif Rust et un Player Web.
-
