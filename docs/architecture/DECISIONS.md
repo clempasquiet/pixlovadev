@@ -11,11 +11,17 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 - Administration privée, services Docker séparés, exposition publique via Cloudflare Tunnel.
 - PostgreSQL, stockage S3 compatible, Redis et traitements asynchrones.
 
+## ADR acceptés
+
+| ADR | Sujet | Lot |
+|---|---|---|
+| [ADR-001](adr/0001-outillage-workspace-versions.md) | Node 24, pnpm workspaces, TypeScript, Rust épinglés | L00 |
+| [ADR-002](adr/0002-backend-api-orm-jobs.md) | Fastify, Drizzle, PostgreSQL, BullMQ + outbox, listeners public/interne | L00 |
+
 ## À traiter par lot
 
 | Décision | Responsable du lot | Livrable |
 |---|---|---|
-| Framework backend, ORM, workspaces et versions | L00 | ADR technique, installation et CI reproductibles |
 | Renderer, IPC et profils Linux/Windows | L00 puis L06-N | Prototype mesuré, ADR, matrice de compatibilité |
 | Schémas JSON, signature et fixtures communes | L00 puis L05/L06 | Contrats versionnés et tests croisés |
 | Scopes de contenu et matrice RBAC détaillée | L01 | ADR, permissions et tests multi-tenant |

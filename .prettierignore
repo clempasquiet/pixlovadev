@@ -1,0 +1,11 @@
+# Documentation rédigée et générée : non reformatée automatiquement.
+*.md
+docs/
+scripts/
+pnpm-lock.yaml
+target/
+dist/
+coverage/
+**/generated/
+**/migrations/meta/
+.github/

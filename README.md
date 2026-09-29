@@ -2,7 +2,7 @@
 
 SaaS d’affichage dynamique pour moniteurs et installations LED. Domaines du projet : **pixlova.com** et **pixlova.fr**.
 
-Ce dépôt contient le cadre de développement et le cahier des charges. L’application et les Players restent à implémenter.
+Ce dépôt contient le cadre de développement, le cahier des charges et le workspace applicatif en construction (lot L00). L’application et les Players restent à implémenter.
 
 ## Commencer
 
@@ -25,11 +25,22 @@ Ce dépôt contient le cadre de développement et le cahier des charges. L’app
 
 ## Vérifications disponibles
 
-Node.js 24 suffit ; aucune dépendance à installer pour ces outils de préparation.
+Prérequis : Node.js 24.21 (`.nvmrc`), Corepack et Rust 1.94.1 (`rust-toolchain.toml`). Détails dans l’[ADR-001](docs/architecture/adr/0001-outillage-workspace-versions.md).
 
 ```sh
+# Documentation (aucune dépendance)
 node scripts/check-repository.mjs
 node scripts/sync-spec.mjs --check
+
+# Workspace TypeScript
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run check
+
+# Workspace Rust
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
 
 Après modification du cahier des charges, régénérer ses chapitres et son index :
@@ -38,7 +49,7 @@ Après modification du cahier des charges, régénérer ses chapitres et son ind
 node scripts/sync-spec.mjs
 ```
 
-La CI vérifie la documentation, les liens locaux, les exemples JSON et la synchronisation du cahier des charges. Les tests applicatifs, les builds Rust et les tests terrain seront ajoutés avec les lots concernés ; cette CI ne certifie pas encore le produit.
+Deux workflows s’exécutent sur chaque PR : `Repository checks` (documentation, liens, JSON, synchronisation du cahier des charges) et `CI` (format, lint, build, typecheck et tests TypeScript et Rust). Ils vérifient ce qui est implémenté ; ils ne certifient pas le produit, et les tests terrain restent hors CI.
 
 ## Premiers travaux
 

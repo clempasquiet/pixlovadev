@@ -12,11 +12,13 @@ Les spécifications priment sur les exemples isolés. En cas de contradiction, r
 
 ## Validation
 
-Aujourd’hui, les commandes disponibles sont :
+Commandes disponibles (voir [ADR-001](docs/architecture/adr/0001-outillage-workspace-versions.md)) :
 
 ```sh
 node scripts/check-repository.mjs
 node scripts/sync-spec.mjs --check
+pnpm install --frozen-lockfile && pnpm run check
+cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 ```
 
 Chaque lot ajoute ses propres builds/tests et leur mode d’emploi. La [recette](docs/quality/ACCEPTANCE.md) précise les invariants. Les preuves terrain sont requises pour offline, codec, outputs, update et rollback ; un mock ne remplace pas ces résultats.

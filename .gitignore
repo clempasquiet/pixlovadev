@@ -33,3 +33,7 @@ tmp/
 Thumbs.db
 .idea/
 .vscode/
+
+# Outillage applicatif
+*.tsbuildinfo
+.pnpm-store/
