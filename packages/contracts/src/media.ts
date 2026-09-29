@@ -65,6 +65,7 @@ export const MEDIA_ERROR_CODES = [
   'UPLOAD_MISSING',
   'UPLOAD_SIZE_MISMATCH',
   'UPLOAD_EXPIRED',
+  'UPLOAD_ABORTED',
   'PROCESSING_FAILED',
 ] as const;
 export type MediaErrorCode = (typeof MEDIA_ERROR_CODES)[number];

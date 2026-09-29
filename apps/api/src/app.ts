@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import cookie from '@fastify/cookie';
+import { LocalObjectStorage } from '@pixlova/storage';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { ApiError, registerErrorHandling } from './errors.js';
 import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
 import { fleetRoutes } from './modules/fleet.js';
+import { mediaRoutes } from './modules/media.js';
 import { memberRoutes } from './modules/members.js';
 import { organizationRoutes } from './modules/organizations.js';
 import { playerApiRoutes } from './modules/player-api.js';
+import { localStorageRoutes } from './modules/storage.js';
 
 export interface AppOptions {
   logger?: FastifyServerOptions['logger'];
@@ -52,6 +55,7 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
   organizationRoutes(app, services);
   memberRoutes(app, services);
   fleetRoutes(app, services);
+  mediaRoutes(app, services);
   auditRoutes(app, services);
 }
 
@@ -76,6 +80,10 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
   if (services) {
     void app.register((instance) => apiV1(instance, services), { prefix: '/api/v1' });
     void app.register((instance) => playerV1(instance, services), { prefix: '/player/v1' });
+    if (services.storage instanceof LocalObjectStorage) {
+      const storage = services.storage;
+      void app.register((instance) => localStorageRoutes(instance, storage));
+    }
   }
   return app;
 }

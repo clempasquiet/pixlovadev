@@ -1,4 +1,6 @@
+import { rm } from 'node:fs/promises';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
+import type { LocalObjectStorage } from '@pixlova/storage';
 import { createTestDatabase, type TestDatabase } from '@pixlova/db/testing';
 import { buildPublicApp } from '../../src/app.js';
 import type { SecurityConfig } from '../../src/config.js';
@@ -17,6 +19,8 @@ export interface Harness {
   clock: { now: Date; advance(ms: number): void };
   setMaxUsers(value: number): void;
   setDisplaySlots(value: number): void;
+  setStorageBytes(value: number): void;
+  storage: LocalObjectStorage;
   flushEmails(): Promise<void>;
   close(): Promise<void>;
 }
@@ -39,10 +43,13 @@ export async function createHarness(security: Partial<SecurityConfig> = {}): Pro
     clock: test.clock,
     setMaxUsers: test.setMaxUsers,
     setDisplaySlots: test.setDisplaySlots,
+    setStorageBytes: test.setStorageBytes,
+    storage: test.storage,
     flushEmails: test.flushEmails,
     async close() {
       await app.close();
       await database.close();
+      await rm(test.storageRoot, { recursive: true, force: true });
     },
   };
 }

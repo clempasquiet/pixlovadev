@@ -211,6 +211,9 @@ importers:
       '@pixlova/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
+      '@pixlova/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@types/pg@8.23.1)(pg@8.23.0)
@@ -230,9 +233,15 @@ importers:
       '@noble/curves':
         specifier: 2.4.0
         version: 2.4.0
+      '@pixlova/workers':
+        specifier: workspace:*
+        version: link:../workers
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@24.19.0)
 
   apps/dashboard:
     dependencies:
