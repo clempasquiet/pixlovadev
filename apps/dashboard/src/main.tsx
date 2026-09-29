@@ -5,6 +5,8 @@ import { AppLayout, RequireSession } from './layout.js';
 import { AccountPage } from './pages/account.js';
 import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
 import { LibraryPage } from './pages/library.js';
+import { CompositionEditorPage } from './compositions/editor.js';
+import { CompositionsPage, TemplatesPage } from './compositions/pages.js';
 import {
   AcceptInvitationPage,
   LoginPage,
@@ -22,6 +24,7 @@ import {
   SitesPage,
 } from './pages/organization.js';
 import { SessionProvider } from './session.js';
+import '@pixlova/render-engine/fonts.css';
 import './styles.css';
 
 const router = createBrowserRouter([
@@ -41,6 +44,9 @@ const router = createBrowserRouter([
           { index: true, element: <HomePage /> },
           { path: 'organizations/new', element: <CreateOrganizationPage /> },
           { path: 'library', element: <LibraryPage /> },
+          { path: 'compositions', element: <CompositionsPage /> },
+          { path: 'compositions/:id', element: <CompositionEditorPage /> },
+          { path: 'templates', element: <TemplatesPage /> },
           { path: 'displays', element: <DisplaysPage /> },
           { path: 'displays/:id', element: <DisplayDetailPage /> },
           { path: 'players', element: <PlayersPage /> },
