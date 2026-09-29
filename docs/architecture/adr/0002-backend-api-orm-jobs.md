@@ -23,7 +23,7 @@ DEC-07 laisse ouverts NestJS/Fastify et Prisma/Drizzle. Contraintes structurante
 2. **Deux instances Fastify par processus** : `buildPublicApp` (tunnel public : `/api/v1`, `/player/v1`, webhooks) et `buildInternalApp` (réseau privé : `/internal/v1`). Un hook refuse l’enregistrement d’une route `/internal` sur l’application publique ; un test le vérifie. Le listener interne écoute par défaut sur `127.0.0.1`.
 3. **Validation par JSON Schema** (Ajv intégré à Fastify) : les schémas proviennent de `packages/contracts`, source unique partagée avec les Players (ADR-003).
 4. **Drizzle ORM** (0.45.x) avec **migrations SQL générées puis relues et versionnées** (drizzle-kit). Le SQL des migrations fait foi ; les contraintes non exprimables dans le DSL (triggers, policies RLS) sont écrites en SQL dans des migrations dédiées.
-5. **PostgreSQL 16+** pour les décisions durables ; **Redis + BullMQ** pour les files ; **outbox transactionnelle** écrite dans la même transaction que l’effet métier, relayée vers BullMQ par un dispatcher idempotent.
+5. **PostgreSQL 16+** pour les décisions durables ; **Redis + BullMQ** pour les files ; **outbox transactionnelle** écrite dans la même transaction que l’effet métier, relayée vers BullMQ par un dispatcher idempotent. *Modifié par l’[ADR-009](0009-bibliotheque-media-stockage-pipeline.md) : les tâches durables (médias, balayages) sont réclamées directement dans PostgreSQL (`FOR UPDATE SKIP LOCKED`, bail) ; BullMQ reste une option d’accélération, jamais la source de vérité.*
 6. **Enveloppe d’erreur unique** (API-006) avec `request_id` généré côté serveur, renvoyé dans `x-request-id` ; aucun détail interne dans une réponse 5xx.
 
 ## Options évaluées
