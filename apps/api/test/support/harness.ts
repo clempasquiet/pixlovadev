@@ -16,6 +16,7 @@ export interface Harness {
   mailer: MemoryMailer;
   clock: { now: Date; advance(ms: number): void };
   setMaxUsers(value: number): void;
+  setDisplaySlots(value: number): void;
   flushEmails(): Promise<void>;
   close(): Promise<void>;
 }
@@ -37,6 +38,7 @@ export async function createHarness(security: Partial<SecurityConfig> = {}): Pro
     mailer: test.mailer,
     clock: test.clock,
     setMaxUsers: test.setMaxUsers,
+    setDisplaySlots: test.setDisplaySlots,
     flushEmails: test.flushEmails,
     async close() {
       await app.close();

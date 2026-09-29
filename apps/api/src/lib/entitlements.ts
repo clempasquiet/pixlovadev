@@ -5,13 +5,16 @@
  */
 export interface EntitlementsProvider {
   maxUsers(organizationId: string): Promise<number>;
+  /** Displays actifs autorisés (BILL-002) : slots inclus + extras confirmés + dérogations. */
+  displaySlots(organizationId: string): Promise<number>;
 }
 
-/** Offre gratuite (BILL-003) : un utilisateur. Seule source disponible avant L08. */
+/** Offre gratuite (BILL-003) : un utilisateur et un Display actif. Seule source avant L08. */
 export const FREE_ENTITLEMENTS: EntitlementsProvider = {
   maxUsers: async () => 1,
+  displaySlots: async () => 1,
 };
 
-export function fixedEntitlements(maxUsers: number): EntitlementsProvider {
-  return { maxUsers: async () => maxUsers };
+export function fixedEntitlements(maxUsers: number, displaySlots = 1): EntitlementsProvider {
+  return { maxUsers: async () => maxUsers, displaySlots: async () => displaySlots };
 }

@@ -10,6 +10,7 @@ pub mod canonical;
 pub mod command;
 pub mod instant;
 pub mod manifest;
+pub mod player_auth;
 pub mod schema;
 pub mod signature;
 pub mod strict_json;

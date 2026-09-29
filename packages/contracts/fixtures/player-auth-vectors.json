@@ -1,0 +1,68 @@
+{
+  "warning": "CLÉ DE TEST UNIQUEMENT — graine publique.",
+  "device_seed_hex": "b14129109d853bb06066a6c2fe25a05b173ad01fe98ed22a7acf10a40a8299b7",
+  "public_key_b64u": "PrKUzZiSNgBTAIPrWyYunzSGsy7CHeUUvNi_bRqXPDI",
+  "signing_input": "{\"audience\":\"pixlova-player-api\",\"challenge_id\":\"eeeeeeee-eeee-4eee-8eee-000000000001\",\"expires_at\":\"2026-09-29T18:01:00Z\",\"installation_id\":\"12121212-1212-4212-8212-121212121212\",\"issued_at\":\"2026-09-29T18:00:00Z\",\"nonce\":\"nj8VYyTULw6ktvT86B1W-9ZKIUOj_dYKEw2ckOW01og\",\"player_id\":\"66666666-6666-4666-8666-666666666666\",\"type\":\"PIXLOVA_PLAYER_AUTH_V1\"}",
+  "vectors": [
+    {
+      "name": "valid",
+      "challenge": {
+        "type": "PIXLOVA_PLAYER_AUTH_V1",
+        "audience": "pixlova-player-api",
+        "challenge_id": "eeeeeeee-eeee-4eee-8eee-000000000001",
+        "nonce": "nj8VYyTULw6ktvT86B1W-9ZKIUOj_dYKEw2ckOW01og",
+        "player_id": "66666666-6666-4666-8666-666666666666",
+        "installation_id": "12121212-1212-4212-8212-121212121212",
+        "issued_at": "2026-09-29T18:00:00Z",
+        "expires_at": "2026-09-29T18:01:00Z"
+      },
+      "signature": "ZtXAQ-f6rw4cLjmIIZ0UBzg1MpRP8jP8zIqPhKcP9OtPo_fGpFubbn1WawIa0mTep6pVCYgDz39T57dZBIWoDQ",
+      "valid": true
+    },
+    {
+      "name": "nonce-altered",
+      "challenge": {
+        "type": "PIXLOVA_PLAYER_AUTH_V1",
+        "audience": "pixlova-player-api",
+        "challenge_id": "eeeeeeee-eeee-4eee-8eee-000000000001",
+        "nonce": "dHTB5-2SmvWA_mbkYLBgOWDe_uDIOZ88QKKhZgt9bwk",
+        "player_id": "66666666-6666-4666-8666-666666666666",
+        "installation_id": "12121212-1212-4212-8212-121212121212",
+        "issued_at": "2026-09-29T18:00:00Z",
+        "expires_at": "2026-09-29T18:01:00Z"
+      },
+      "signature": "ZtXAQ-f6rw4cLjmIIZ0UBzg1MpRP8jP8zIqPhKcP9OtPo_fGpFubbn1WawIa0mTep6pVCYgDz39T57dZBIWoDQ",
+      "valid": false
+    },
+    {
+      "name": "other-player",
+      "challenge": {
+        "type": "PIXLOVA_PLAYER_AUTH_V1",
+        "audience": "pixlova-player-api",
+        "challenge_id": "eeeeeeee-eeee-4eee-8eee-000000000001",
+        "nonce": "nj8VYyTULw6ktvT86B1W-9ZKIUOj_dYKEw2ckOW01og",
+        "player_id": "66666666-6666-4666-8666-000000000009",
+        "installation_id": "12121212-1212-4212-8212-121212121212",
+        "issued_at": "2026-09-29T18:00:00Z",
+        "expires_at": "2026-09-29T18:01:00Z"
+      },
+      "signature": "ZtXAQ-f6rw4cLjmIIZ0UBzg1MpRP8jP8zIqPhKcP9OtPo_fGpFubbn1WawIa0mTep6pVCYgDz39T57dZBIWoDQ",
+      "valid": false
+    },
+    {
+      "name": "wrong-key",
+      "challenge": {
+        "type": "PIXLOVA_PLAYER_AUTH_V1",
+        "audience": "pixlova-player-api",
+        "challenge_id": "eeeeeeee-eeee-4eee-8eee-000000000001",
+        "nonce": "nj8VYyTULw6ktvT86B1W-9ZKIUOj_dYKEw2ckOW01og",
+        "player_id": "66666666-6666-4666-8666-666666666666",
+        "installation_id": "12121212-1212-4212-8212-121212121212",
+        "issued_at": "2026-09-29T18:00:00Z",
+        "expires_at": "2026-09-29T18:01:00Z"
+      },
+      "signature": "GFix8MlI8KlsvdW3eVc55gNRDJvAm7XwXX_HOR937aPkA3pq-HcRZISUrlGlt-m1pDZrGFdlXBBe4S8hvARmBQ",
+      "valid": false
+    }
+  ]
+}

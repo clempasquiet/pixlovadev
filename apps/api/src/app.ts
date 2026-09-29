@@ -5,8 +5,10 @@ import { ApiError, registerErrorHandling } from './errors.js';
 import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
+import { fleetRoutes } from './modules/fleet.js';
 import { memberRoutes } from './modules/members.js';
 import { organizationRoutes } from './modules/organizations.js';
+import { playerApiRoutes } from './modules/player-api.js';
 
 export interface AppOptions {
   logger?: FastifyServerOptions['logger'];
@@ -49,7 +51,13 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
   authRoutes(app, services);
   organizationRoutes(app, services);
   memberRoutes(app, services);
+  fleetRoutes(app, services);
   auditRoutes(app, services);
+}
+
+/** API des Players : jeton Bearer, aucun cookie, aucune route d’administration (API-001). */
+async function playerV1(app: FastifyInstance, services: Services): Promise<void> {
+  playerApiRoutes(app, services);
 }
 
 /**
@@ -65,7 +73,10 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
   });
   app.get('/health', async () => ({ status: 'ok' }));
   const { services } = options;
-  if (services) void app.register((instance) => apiV1(instance, services), { prefix: '/api/v1' });
+  if (services) {
+    void app.register((instance) => apiV1(instance, services), { prefix: '/api/v1' });
+    void app.register((instance) => playerV1(instance, services), { prefix: '/player/v1' });
+  }
   return app;
 }
 

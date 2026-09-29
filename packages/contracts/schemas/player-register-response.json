@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/player-register-response.json",
+  "type": "object",
+  "required": [
+    "registration_id",
+    "pairing_code",
+    "expires_at",
+    "poll_secret",
+    "poll_interval_s"
+  ],
+  "properties": {
+    "registration_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "pairing_code": {
+      "type": "string",
+      "pattern": "^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$"
+    },
+    "expires_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "poll_secret": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "poll_interval_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60
+    }
+  },
+  "additionalProperties": false
+}

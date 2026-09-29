@@ -17,6 +17,14 @@ export interface SecurityConfig {
   invitationDays: number;
   /** IAM-007 : MFA exigée des Owner/Admin pour les actions sensibles. */
   requireMfaForAdmins: boolean;
+  /** Durée de validité d’un code d’appairage (PROTO-001, 5 min proposé). */
+  pairingCodeMinutes: number;
+  /** Jeton d’accès Player (PROTO-002, 15 min proposé) et challenge (60 s). */
+  playerTokenMinutes: number;
+  playerChallengeSeconds: number;
+  /** Heartbeat nominal et seuil de présence (SUP-002 : 30 s / 90 s). */
+  heartbeatIntervalSeconds: number;
+  presenceTimeoutSeconds: number;
 }
 
 export interface ApiConfig {
@@ -73,6 +81,11 @@ export function defaultSecurityConfig(env: NodeJS.ProcessEnv = process.env): Sec
     passwordResetMinutes: readNumber(env, 'PIXLOVA_PASSWORD_RESET_MINUTES', 60, 5, 1440),
     invitationDays: readNumber(env, 'PIXLOVA_INVITATION_DAYS', 7, 1, 30),
     requireMfaForAdmins: env.PIXLOVA_REQUIRE_MFA_FOR_ADMINS !== 'false',
+    pairingCodeMinutes: readNumber(env, 'PIXLOVA_PAIRING_CODE_MINUTES', 5, 1, 60),
+    playerTokenMinutes: readNumber(env, 'PIXLOVA_PLAYER_TOKEN_MINUTES', 15, 1, 120),
+    playerChallengeSeconds: readNumber(env, 'PIXLOVA_PLAYER_CHALLENGE_SECONDS', 60, 10, 600),
+    heartbeatIntervalSeconds: readNumber(env, 'PIXLOVA_HEARTBEAT_SECONDS', 30, 5, 600),
+    presenceTimeoutSeconds: readNumber(env, 'PIXLOVA_PRESENCE_TIMEOUT_SECONDS', 90, 10, 3600),
   };
 }
 

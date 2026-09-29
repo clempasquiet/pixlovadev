@@ -29,6 +29,20 @@
       "when": 1790716602564,
       "tag": "0003_identity_access_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790718496795,
+      "tag": "0004_player_pairing",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790718497536,
+      "tag": "0005_player_pairing_grants",
+      "breakpoints": true
     }
   ]
 }

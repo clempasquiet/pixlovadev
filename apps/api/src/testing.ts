@@ -15,6 +15,7 @@ export interface TestServices {
   mailer: MemoryMailer;
   clock: { now: Date; advance(ms: number): void };
   setMaxUsers(value: number): void;
+  setDisplaySlots(value: number): void;
   flushEmails(): Promise<void>;
 }
 
@@ -29,13 +30,14 @@ export function createTestServices(
     },
   };
   let maxUsers = 1;
+  let displaySlots = 1;
   const mailer = new MemoryMailer();
   const services: Services = {
     db: database.app,
     system: database.system,
     cipher: new DataCipher([{ kid: 'test', key: randomBytes(32) }]),
     limiter: new MemoryRateLimiter(() => clock.now.getTime()),
-    entitlements: { maxUsers: async () => maxUsers },
+    entitlements: { maxUsers: async () => maxUsers, displaySlots: async () => displaySlots },
     security: { ...defaultSecurityConfig({}), requireMfaForAdmins: false, ...security },
     now: () => clock.now,
   };
@@ -45,6 +47,9 @@ export function createTestServices(
     clock,
     setMaxUsers(value) {
       maxUsers = value;
+    },
+    setDisplaySlots(value) {
+      displaySlots = value;
     },
     flushEmails: async () => {
       await dispatchEmails(database.system, services.cipher, mailer, 100);
