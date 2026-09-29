@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, idempotencyKey } from '../api.js';
+import { useLoad } from '../data.js';
 import { useSession } from '../session.js';
 import { Empty, ErrorMessage, Field, Forbidden, Form, Loading } from '../ui.js';
 
@@ -46,23 +47,6 @@ interface DisplaySummary {
     presence: Player['presence'];
     last_seen_at: string | null;
   } | null;
-}
-
-function useLoad<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const reload = useCallback(async () => {
-    try {
-      setError(null);
-      setData(await api<T>('GET', path));
-    } catch (caught) {
-      setError(caught);
-    }
-  }, [path]);
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-  return { data, error, reload };
 }
 
 const PRESENCE_LABEL = {

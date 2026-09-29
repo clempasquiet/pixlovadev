@@ -40,3 +40,6 @@ Thumbs.db
 
 # Sorties de tests navigateur (captures, mesures locales)
 test-results/
+
+# Environnements Python locaux (outils de test)
+.venv*/

@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import type { AddressInfo } from 'node:net';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { chromium, type Browser, type Page } from 'playwright-core';
@@ -9,7 +10,14 @@ import { preview, type PreviewServer } from 'vite';
 import { buildPublicApp } from '@pixlova/api';
 import { createTestServices, type TestServices } from '@pixlova/api/testing';
 import { encodeBase64url, signPlayerChallenge } from '@pixlova/contracts';
+import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import { createTestDatabase, type TestDatabase } from '@pixlova/db/testing';
+import {
+  createMediaWorker,
+  DEFAULT_VIDEO_TOOLS,
+  silentLogger,
+  type Worker,
+} from '@pixlova/workers';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const output = resolve(root, 'test-results');
@@ -23,6 +31,8 @@ export interface Stack {
   server: PreviewServer;
   browser: Browser;
   base: string;
+  /** Worker média réel (ADR-009), sur la même base et le même stockage que l’API. */
+  worker: Worker;
   close(): Promise<void>;
 }
 
@@ -46,6 +56,22 @@ export async function startStack(): Promise<Stack> {
   test.services.security.appBaseUrl = base;
   const browser = await chromium.launch();
   await mkdir(output, { recursive: true });
+  const workerTmp = await mkdtemp(join(tmpdir(), 'pixlova-e2e-worker-'));
+  const worker = createMediaWorker(
+    {
+      appDb: database.app,
+      systemDb: database.system,
+      storage: test.storage,
+      limits: DEFAULT_MEDIA_LIMITS,
+      tools: DEFAULT_VIDEO_TOOLS,
+      tmpRoot: workerTmp,
+      trashRetentionDays: 30,
+      now: () => new Date(),
+      logger: silentLogger,
+    },
+    { pollIntervalMs: 200, concurrency: 1, sweepIntervalMs: 3_600_000 },
+  );
+  worker.start();
   return {
     database,
     test,
@@ -54,7 +80,10 @@ export async function startStack(): Promise<Stack> {
     server,
     browser,
     base,
+    worker,
     async close() {
+      await worker.stop();
+      await rm(workerTmp, { recursive: true, force: true });
       await browser.close();
       await server.close();
       await api.close();

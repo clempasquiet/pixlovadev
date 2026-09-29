@@ -82,13 +82,14 @@ export function AppLayout() {
             <NavLink to="/" end>
               Tableau de bord
             </NavLink>
+            <NavLink to="/library">Bibliothèque</NavLink>
             <NavLink to="/displays">Écrans</NavLink>
             <NavLink to="/players">Players</NavLink>
             <NavLink to="/sites">Sites</NavLink>
             <NavLink to="/members">Membres</NavLink>
             <NavLink to="/audit">Journal d’audit</NavLink>
             <p className="sidebar-note">
-              Bibliothèque, Créateur, Playlists et Programmation arrivent avec les lots suivants.
+              Créateur, Playlists et Programmation arrivent avec les lots suivants.
             </p>
           </nav>
         )}
