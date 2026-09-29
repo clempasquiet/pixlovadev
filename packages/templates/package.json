@@ -1,0 +1,22 @@
+{
+  "name": "@pixlova/templates",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Catalogue des templates plateforme V1 (TPL-001) : documents d’édition versionnés avec le code, sans asset plateforme.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pixlova/contracts": "workspace:*"
+  }
+}

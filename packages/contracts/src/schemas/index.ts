@@ -4,6 +4,7 @@ export * from './tenant.js';
 export * from './display.js';
 export * from './capabilities.js';
 export * from './composition.js';
+export * from './composition-document.js';
 export * from './manifest.js';
 export * from './command.js';
 export * from './ws.js';
@@ -13,6 +14,7 @@ export * from './player-api.js';
 import { PlayerCapabilities } from './capabilities.js';
 import { CommandPayload, CommandResult, SignedCommand } from './command.js';
 import { Composition } from './composition.js';
+import { CompositionDocument, CompositionTemplate } from './composition-document.js';
 import { Display, DisplayAssignment } from './display.js';
 import { ErrorEnvelope } from './errors.js';
 import { PlayerEventBatch } from './events.js';
@@ -52,6 +54,8 @@ export const ROOT_SCHEMAS = {
   'display-assignment.json': root('display-assignment.json', DisplayAssignment),
   'player-capabilities.json': root('player-capabilities.json', PlayerCapabilities),
   'composition.json': root('composition.json', Composition),
+  'composition-document.json': root('composition-document.json', CompositionDocument),
+  'composition-template.json': root('composition-template.json', CompositionTemplate),
   'manifest-payload.json': root('manifest-payload.json', ManifestPayload),
   'manifest.json': root('manifest.json', SignedManifest),
   'command.json': root('command.json', SignedCommand),

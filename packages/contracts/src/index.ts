@@ -19,3 +19,5 @@ export * from './manifest.js';
 export * from './command.js';
 export * from './player-auth.js';
 export * from './media.js';
+export * from './fonts.js';
+export * from './composition-tools.js';

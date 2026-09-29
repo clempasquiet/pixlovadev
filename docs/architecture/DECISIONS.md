@@ -23,6 +23,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-007](adr/0007-rbac-scopes.md) | Rôles V1, permissions nommées, scopes par site, délégation, dernier Owner | L01 |
 | [ADR-008](adr/0008-appairage-players-displays.md) | Appairage par code, clé Ed25519 et jeton court des Players, slots sous verrou, affectations générationnelles, idempotence | L02 |
 | [ADR-009](adr/0009-bibliotheque-media-stockage-pipeline.md) | Stockage objet abstrait (S3 ou local signé), upload en quarantaine, file de tâches PostgreSQL à bail, pipeline sharp/FFmpeg, quota sur les originaux, corbeille, visibilité par site | L03 |
+| [ADR-010](adr/0010-compositions-editeur-templates.md) | Document d’édition distinct du document résolu, six polices OFL empaquetées, brouillon à concurrence optimiste, versions immuables, validation avant publication, templates versionnés avec le code, comparaison Chromium / WebKitGTK | L04 |
 
 ## ADR proposés (en attente de preuves)
 

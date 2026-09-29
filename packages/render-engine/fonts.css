@@ -1,0 +1,11 @@
+/*
+ * Polices qualifiées du moteur (CMP-003, REN-002, ADR-010) : familles SIL OFL 1.1 en
+ * fichiers variables WOFF2 (Fontsource), intégrées au build de chaque hôte (preview,
+ * Player Web, renderer natif). Le catalogue des familles est dans @pixlova/contracts.
+ */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/roboto';
+@import '@fontsource-variable/open-sans';
+@import '@fontsource-variable/montserrat';
+@import '@fontsource-variable/playfair-display';
+@import '@fontsource-variable/roboto-mono';
