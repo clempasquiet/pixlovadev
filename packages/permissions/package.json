@@ -1,0 +1,19 @@
+{
+  "name": "@pixlova/permissions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Catalogue des permissions, rôles V1 et évaluation des autorisations par scope (organisation, sites).",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  }
+}

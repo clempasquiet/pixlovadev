@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
@@ -24,5 +28,10 @@
   "devDependencies": {
     "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11"
-  }
+  },
+  "files": [
+    "dist",
+    "migrations",
+    "sql"
+  ]
 }

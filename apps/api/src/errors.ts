@@ -8,6 +8,7 @@ export class ApiError extends Error {
     message: string,
     readonly retryable = false,
     readonly details?: Record<string, unknown>,
+    readonly headers?: Record<string, string>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -55,6 +56,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError | ApiError, request, reply: FastifyReply) => {
     const apiError = normalize(error);
     if (apiError.statusCode >= 500) request.log.error({ err: error }, 'request failed');
+    if (apiError.headers) reply.headers(apiError.headers);
     return reply.status(apiError.statusCode).send(body(request, apiError));
   });
   app.setNotFoundHandler((request, reply) => {
