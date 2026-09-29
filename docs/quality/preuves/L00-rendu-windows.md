@@ -14,7 +14,9 @@
 | GPU | Intel UHD Graphics 630 (Direct3D 11) | masqué par Brave |
 | Threads CPU | 8 | 8 |
 | Écran / fenêtre | 1920×1080, plein écran | écran 2560×1440, fenêtre 1920×951 (non plein écran) |
-| Vidéo fournie | oui, 60 s par scénario | non (scénario vidéo ignoré) |
+| Vidéo fournie | oui, 60 s par scénario (voir ci-dessous) | non (scénario vidéo ignoré) |
+
+Vidéo de test (fichier fourni par le responsable produit, non versionné ; propriétés lues dans ses boîtes MP4) : **H.264 High, niveau 4.0**, 1920×1080, 29,97 images/s, 34,5 s, environ 4,4 Mbit/s, audio AAC, conteneur MP4 avec `moov` en tête. C’est le profil de référence H.264/AAC 1080p (MED-004, REN-003) ; la boucle de 60 s couvre aussi le rebouclage du fichier.
 
 Fichiers bruts : [WebView2](donnees/L00-windows-webview2-uhd630.json), [Brave](donnees/L00-windows-brave.json).
 
@@ -40,7 +42,7 @@ Les fichiers de la version 0.1.0 du banc indiquent `decoding.supported: false` p
 
 ## Ce qui manque pour qualifier le profil Windows
 
-1. Codec, résolution et débit de la vidéo utilisée (propriétés du fichier ou MediaInfo).
+1. ~~Codec de la vidéo~~ : établi (H.264 High 1080p30).
 2. Nouvelle mesure avec le banc 0.1.1 (support des codecs fiable).
 3. Charge CPU pendant la boucle vidéo (Gestionnaire des tâches) et confirmation du décodage matériel (colonne « Décodage vidéo » du GPU).
 4. Observations visuelles : netteté, QR code scanné, heure de l’horloge, sens de la rotation portrait, absence de déchirure.
