@@ -421,6 +421,51 @@ describe.skipIf(skipDatabaseTests)(
       expect(audit[0]).toMatchObject({ actorType: 'system', result: 'success' });
     });
 
+    it('média référencé par une version publiée : binaire conservé, purge différée (MED-006)', async () => {
+      const mediaId = await completedUpload(h, fx.jpeg);
+      await h.worker.drain();
+      await withTenant(h.db.app, h.organizationId, async (tx) => {
+        const [composition] = await tx
+          .insert(schema.compositions)
+          .values({
+            organizationId: h.organizationId,
+            name: 'Affiche',
+            width: 100,
+            height: 100,
+            draftDocument: {},
+          })
+          .returning();
+        const [version] = await tx
+          .insert(schema.compositionVersions)
+          .values({
+            organizationId: h.organizationId,
+            compositionId: composition!.id,
+            version: 1,
+            schemaVersion: 1,
+            document: {},
+          })
+          .returning();
+        await tx
+          .insert(schema.contentDependencies)
+          .values({ organizationId: h.organizationId, compositionVersionId: version!.id, mediaId });
+        await tx
+          .update(schema.media)
+          .set({ deletedAt: h.clock.now, purgeAfter: h.clock.now })
+          .where(eq(schema.media.id, mediaId));
+        await enqueueJob(tx, {
+          organizationId: h.organizationId,
+          kind: MEDIA_PURGE,
+          dedupeKey: mediaId,
+          payload: { mediaId },
+        });
+      });
+      await h.worker.drain();
+      const { media, assets } = await mediaState(h, mediaId);
+      expect(media).toMatchObject({ purgeStartedAt: null });
+      expect(media!.purgeAfter!.getTime()).toBeGreaterThan(h.clock.now.getTime() + 29 * 86_400_000);
+      expect(await h.local.head(assets.original!.storageKey)).not.toBeNull();
+    });
+
     it('média restauré avant la purge : conservé', async () => {
       const mediaId = await completedUpload(h, fx.jpeg);
       await h.worker.drain();

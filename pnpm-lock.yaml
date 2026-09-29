@@ -214,6 +214,9 @@ importers:
       '@pixlova/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@pixlova/templates':
+        specifier: workspace:*
+        version: link:../../packages/templates
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@types/pg@8.23.1)(pg@8.23.0)

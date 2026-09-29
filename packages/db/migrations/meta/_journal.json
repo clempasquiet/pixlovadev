@@ -57,6 +57,20 @@
       "when": 1790720798738,
       "tag": "0007_media_library_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790724029286,
+      "tag": "0008_compositions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790724030077,
+      "tag": "0009_compositions_grants",
+      "breakpoints": true
     }
   ]
 }

@@ -36,7 +36,8 @@ if (process.env.PIXLOVA_MAILER === 'console') {
 const devMaxUsers = process.env.PIXLOVA_DEV_MAX_USERS;
 const devDisplaySlots = process.env.PIXLOVA_DEV_DISPLAY_SLOTS;
 const devStorageBytes = process.env.PIXLOVA_DEV_STORAGE_BYTES;
-if ((devMaxUsers || devDisplaySlots || devStorageBytes) && production) {
+const devFeatures = process.env.PIXLOVA_DEV_FEATURES;
+if ((devMaxUsers || devDisplaySlots || devStorageBytes || devFeatures) && production) {
   throw new Error('Les variables PIXLOVA_DEV_* sont interdites en production.');
 }
 
@@ -46,11 +47,15 @@ const services: Services = {
   cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
   limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
   entitlements:
-    devMaxUsers || devDisplaySlots || devStorageBytes
+    devMaxUsers || devDisplaySlots || devStorageBytes || devFeatures
       ? fixedEntitlements(
           Number(devMaxUsers ?? 1),
           Number(devDisplaySlots ?? 1),
           devStorageBytes ? Number(devStorageBytes) : FREE_STORAGE_BYTES,
+          (devFeatures ?? '')
+            .split(',')
+            .map((f) => f.trim())
+            .filter(Boolean),
         )
       : FREE_ENTITLEMENTS,
   security: config.security,

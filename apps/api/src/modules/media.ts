@@ -36,6 +36,7 @@ import {
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
 import { idempotencyScope, idempotent } from '../lib/idempotency.js';
+import { compositionUsages } from './compositions.js';
 import { Strict, Uuid } from './schemas.js';
 
 /** Noms des tâches du worker média (apps/workers). */
@@ -105,15 +106,12 @@ function storageError(error: unknown): never {
 }
 
 /**
- * Références d’un média par des contenus publiés ou brouillons (MED-008, MED-009).
- * Le graphe `content_dependencies` arrive avec les playlists et compositions (L05) ;
- * cette fonction est le point unique que L05 complétera.
+ * Références d’un média (MED-008, MED-009, ADR-010) : versions publiées de compositions
+ * (bloquantes : suppression forcée requise) et brouillons (signalés, non bloquants).
+ * Les playlists (L05) s’ajouteront ici.
  */
-export async function mediaUsages(
-  _tx: Transaction,
-  _mediaId: string,
-): Promise<{ type: string; id: string; name: string }[]> {
-  return [];
+export async function mediaUsages(tx: Transaction, mediaId: string) {
+  return compositionUsages(tx, mediaId);
 }
 
 function publicMedia(
@@ -826,7 +824,7 @@ export function mediaRoutes(app: FastifyInstance, services: Services): void {
         const media = await loadMedia(tx, member, id, true);
         authorize(member, 'content.manage', { siteId: media.siteId });
         if (media.deletedAt) return;
-        const usages = await mediaUsages(tx, id);
+        const usages = (await mediaUsages(tx, id)).filter((usage) => usage.blocking);
         if (usages.length > 0) {
           if (!force) {
             throw new ApiError(
@@ -940,8 +938,17 @@ export function mediaRoutes(app: FastifyInstance, services: Services): void {
             'Placez d’abord le média dans la corbeille.',
           );
         }
-        if ((await mediaUsages(tx, id)).length > 0)
-          authorize(member, 'content.force_delete', { siteId: media.siteId });
+        // Les versions publiées qui le référencent protègent le binaire (MED-006).
+        const blocking = (await mediaUsages(tx, id)).filter((usage) => usage.blocking);
+        if (blocking.length > 0) {
+          throw new ApiError(
+            409,
+            'MEDIA_REFERENCED',
+            'Des versions publiées utilisent ce média : sa suppression définitive est impossible.',
+            false,
+            { usages: blocking },
+          );
+        }
         const [updated] = await tx
           .update(schema.media)
           .set({ purgeAfter: now, updatedAt: now })
