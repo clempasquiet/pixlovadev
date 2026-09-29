@@ -113,7 +113,7 @@ async function run(only: string | null): Promise<void> {
   window.__PIXLOVA_LAB__ = {
     status: 'done',
     results: {
-      lab_version: '0.1.0',
+      lab_version: '0.1.1',
       measured_at: new Date().toISOString(),
       environment: environment(),
       codecs: await probeCodecs(),

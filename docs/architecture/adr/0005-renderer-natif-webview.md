@@ -24,6 +24,8 @@ Détail : [preuves L00 — rendu en environnement cloud](../../quality/preuves/L
 - Chromium headless (Playwright 1.56.1, Chromium 141) : les 6 scénarios sans vidéo sont rendus sans erreur ; positions de la scène et des éléments conformes au calcul au pixel près ; **H.264 et HEVC non décodés** (Chromium libre sans codecs propriétaires), VP9 et AV1 oui.
 - `pixlova-renderer` sous WebKitGTK 2.52 (Xvfb, rendu logiciel) : 6 scénarios rendus, environ 60 images/s, p95 17–26 ms ; **H.264 non décodé faute de plugins GStreamer** dans le conteneur.
 
+Mesure sur matériel réel (Windows, WebView2, Intel UHD Graphics 630, détail : [preuves Windows](../../quality/preuves/L00-rendu-windows.md)) : les 7 scénarios, dont la boucle vidéo plein écran 1920×1080, tournent à 59,94 images/s sans saccade, avec **0 image vidéo perdue sur 1797** ; 2 sur 1797 avec deux zones. Résultat favorable à l’option proposée pour Windows ; la qualification du profil attend le codec exact de la vidéo, la charge CPU, le décodage matériel et les observations visuelles.
+
 Conséquence déjà établie : un Chromium libre ne suffit pas pour H.264. Sous Linux, WebKitGTK exige GStreamer avec `gst-libav` et, pour l’accélération, VA-API ; l’installation du Player doit l’imposer et la qualification doit le mesurer.
 
 ## Options évaluées
@@ -37,4 +39,4 @@ Conséquence déjà établie : un Chromium libre ne suffit pas pour H.264. Sous 
 
 ## Conditions d’acceptation
 
-L’ADR passe « acceptée » quand, pour chaque profil cible (au minimum Linux x86-64 Debian/Ubuntu avec GPU Intel, et Windows x86-64), le protocole de qualification fournit : décodage H.264 1080p accéléré sans perte significative d’images, boucle vidéo stable, scénarios de composition et formats LED, démarrage et reprise mesurés, limites connues. Sinon, l’option de repli est retenue pour le profil concerné et consignée ici.
+L’ADR passe « acceptée » quand, pour chaque profil cible (au minimum Linux x86-64 Debian/Ubuntu avec GPU Intel, et Windows x86-64 ; les mesures Linux sont reportées à une étape ultérieure du projet), le protocole de qualification fournit : décodage H.264 1080p accéléré sans perte significative d’images, boucle vidéo stable, scénarios de composition et formats LED, démarrage et reprise mesurés, limites connues. Sinon, l’option de repli est retenue pour le profil concerné et consignée ici.

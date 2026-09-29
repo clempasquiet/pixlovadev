@@ -1,6 +1,6 @@
 {
   "name": "@pixlova/render-lab",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Banc de qualification du moteur de rendu (REN-004) à exécuter sur chaque profil matériel et runtime candidat.",
   "type": "module",
@@ -9,7 +9,7 @@
     "dev": "vite",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/scenarios.test.ts",
+    "test": "vitest run test/scenarios.test.ts test/metrics.test.ts",
     "test:browser": "vitest run test/lab.browser.test.ts"
   },
   "dependencies": {

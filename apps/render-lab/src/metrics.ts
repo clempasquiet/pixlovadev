@@ -7,25 +7,25 @@
 export const CODEC_PROBES = [
   {
     id: 'h264-baseline-1080p',
-    type: 'video/mp4; codecs="avc1.42E028, mp4a.40.2"',
+    type: 'video/mp4; codecs="avc1.42E028"',
     width: 1920,
     height: 1080,
   },
   {
     id: 'h264-main-1080p',
-    type: 'video/mp4; codecs="avc1.4D4028, mp4a.40.2"',
+    type: 'video/mp4; codecs="avc1.4D4028"',
     width: 1920,
     height: 1080,
   },
   {
     id: 'h264-high-1080p',
-    type: 'video/mp4; codecs="avc1.640028, mp4a.40.2"',
+    type: 'video/mp4; codecs="avc1.640028"',
     width: 1920,
     height: 1080,
   },
   {
     id: 'h264-high-2160p',
-    type: 'video/mp4; codecs="avc1.640033, mp4a.40.2"',
+    type: 'video/mp4; codecs="avc1.640033"',
     width: 3840,
     height: 2160,
   },
@@ -39,6 +39,14 @@ export const CODEC_PROBES = [
   { id: 'av1-1080p', type: 'video/mp4; codecs="av01.0.08M.08"', width: 1920, height: 1080 },
 ] as const;
 
+/**
+ * `MediaCapabilities` n’accepte qu’un seul codec par configuration : la piste audio
+ * est sondée séparément (une chaîne « vidéo + audio » est déclarée non supportée).
+ */
+export const AUDIO_PROBES = [
+  { id: 'aac-lc-stereo', type: 'audio/mp4; codecs="mp4a.40.2"' },
+] as const;
+
 export interface CodecResult {
   id: string;
   can_play_type: string;
@@ -46,33 +54,47 @@ export interface CodecResult {
 }
 
 export async function probeCodecs(): Promise<CodecResult[]> {
-  const video = document.createElement('video');
-  return Promise.all(
-    CODEC_PROBES.map(async (probe) => {
-      let decoding: CodecResult['decoding'] = null;
-      try {
-        const info = await navigator.mediaCapabilities?.decodingInfo({
-          type: 'file',
-          video: {
-            contentType: probe.type,
-            width: probe.width,
-            height: probe.height,
-            bitrate: 8_000_000,
-            framerate: 30,
-          },
-        });
-        if (info)
-          decoding = {
-            supported: info.supported,
-            smooth: info.smooth,
-            power_efficient: info.powerEfficient,
-          };
-      } catch {
-        decoding = null;
+  const media = document.createElement('video');
+  const probe = async (
+    id: string,
+    type: string,
+    configuration: MediaDecodingConfiguration,
+  ): Promise<CodecResult> => {
+    let decoding: CodecResult['decoding'] = null;
+    try {
+      const info = await navigator.mediaCapabilities?.decodingInfo(configuration);
+      if (info) {
+        decoding = {
+          supported: info.supported,
+          smooth: info.smooth,
+          power_efficient: info.powerEfficient,
+        };
       }
-      return { id: probe.id, can_play_type: video.canPlayType(probe.type), decoding };
-    }),
-  );
+    } catch {
+      decoding = null;
+    }
+    return { id, can_play_type: media.canPlayType(type), decoding };
+  };
+  return Promise.all([
+    ...CODEC_PROBES.map((p) =>
+      probe(p.id, p.type, {
+        type: 'file',
+        video: {
+          contentType: p.type,
+          width: p.width,
+          height: p.height,
+          bitrate: 8_000_000,
+          framerate: 30,
+        },
+      }),
+    ),
+    ...AUDIO_PROBES.map((p) =>
+      probe(p.id, p.type, {
+        type: 'file',
+        audio: { contentType: p.type, channels: '2', bitrate: 128_000, samplerate: 48_000 },
+      }),
+    ),
+  ]);
 }
 
 function webglRenderer(): string | null {

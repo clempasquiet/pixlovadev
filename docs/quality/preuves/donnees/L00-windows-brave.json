@@ -1,0 +1,240 @@
+{
+  "lab_version": "0.1.0",
+  "measured_at": "2026-09-29T20:50:29.446Z",
+  "environment": {
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "hardware_concurrency": 8,
+    "device_memory_gb": 8,
+    "screen": {
+      "width": 2560,
+      "height": 1440
+    },
+    "viewport": {
+      "width": 1920,
+      "height": 951
+    },
+    "device_pixel_ratio": 1,
+    "webgl_renderer": "Brave",
+    "timezone": "Europe/Paris"
+  },
+  "codecs": [
+    {
+      "id": "h264-baseline-1080p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": false,
+        "smooth": false,
+        "power_efficient": false
+      }
+    },
+    {
+      "id": "h264-main-1080p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": false,
+        "smooth": false,
+        "power_efficient": false
+      }
+    },
+    {
+      "id": "h264-high-1080p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": false,
+        "smooth": false,
+        "power_efficient": false
+      }
+    },
+    {
+      "id": "h264-high-2160p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": false,
+        "smooth": false,
+        "power_efficient": false
+      }
+    },
+    {
+      "id": "hevc-main-2160p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": true,
+        "smooth": true,
+        "power_efficient": true
+      }
+    },
+    {
+      "id": "vp9-1080p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": true,
+        "smooth": true,
+        "power_efficient": true
+      }
+    },
+    {
+      "id": "av1-1080p",
+      "can_play_type": "probably",
+      "decoding": {
+        "supported": true,
+        "smooth": true,
+        "power_efficient": false
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "video-loop",
+      "title": "Boucle vidéo plein écran 1920×1080",
+      "status": "skipped",
+      "display": {
+        "width": 1920,
+        "height": 1080,
+        "orientation": 0
+      },
+      "first_frame_ms": null,
+      "frames": null,
+      "errors": [
+        "Aucune vidéo fournie"
+      ]
+    },
+    {
+      "id": "text-qr-clock",
+      "title": "Composition texte, QR code, horloge et formes 1920×1080",
+      "status": "ok",
+      "display": {
+        "width": 1920,
+        "height": 1080,
+        "orientation": 0
+      },
+      "first_frame_ms": 2,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 17,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5566893
+      },
+      "errors": []
+    },
+    {
+      "id": "two-media-zones",
+      "title": "Deux zones média 1920×1080",
+      "status": "ok",
+      "display": {
+        "width": 1920,
+        "height": 1080,
+        "orientation": 0
+      },
+      "first_frame_ms": 83,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 16.9,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5440032
+      },
+      "errors": []
+    },
+    {
+      "id": "portrait-rotated",
+      "title": "Display portrait 1080×1920 sur sortie paysage (rotation 90°)",
+      "status": "ok",
+      "display": {
+        "width": 1080,
+        "height": 1920,
+        "orientation": 90
+      },
+      "first_frame_ms": 13,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 16.9,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5899963
+      },
+      "errors": []
+    },
+    {
+      "id": "led-2688x672",
+      "title": "Bandeau LED 2688×672 avec playlist en fondu",
+      "status": "ok",
+      "display": {
+        "width": 2688,
+        "height": 672,
+        "orientation": 0
+      },
+      "first_frame_ms": 32,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 16.8,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5654460
+      },
+      "errors": []
+    },
+    {
+      "id": "led-3840x480",
+      "title": "Bandeau LED très large 3840×480",
+      "status": "ok",
+      "display": {
+        "width": 3840,
+        "height": 480,
+        "orientation": 0
+      },
+      "first_frame_ms": 15,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 17.6,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5540487
+      },
+      "errors": []
+    },
+    {
+      "id": "led-768x2304",
+      "title": "Totem LED vertical 768×2304",
+      "status": "ok",
+      "display": {
+        "width": 768,
+        "height": 2304,
+        "orientation": 0
+      },
+      "first_frame_ms": 33,
+      "frames": {
+        "frames": 1198,
+        "fps": 59.94,
+        "interval_ms_p50": 16.7,
+        "interval_ms_p95": 16.8,
+        "interval_ms_max": 16.9,
+        "janks_over_50ms": 0,
+        "long_tasks": 0,
+        "video": null,
+        "js_heap_used_bytes": 5405518
+      },
+      "errors": []
+    }
+  ]
+}

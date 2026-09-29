@@ -40,7 +40,7 @@ Pendant l’exécution, observer l’écran : défilement fluide de la vidéo, a
 
 Pour chaque couple profil × runtime, joindre au ticket L06-N (ou à la PR de qualification) :
 
-1. Le fichier JSON produit (environnement, codecs, mesures par scénario).
+1. Le fichier JSON produit (environnement, codecs, mesures par scénario), avec un banc en version 0.1.1 ou ultérieure : la version 0.1.0 déclarait à tort H.264 non supporté par `MediaCapabilities`.
 2. Une fiche remplie :
 
 | Champ | Valeur |
