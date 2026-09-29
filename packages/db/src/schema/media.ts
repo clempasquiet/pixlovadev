@@ -94,6 +94,8 @@ export const media = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     deletedBy: uuid('deleted_by').references(() => users.id),
     purgeAfter: timestamp('purge_after', { withTimezone: true }),
+    /** Purge définitive engagée : les binaires peuvent déjà manquer, restauration refusée. */
+    purgeStartedAt: timestamp('purge_started_at', { withTimezone: true }),
   },
   (t) => [
     foreignKey({

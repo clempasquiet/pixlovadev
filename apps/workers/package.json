@@ -1,0 +1,31 @@
+{
+  "name": "@pixlova/workers",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Workers pixlova : file de tâches PostgreSQL, préparation des médias (sharp, FFmpeg) et balayages.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/main.js",
+    "start:dev": "node --env-file=../api/.env dist/main.js"
+  },
+  "dependencies": {
+    "@pixlova/contracts": "workspace:*",
+    "@pixlova/db": "workspace:*",
+    "@pixlova/storage": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.0",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

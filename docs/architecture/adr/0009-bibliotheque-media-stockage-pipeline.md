@@ -71,7 +71,7 @@ Le worker `apps/workers` traite chaque tâche dans un répertoire temporaire pro
    - `thumbnail` en WebP, 480 px sur le grand côté (`webp-thumb-480-v1`).
 4. Vidéos, avec FFprobe puis FFmpeg :
    - analyse avec délai borné, `-protocol_whitelist file`, sans entrée standard ;
-   - profil de référence **MP4 H.264 (Baseline/Main/High, yuv420p, niveau ≤ 5.1) + AAC ou sans audio** ;
+   - profil de référence **MP4 H.264 (Baseline/Main/High, yuv420p, niveau ≤ 5.2) + AAC ou sans audio** ;
    - vidéo déjà compatible : l’original sert de `playback` (profil `passthrough`), sans transcodage inutile (MED-004) ;
    - sinon, transcodage `h264-aac-mp4-v1` :
      - `libx264` CRF 20, preset `medium`, `yuv420p` ;

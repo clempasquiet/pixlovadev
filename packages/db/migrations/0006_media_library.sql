@@ -57,6 +57,7 @@ CREATE TABLE "media" (
 	"deleted_at" timestamp with time zone,
 	"deleted_by" uuid,
 	"purge_after" timestamp with time zone,
+	"purge_started_at" timestamp with time zone,
 	CONSTRAINT "media_org_id_unique" UNIQUE("organization_id","id"),
 	CONSTRAINT "media_type_check" CHECK ("media"."type" in ('image', 'video')),
 	CONSTRAINT "media_status_check" CHECK ("media"."status" in ('uploading', 'processing', 'ready', 'error')),

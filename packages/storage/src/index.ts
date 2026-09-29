@@ -7,3 +7,4 @@ export {
 } from './local.js';
 export { S3ObjectStorage, type S3StorageOptions } from './s3.js';
 export { createStorageFromEnv } from './config.js';
+export { mediaObjectKey, uploadObjectKey } from './keys.js';

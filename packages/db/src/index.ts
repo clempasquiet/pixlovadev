@@ -41,3 +41,14 @@ export async function withTenant<T>(
     return work(tx);
   });
 }
+
+export {
+  claimJob,
+  completeJob,
+  enqueueJob,
+  failJob,
+  renewJobLease,
+  type ClaimedJob,
+  type NewJob,
+} from './jobs.js';
+export { adjustUsage, lockUsage, type UsageCategory } from './usage.js';
