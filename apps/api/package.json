@@ -18,7 +18,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "node dist/server.js",
-    "start:dev": "node --env-file=.env dist/server.js"
+    "start:dev": "node --env-file=.env dist/server.js",
+    "simulate-player": "node scripts/simulate-player.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.2",

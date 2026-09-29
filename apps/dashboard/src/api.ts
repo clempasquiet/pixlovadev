@@ -32,8 +32,13 @@ export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
 }
 
-export async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { accept: 'application/json' };
+export async function api<T = unknown>(
+  method: string,
+  path: string,
+  body?: unknown,
+  extraHeaders: Record<string, string> = {},
+): Promise<T> {
+  const headers: Record<string, string> = { accept: 'application/json', ...extraHeaders };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (activeOrganization) headers['x-organization-id'] = activeOrganization;
   let response: Response;
@@ -76,4 +81,9 @@ export interface Me {
 export interface Grant {
   role: string;
   scope: { type: 'organization' } | { type: 'sites'; site_ids: string[] };
+}
+
+/** Clé d’idempotence d’une action utilisateur (API-005) : une par clic, réutilisée en cas de reprise. */
+export function idempotencyKey(): Record<string, string> {
+  return { 'idempotency-key': crypto.randomUUID() };
 }

@@ -1,6 +1,6 @@
 # Lancer pixlova en local (développement)
 
-Ce guide démarre l’API et le dashboard sur votre poste pour essayer le parcours disponible : compte, organisation, sites, membres, invitations et audit. Il ne concerne ni la recette ni la production (lot L09-I).
+Ce guide démarre l’API et le dashboard sur votre poste pour essayer le parcours disponible : compte, organisation, sites, membres, invitations, audit, appairage d’un Player simulé, Displays et remplacement. Il ne concerne ni la recette ni la production (lot L09-I).
 
 ## Prérequis
 
@@ -55,6 +55,16 @@ pnpm --filter @pixlova/dashboard run dev      # dashboard sur http://localhost:5
 ```
 
 Ouvrir **http://localhost:5173**, puis « Créer un compte ». Les emails ne sont pas envoyés en développement : ils s’affichent dans le terminal de l’API. Copiez-y le lien de confirmation, puis plus tard les liens d’invitation.
+
+## Simuler un Player
+
+En attendant les Players natif et Web (lot L06), un simulateur utilise le vrai protocole d’appairage et d’authentification. Il utilise une clé Ed25519 locale, envoie un heartbeat toutes les 30 s et déclare deux sorties virtuelles :
+
+```sh
+pnpm --filter @pixlova/api run simulate-player
+```
+
+Il affiche un code `XXXX-XXXX` à saisir dans **Players → Appairer un Player**. Créez ensuite un Display dans **Écrans**, puis affectez-lui une sortie du Player simulé : le terminal affiche l’affectation reçue. Lancez un second simulateur pour essayer le remplacement d’un Player. Arrêtez le simulateur (Ctrl+C) : après 90 secondes, le Player apparaît hors ligne avec l’heure du dernier contact.
 
 ## Arrêter et repartir de zéro
 
