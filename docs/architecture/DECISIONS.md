@@ -24,6 +24,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-008](adr/0008-appairage-players-displays.md) | Appairage par code, clé Ed25519 et jeton court des Players, slots sous verrou, affectations générationnelles, idempotence | L02 |
 | [ADR-009](adr/0009-bibliotheque-media-stockage-pipeline.md) | Stockage objet abstrait (S3 ou local signé), upload en quarantaine, file de tâches PostgreSQL à bail, pipeline sharp/FFmpeg, quota sur les originaux, corbeille, visibilité par site | L03 |
 | [ADR-010](adr/0010-compositions-editeur-templates.md) | Document d’édition distinct du document résolu, six polices OFL empaquetées, brouillon à concurrence optimiste, versions immuables, validation avant publication, templates versionnés avec le code, comparaison Chromium / WebKitGTK | L04 |
+| [ADR-011](adr/0011-programmation-compilation-manifests.md) | Playlists et programmes (planning, campagne, override) en brouillon + versions immuables, heures locales et DST, arbitrage unique, compilation idempotente par révision désirée, préflight, états désiré/préparé/appliqué | L05 |
 
 ## ADR proposés (en attente de preuves)
 
