@@ -58,6 +58,8 @@ jobs:
         run: pnpm --filter @pixlova/render-lab exec playwright-core install --with-deps chromium
       - name: Banc de rendu dans Chromium headless (géométrie, pas de qualification matérielle)
         run: pnpm --filter @pixlova/render-lab run test:browser
+      - name: Dashboard de bout en bout (Chromium, API et PostgreSQL réels)
+        run: pnpm --filter @pixlova/dashboard run test:browser
 
   rust:
     name: Rust (fmt, clippy, tests)

@@ -1,13 +1,10 @@
-import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { createTestDatabase, type TestDatabase } from '@pixlova/db/testing';
 import { buildPublicApp } from '../../src/app.js';
-import { defaultSecurityConfig, type SecurityConfig } from '../../src/config.js';
+import type { SecurityConfig } from '../../src/config.js';
 import type { Services } from '../../src/http/services.js';
-import { DataCipher } from '../../src/lib/crypto.js';
-import { dispatchEmails, MemoryMailer } from '../../src/lib/email.js';
-import { fixedEntitlements } from '../../src/lib/entitlements.js';
-import { MemoryRateLimiter } from '../../src/lib/rate-limit.js';
+import type { MemoryMailer } from '../../src/lib/email.js';
+import { createTestServices } from '../../src/testing.js';
 import { currentStep, totpAt } from '../../src/lib/totp.js';
 
 export const ORIGIN = 'https://app.pixlova.test';
@@ -25,44 +22,22 @@ export interface Harness {
 
 export async function createHarness(security: Partial<SecurityConfig> = {}): Promise<Harness> {
   const database = await createTestDatabase();
-  const clock = {
-    now: new Date(),
-    advance(ms: number) {
-      this.now = new Date(this.now.getTime() + ms);
-    },
-  };
-  let maxUsers = 1;
-  const mailer = new MemoryMailer();
-  const services: Services = {
-    db: database.app,
-    system: database.system,
-    cipher: new DataCipher([{ kid: 'test', key: randomBytes(32) }]),
-    limiter: new MemoryRateLimiter(() => clock.now.getTime()),
-    entitlements: { maxUsers: async (orgId) => fixedEntitlements(maxUsers).maxUsers(orgId) },
-    security: {
-      ...defaultSecurityConfig({}),
-      allowedOrigins: [ORIGIN],
-      appBaseUrl: ORIGIN,
-      cookieSecure: true,
-      requireMfaForAdmins: false,
-      ...security,
-    },
-    now: () => clock.now,
-  };
-  const app = buildPublicApp({ services });
+  const test = createTestServices(database, {
+    allowedOrigins: [ORIGIN],
+    appBaseUrl: ORIGIN,
+    cookieSecure: true,
+    ...security,
+  });
+  const app = buildPublicApp({ services: test.services });
   await app.ready();
   return {
     app,
     database,
-    services,
-    mailer,
-    clock,
-    setMaxUsers(value) {
-      maxUsers = value;
-    },
-    async flushEmails() {
-      await dispatchEmails(database.system, services.cipher, mailer, 100);
-    },
+    services: test.services,
+    mailer: test.mailer,
+    clock: test.clock,
+    setMaxUsers: test.setMaxUsers,
+    flushEmails: test.flushEmails,
     async close() {
       await app.close();
       await database.close();
