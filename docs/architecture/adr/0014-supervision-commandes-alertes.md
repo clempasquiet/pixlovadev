@@ -132,7 +132,29 @@ Une valeur indisponible, par exemple sur le Player Web, reste « non disponible 
 
 - **Journaux structurés** (Pino), avec en-têtes et champs expurgés : `authorization`, `cookie`, jetons, secrets de suivi, URL signées, requêtes de stockage.
 - **Métriques** au format Prometheus sur le **listener interne** seulement (`/internal/v1/metrics`), avec des labels à cardinalité bornée : route **modèle**, classe de statut, type de job, état. Aucun identifiant de Player ou d’organisation en label ; le détail par Player reste dans la base et les vues.
-- **Runbooks** : `docs/operations/RUNBOOKS.md`.
+- **Runbooks** : [RUNBOOKS](../../operations/RUNBOOKS.md).
+
+## Mise en œuvre (L07)
+
+- **Événements émis** :
+  - Player natif : `AGENT_STARTED`, `RENDERER_CONNECTED`, `RENDERER_DISCONNECTED`, `PLAYBACK_ERROR` (à la transition vers l’erreur), `CLOUD_UNREACHABLE`, `CLOUD_RESTORED`, `CLOCK_DRIFT` ;
+  - Player Web : les mêmes, avec `PLAYER_STARTED` au lieu d’`AGENT_STARTED` ;
+  - cloud : `PRESENCE_LOST` (worker, daté de l’échéance de présence), `PRESENCE_RESTORED`, `COMMAND_*`, `SCREENSHOT_RECEIVED`, `INCIDENT_OPENED`, `INCIDENT_RESOLVED`, `EVENTS_DROPPED`.
+- **Files locales** : 10 000 événements (natif, SQLite) et 2 000 (Web, IndexedDB) **[à valider]**. Un lot rejoué n’est compté qu’une fois.
+- **Statut complet** : toutes les 5 min **[à valider]** et sur `GET_STATUS`. Le Player Web ne mesure ni disque, ni CPU, ni température (`null`).
+- **Chronologie d’un Display** : les événements d’un Player sans Display n’y figurent que pendant l’affectation de ce Player à ce Display.
+- **Commandes** :
+  - redistribuées tant qu’elles ne sont pas accusées ; après un redémarrage, une commande inscrite mais jamais lancée est exécutée à sa redistribution, une commande lancée sans résultat est déclarée `unknown` ;
+  - une enveloppe invalide reçoit un résultat `rejected` (sans effet), pour cesser d’être redistribuée ;
+  - Player Web : `RESTART_RENDERER` recharge la page une fois le résultat transmis.
+- **Capture native** : message IPC `SCREENSHOT`, instantané de la vue WebKitGTK encodé en PNG. Un renderer sans affichage refuse (`SCREENSHOT_UNSUPPORTED`) et ne déclare pas la capacité. La capture sous Windows (WebView2) n’est pas implémentée.
+- **Incidents** :
+  - `manifest_not_applied` ne s’ouvre que si le Player est en ligne : sinon, c’est `player_offline` qui s’applique ;
+  - une cible disparue (Player révoqué, Display désaffecté) clôt l’incident ;
+  - la maintenance retient les ouvertures et les rappels ; la résolution d’un incident déjà annoncé est toujours annoncée.
+- **Corrélation plateforme** : Players actifs dans les dernières 24 h ; perte de contact récente = silence entre 90 s et (seuil hors ligne + 5 min).
+- **Notifications** : le worker écrit `alert.notification` dans `outbox_events`, dans la transaction de l’incident. L’API, qui détient la clé de chiffrement de l’outbox email, les convertit en emails.
+- **Rétentions** : captures 24 h ; chronologie 90 j **[à valider]** (DEC-11).
 
 ## Conséquences
 
@@ -155,3 +177,17 @@ Une valeur indisponible, par exemple sur le Player Web, reste « non disponible 
   - commande vérifiée, dédupliquée, reprise après redémarrage ;
   - capture réelle WebKitGTK sous Xvfb.
 - Bout en bout : commande et capture depuis le dashboard jusqu’au Player réel et retour.
+
+Réalisé dans L07 :
+
+| Preuve | Emplacement |
+|---|---|
+| API : permissions, idempotence, expiration, annulation, doublons, résultat d’un autre Player, isolation, capture altérée ou trop grande, consultation auditée, chronologie paginée, notifications ciblées, maintenance, métriques | `apps/api/test/supervision.integration.test.ts`, `listeners.test.ts` |
+| Worker : ouverture unique sous concurrence, résolution stable, rappel, cible disparue, maintenance, hystérésis disque, échec de livraison, erreurs répétées, corrélation plateforme, purge des captures | `apps/workers/test/alerts.test.ts` |
+| Agent natif : commandes vérifiées, refusées, dédupliquées, reprises après redémarrage ; file d’événements conservée hors ligne puis rattrapée | `native/agent/tests/commands.rs` |
+| Capture WebKitGTK réelle sous Xvfb | `native/agent/tests/renderer.rs` |
+| Player Web dans Chromium : commandes, statut, événements, capture refusée | `apps/web-player/test/web-player.browser.test.ts` |
+| Dashboard dans Chromium : signaux, commande, capture, incident, maintenance | `apps/dashboard/test/e2e/supervision.browser.test.ts` |
+| Bout en bout avec l’agent et le renderer réels (sans affichage et WebKitGTK) | `apps/api/scripts/e2e-native-player.mjs` |
+
+Restent à prouver sur matériel : les essais 17 à 20 de [PLAYER-NATIF](../../quality/PLAYER-NATIF.md).

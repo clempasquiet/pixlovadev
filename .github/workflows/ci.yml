@@ -134,7 +134,7 @@ jobs:
           pnpm --filter @pixlova/render-lab run compare-render \
             "$PWD/apps/render-lab/test-results/measure-chromium.json" "$RUNNER_TEMP/measure-webkit.json" \
             --markdown "$GITHUB_STEP_SUMMARY"
-      - name: Agent + renderer WebKitGTK jusqu’à la première image (Xvfb)
+      - name: Agent + renderer WebKitGTK jusqu’à la première image et à la capture (Xvfb)
         run: |
           cargo build -p pixlova-agent -p pixlova-renderer --locked
           PIXLOVA_TEST_RENDERER="$PWD/target/debug/pixlova-renderer" \

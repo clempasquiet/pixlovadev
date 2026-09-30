@@ -24,7 +24,7 @@ target/debug/pixlova-agent run --data-dir work/player --api-url http://127.0.0.1
 target/debug/pixlova-agent diagnose --data-dir work/player   # rapport JSON sans secret
 ```
 
-`work/player-trust/manifest-keys.json` contient la clé **publique** de signature des manifests du worker : `{"keys":[{"kid":"<PIXLOVA_MANIFEST_KEY_ID>","public_key":"<base64url>"}]}`. Voir [Lancer en local](../docs/dev/LANCER-EN-LOCAL.md#essayer-le-player-natif-linux).
+`work/player-trust/manifest-keys.json` contient la clé **publique** de signature des manifests du worker : `{"keys":[{"kid":"<PIXLOVA_MANIFEST_KEY_ID>","public_key":"<base64url>"}]}`. `command-keys.json`, au même format, contient la clé publique des commandes distantes (`PIXLOVA_COMMAND_KEY_ID`), distincte ([ADR-014](../docs/architecture/adr/0014-supervision-commandes-alertes.md)) ; une même clé dans deux fichiers est refusée au démarrage. Voir [Lancer en local](../docs/dev/LANCER-EN-LOCAL.md#essayer-le-player-natif-linux).
 
 ## Tests
 

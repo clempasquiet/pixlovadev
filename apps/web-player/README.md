@@ -13,5 +13,5 @@ PIXLOVA_TEST_DATABASE_URL=… pnpm --filter @pixlova/web-player run test:browser
 
 - Servir `dist/` en HTTPS, idéalement **sur la même origine que l’API** (`/player/v1` et le stockage relayés) : aucun CORS.
 - Sinon, déclarer l’origine du Player dans `PIXLOVA_WEB_PLAYER_ORIGINS` côté API, et `{"api_url": "https://api…"}` dans `dist/config.json`.
-- Déposer les clés **publiques** des manifests dans `dist/trust/manifest-keys.json` : `{"keys":[{"kid":"…","public_key":"<base64url>"}]}`. Sans ce fichier, aucun contenu n’est accepté et le service worker ne s’installe pas.
+- Déposer les clés **publiques** des manifests dans `dist/trust/manifest-keys.json` : `{"keys":[{"kid":"…","public_key":"<base64url>"}]}`. Sans ce fichier, aucun contenu n’est accepté et le service worker ne s’installe pas. `dist/trust/command-keys.json` (clé publique des commandes, facultatif) : sans lui, toute commande distante est refusée.
 - Mode kiosque conseillé : Chrome `--kiosk --autoplay-policy=no-user-gesture-required`.
