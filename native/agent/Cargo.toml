@@ -16,6 +16,10 @@ path = "src/lib.rs"
 name = "pixlova-agent"
 path = "src/main.rs"
 
+[[bin]]
+name = "pixlova-launcher"
+path = "src/bin/pixlova-launcher.rs"
+
 [dependencies]
 pixlova-contracts = { path = "../contracts" }
 base64 = "0.22.1"

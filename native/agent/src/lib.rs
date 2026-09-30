@@ -18,12 +18,14 @@ pub mod config;
 pub mod diagnostics;
 pub mod identity;
 pub mod ipc;
+pub mod launcher;
 pub mod pipeline;
 pub mod platform;
 pub mod runtime;
 pub mod store;
 pub mod supervisor;
 pub mod trust;
+pub mod updater;
 
 /// Version de l’agent, publiée dans les capacités et les rapports.
 pub const AGENT_VERSION: &str = env!("CARGO_PKG_VERSION");

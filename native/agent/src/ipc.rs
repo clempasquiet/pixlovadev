@@ -40,6 +40,8 @@ pub enum RendererEvent {
     Connected {
         connection: u64,
         pid: Option<i32>,
+        /// Version déclarée par le renderer dans `HELLO`.
+        version: Option<String>,
     },
     Disconnected {
         connection: u64,
@@ -211,6 +213,11 @@ impl RendererLink {
                 let _ = self.events.send(RendererEvent::Connected {
                     connection,
                     pid: pid.flatten(),
+                    version: envelope
+                        .payload
+                        .get("renderer_version")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
                 });
             }
             MessageType::Ready | MessageType::Status | MessageType::Error

@@ -207,8 +207,9 @@ async fn watchdog_loop(
 
 /// Arrêt forcé d’un renderer du même compte (NAT-003) ; le processus est identifié par le
 /// noyau via `SO_PEERCRED`, jamais par ses propres déclarations.
-async fn kill_process(pid: i32) {
-    if pid <= 1 {
+pub async fn kill_process(pid: i32) {
+    // Jamais init ni l’agent lui-même (renderer factice dans le même processus en test).
+    if pid <= 1 || pid as u32 == std::process::id() {
         return;
     }
     let status = tokio::process::Command::new("kill")

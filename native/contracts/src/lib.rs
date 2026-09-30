@@ -12,6 +12,7 @@ pub mod instant;
 pub mod ipc;
 pub mod manifest;
 pub mod player_auth;
+pub mod release;
 pub mod schema;
 pub mod signature;
 pub mod strict_json;

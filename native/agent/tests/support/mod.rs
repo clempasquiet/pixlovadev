@@ -551,7 +551,7 @@ pub async fn fake_renderer(
         MessageType::Hello,
         "h".into(),
         None,
-        json!({ "renderer_version": "test", "engine": "test" }),
+        json!({ "renderer_version": env!("CARGO_PKG_VERSION"), "engine": "test" }),
     );
     write
         .write_all(format!("{}\n", hello.encode()).as_bytes())

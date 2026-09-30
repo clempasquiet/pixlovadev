@@ -11,6 +11,8 @@ Commandes :
   run        démarre l’agent (appairage, synchronisation, diffusion, supervision)
   diagnose   affiche un rapport JSON local, sans secret
   init       crée l’identité de l’appareil et la base locale
+  update apply --release <release.json> --package <paquet.tar>
+             vérifie et installe une release signée ; active au prochain démarrage
   version    affiche la version
 
 Options communes :
@@ -28,6 +30,9 @@ Options de run :
 
 struct Cli {
     command: String,
+    positional: Vec<String>,
+    release: Option<PathBuf>,
+    package: Option<PathBuf>,
     data_dir: Option<PathBuf>,
     overrides: CliOverrides,
 }
@@ -37,6 +42,9 @@ fn parse(args: Vec<String>) -> Result<Cli, String> {
     let command = args.next().ok_or_else(|| USAGE.to_owned())?;
     let mut cli = Cli {
         command,
+        positional: Vec::new(),
+        release: None,
+        package: None,
         data_dir: None,
         overrides: CliOverrides::default(),
     };
@@ -63,6 +71,9 @@ fn parse(args: Vec<String>) -> Result<Cli, String> {
             "--virtual-output" => cli.overrides.virtual_outputs.push(value()?),
             "--sync-interval" => cli.overrides.sync_interval_seconds = Some(number(value()?)?),
             "--reserve-bytes" => cli.overrides.reserve_bytes = Some(number(value()?)?),
+            "--release" => cli.release = Some(PathBuf::from(value()?)),
+            "--package" => cli.package = Some(PathBuf::from(value()?)),
+            other if !other.starts_with('-') => cli.positional.push(other.to_owned()),
             other => return Err(format!("option inconnue {other}\n\n{USAGE}")),
         }
     }
@@ -99,6 +110,9 @@ fn main() -> ExitCode {
             );
         }),
         "run" => run(&cli),
+        "update" if cli.positional.first().map(String::as_str) == Some("apply") => {
+            update_apply(&cli)
+        }
         other => Err(format!("commande inconnue {other}\n\n{USAGE}")),
     };
     match result {
@@ -126,6 +140,45 @@ fn init(cli: &Cli) -> Result<(), String> {
     println!("installation {installation}");
     println!("clé publique {}", identity.public_key_b64u());
     Ok(())
+}
+
+fn update_apply(cli: &Cli) -> Result<(), String> {
+    let config = config(cli)?;
+    let (Some(release), Some(package)) = (&cli.release, &cli.package) else {
+        return Err("--release et --package sont requis".into());
+    };
+    let raw = std::fs::read_to_string(release).map_err(|e| e.to_string())?;
+    let trust =
+        pixlova_agent::trust::TrustAnchors::load(&config.trust_dir).map_err(|e| e.to_string())?;
+    let now = pixlova_agent::clock::format_instant(pixlova_agent::clock::Clock::now_millis(
+        &pixlova_agent::clock::SystemClock,
+    ));
+    let store = pixlova_agent::store::Store::open(&config.db_path()).map_err(|e| e.to_string())?;
+    match pixlova_agent::updater::apply(
+        &config.data_dir,
+        &trust.releases,
+        &raw,
+        package,
+        AGENT_VERSION,
+        &now,
+    ) {
+        Ok(installed) => {
+            let _ = store.record_update(
+                &installed.release.release_id,
+                &installed.release.version,
+                "pending",
+                None,
+                &now,
+            );
+            println!(
+                "version {} installée dans {} ; elle sera essayée au prochain démarrage du service",
+                installed.release.version,
+                installed.directory.display()
+            );
+            Ok(())
+        }
+        Err(error) => Err(format!("{} ({})", error, error.code())),
+    }
 }
 
 /// Journaux : sortie d’erreur (journald) et fichiers quotidiens, 7 au plus.

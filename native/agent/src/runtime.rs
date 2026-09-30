@@ -127,6 +127,7 @@ impl Runtime {
         self.store
             .installation_id(&now)
             .map_err(init("installation"))?;
+        self.import_update_history();
         let recovered = self.pipeline.recover_intents().map_err(init("reprise"))?;
         if recovered > 0 {
             tracing::warn!(recovered, "activations interrompues reprises");
@@ -161,15 +162,51 @@ impl Runtime {
         Ok(())
     }
 
+    /// Résultats du lanceur (installée, promue, revenue en arrière) conservés en base pour
+    /// le diagnostic et leur future déclaration au cloud.
+    fn import_update_history(&self) {
+        let Ok(state) = crate::updater::LauncherState::load(&self.config.data_dir) else {
+            return;
+        };
+        for entry in state.history {
+            if let Some(release_id) = &entry.release_id {
+                let _ = self.store.record_update(
+                    release_id,
+                    &entry.version,
+                    &entry.result,
+                    entry.reason.as_deref(),
+                    &entry.at,
+                );
+            }
+        }
+    }
+
     // --- Renderer -------------------------------------------------------------------------
 
     async fn renderer_events(self: Arc<Self>) {
         let mut events = self.link.subscribe();
         let mut healthy = false;
+        let mut renderer_version_checked = false;
         loop {
             match events.recv().await {
-                Ok(RendererEvent::Connected { pid, .. }) => {
-                    tracing::info!(?pid, "renderer connecté");
+                Ok(RendererEvent::Connected { pid, version, .. }) => {
+                    tracing::info!(?pid, ?version, "renderer connecté");
+                    // Après une mise à jour, le renderer de la session graphique peut être
+                    // encore l’ancien : il est arrêté une fois et relancé depuis `active`.
+                    if matches!(self.config.renderer, crate::config::RendererMode::External)
+                        && version.as_deref() != Some(crate::AGENT_VERSION)
+                        && !renderer_version_checked
+                    {
+                        renderer_version_checked = true;
+                        if let Some(pid) = pid {
+                            tracing::warn!(
+                                ?version,
+                                "version du renderer différente : redémarrage"
+                            );
+                            crate::supervisor::kill_process(pid).await;
+                            continue;
+                        }
+                    }
                     self.configure_renderer().await;
                     let _guard = self.activation.lock().await;
                     if let Err(error) = self.pipeline.restore_all().await {
