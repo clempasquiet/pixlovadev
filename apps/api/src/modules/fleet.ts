@@ -22,6 +22,7 @@ import { audit } from '../lib/audit.js';
 import { idempotencyScope, idempotent } from '../lib/idempotency.js';
 import { assertTimezone } from './organizations.js';
 import { pairingCodeHash } from './player-api.js';
+import { recompile } from './content-graph.js';
 import { Strict, Uuid } from './schemas.js';
 
 const Name = Type.String({ minLength: 1, maxLength: 120 });
@@ -762,6 +763,8 @@ export function fleetRoutes(app: FastifyInstance, services: Services): void {
           })
           .where(eq(schema.displays.id, id))
           .returning();
+        // Site, fuseau ou état d’activité changent la programmation (ADR-011).
+        await recompile(tx, member, [id], 'display.updated');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',
@@ -901,6 +904,7 @@ export function fleetRoutes(app: FastifyInstance, services: Services): void {
               previous_output_id: current?.playerOutputId ?? null,
             },
           });
+          await recompile(tx, member, [id], 'display.assignment_changed');
           await audit(tx, {
             organizationId: member.organizationId,
             actorType: 'user',
@@ -963,6 +967,7 @@ export function fleetRoutes(app: FastifyInstance, services: Services): void {
           .returning({ id: schema.displayAssignments.id });
         if (ended.length === 0)
           throw new ApiError(404, 'RESOURCE_NOT_FOUND', 'Ce Display n’est pas affecté.');
+        await recompile(tx, member, [id], 'display.unassigned');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',
@@ -1087,6 +1092,8 @@ export function fleetRoutes(app: FastifyInstance, services: Services): void {
             })),
           );
         }
+        // Appartenances réévaluées à chaque compilation (PLN-007).
+        await recompile(tx, member, 'all', 'display_group.members_changed');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',

@@ -100,15 +100,17 @@ export async function loadSnapshot(
       group_ids: groups.map((g) => g.id).sort(),
       fallback: fallbackRef(display),
     },
-    assignment: assignment
-      ? {
-          player_id: assignment.playerId,
-          generation: assignment.generation.toString(),
-          capabilities: validateCapabilities(assignment.capabilities)
-            ? (assignment.capabilities as PlayerCapabilities)
-            : null,
-        }
-      : null,
+    // Un Display inactif ou archivé n’est pas diffusé : aucun manifest (DSP-001).
+    assignment:
+      assignment && display.lifecycleStatus === 'active'
+        ? {
+            player_id: assignment.playerId,
+            generation: assignment.generation.toString(),
+            capabilities: validateCapabilities(assignment.capabilities)
+              ? (assignment.capabilities as PlayerCapabilities)
+              : null,
+          }
+        : null,
     programs: programRows
       .map(({ program, version }) => ({
         id: program.id,

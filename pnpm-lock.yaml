@@ -211,6 +211,9 @@ importers:
       '@pixlova/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
+      '@pixlova/scheduling':
+        specifier: workspace:*
+        version: link:../../packages/scheduling
       '@pixlova/storage':
         specifier: workspace:*
         version: link:../../packages/storage

@@ -368,3 +368,29 @@ export async function scheduleRenewals(system: Database, now: Date): Promise<num
   }
   return count;
 }
+
+/**
+ * Le média est-il épinglé par un manifest utilisable (NAT-009, DATA-009) : dernier manifest
+ * désiré d’un Display, ou dernier manifest déclaré appliqué ? Sa purge est alors refusée.
+ */
+export async function isMediaPinnedByManifests(
+  tx: Transaction | Database,
+  mediaId: string,
+): Promise<boolean> {
+  const result = await tx.execute(sql`
+    select 1 from manifest_assets ma
+    join media_assets a on a.id = ma.media_asset_id
+    join manifests m on m.id = ma.manifest_id
+    where a.media_id = ${mediaId}
+      and (
+        m.version = (select max(m2.version) from manifests m2 where m2.display_id = m.display_id)
+        or m.id = (
+          select d.manifest_id from manifest_deliveries d
+          join manifests m3 on m3.id = d.manifest_id
+          where d.display_id = m.display_id and d.applied_at is not null
+          order by m3.version desc limit 1
+        )
+      )
+    limit 1`);
+  return result.rows.length > 0;
+}
