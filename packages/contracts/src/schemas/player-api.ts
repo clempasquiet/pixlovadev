@@ -1,6 +1,9 @@
 import Type, { type Static } from 'typebox';
 import {
+  Code,
+  Detail,
   Instant,
+  SizeBytes,
   Orientation,
   PixelSize,
   Sha256Hex,
@@ -128,6 +131,8 @@ export const PlayerConfig = Type.Object(
           display_id: Uuid,
           assignment_generation: VersionString,
           output_key: Type.String({ minLength: 1, maxLength: 128 }),
+          /** Version du dernier manifest désiré ; `null` tant qu’aucun n’est compilé. */
+          manifest_version: Type.Union([VersionString, Type.Null()]),
           display: Type.Object(
             {
               name: Type.String({ maxLength: 120 }),
@@ -162,3 +167,49 @@ export const HeartbeatResponse = Type.Object(
   Strict,
 );
 export type HeartbeatResponse = Static<typeof HeartbeatResponse>;
+
+/**
+ * États d’une livraison de manifest (FON-002, ADR-011). `received` est observé par le
+ * cloud ; les états suivants ne sont déclarés que par le Player.
+ */
+export const MANIFEST_DELIVERY_STATES = [
+  'desired',
+  'received',
+  'downloading',
+  'ready',
+  'applied',
+  'failed',
+  'superseded',
+] as const;
+export type ManifestDeliveryState = (typeof MANIFEST_DELIVERY_STATES)[number];
+
+/** POST /player/v1/manifests/:id/status */
+export const ManifestStatusRequest = Type.Object(
+  {
+    state: Type.Union([
+      Type.Literal('downloading'),
+      Type.Literal('ready'),
+      Type.Literal('applied'),
+      Type.Literal('failed'),
+    ]),
+    observed_at: Instant,
+    error_code: Type.Union([Code, Type.Null()]),
+    detail: Type.Union([Detail, Type.Null()]),
+  },
+  Strict,
+);
+export type ManifestStatusRequest = Static<typeof ManifestStatusRequest>;
+
+/** GET /player/v1/assets/:id/url (PROTO-004) : URL courte, jamais journalisée. */
+export const AssetUrlResponse = Type.Object(
+  {
+    asset_id: Uuid,
+    url: Type.String({ minLength: 1, maxLength: 4096 }),
+    expires_at: Instant,
+    size_bytes: SizeBytes,
+    sha256: Sha256Hex,
+    range_supported: Type.Boolean(),
+  },
+  Strict,
+);
+export type AssetUrlResponse = Static<typeof AssetUrlResponse>;
