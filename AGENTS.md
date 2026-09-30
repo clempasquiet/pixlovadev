@@ -44,6 +44,7 @@ corepack enable                 # une fois ; pnpm épinglé par package.json
 pnpm install --frozen-lockfile
 pnpm run check                  # docs, format, lint, build, typecheck, tests TypeScript
                                 # tests de base : PIXLOVA_TEST_DATABASE_URL (voir packages/db)
+                                # worker média : FFmpeg ; pilote S3 : PIXLOVA_TEST_S3_ENDPOINT (voir apps/workers)
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

@@ -1,12 +1,14 @@
 import { Redis } from 'ioredis';
 import pg from 'pg';
+import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import { createDatabase } from '@pixlova/db';
+import { createStorageFromEnv } from '@pixlova/storage';
 import { buildInternalApp, buildPublicApp } from './app.js';
 import { loadConfig } from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
 import { ConsoleMailer, dispatchEmails, type Mailer } from './lib/email.js';
-import { FREE_ENTITLEMENTS, fixedEntitlements } from './lib/entitlements.js';
+import { FREE_ENTITLEMENTS, FREE_STORAGE_BYTES, fixedEntitlements } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
 
 function required(name: string): string {
@@ -33,10 +35,9 @@ if (process.env.PIXLOVA_MAILER === 'console') {
 
 const devMaxUsers = process.env.PIXLOVA_DEV_MAX_USERS;
 const devDisplaySlots = process.env.PIXLOVA_DEV_DISPLAY_SLOTS;
-if ((devMaxUsers || devDisplaySlots) && production) {
-  throw new Error(
-    'PIXLOVA_DEV_MAX_USERS et PIXLOVA_DEV_DISPLAY_SLOTS sont interdits en production.',
-  );
+const devStorageBytes = process.env.PIXLOVA_DEV_STORAGE_BYTES;
+if ((devMaxUsers || devDisplaySlots || devStorageBytes) && production) {
+  throw new Error('Les variables PIXLOVA_DEV_* sont interdites en production.');
 }
 
 const services: Services = {
@@ -45,10 +46,16 @@ const services: Services = {
   cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
   limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
   entitlements:
-    devMaxUsers || devDisplaySlots
-      ? fixedEntitlements(Number(devMaxUsers ?? 1), Number(devDisplaySlots ?? 1))
+    devMaxUsers || devDisplaySlots || devStorageBytes
+      ? fixedEntitlements(
+          Number(devMaxUsers ?? 1),
+          Number(devDisplaySlots ?? 1),
+          devStorageBytes ? Number(devStorageBytes) : FREE_STORAGE_BYTES,
+        )
       : FREE_ENTITLEMENTS,
   security: config.security,
+  storage: createStorageFromEnv(),
+  media: { ...config.media, limits: DEFAULT_MEDIA_LIMITS },
   now: () => new Date(),
 };
 

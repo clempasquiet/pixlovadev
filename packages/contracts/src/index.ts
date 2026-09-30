@@ -18,3 +18,4 @@ export { validator, describeErrors } from './validate.js';
 export * from './manifest.js';
 export * from './command.js';
 export * from './player-auth.js';
+export * from './media.js';

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   bigserial,
   check,
   index,
@@ -8,11 +9,13 @@ import {
   jsonb,
   pgPolicy,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { appRole, createdAt, currentOrganization, id } from './common.js';
+import { appRole, createdAt, currentOrganization, id, tenantPolicy, updatedAt } from './common.js';
 import { organizations } from './identity.js';
 
 /**
@@ -87,5 +90,80 @@ export const outboxEvents = pgTable(
       using: sql`${t.organizationId} = ${currentOrganization}`,
       withCheck: sql`${t.organizationId} = ${currentOrganization}`,
     }),
+  ],
+).enableRLS();
+
+export const JOB_STATES = ['queued', 'running', 'succeeded', 'failed'] as const;
+
+/**
+ * File de tâches durable (ARC-004, ADR-009). La ligne est la source de vérité : écrite
+ * dans la transaction métier, réclamée par un worker (`FOR UPDATE SKIP LOCKED`) sous un
+ * bail qui expire en cas de panne. Une seule tâche active par (`kind`, `dedupe_key`).
+ * `organization_id` NULL : tâche système, invisible du rôle applicatif.
+ */
+export const jobs = pgTable(
+  'jobs',
+  {
+    id: id(),
+    organizationId: uuid('organization_id').references(() => organizations.id),
+    kind: text('kind').notNull(),
+    dedupeKey: text('dedupe_key').notNull(),
+    payload: jsonb('payload')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    state: text('state', { enum: JOB_STATES }).notNull().default('queued'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    runAfter: timestamp('run_after', { withTimezone: true }).notNull().defaultNow(),
+    leaseOwner: text('lease_owner'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('jobs_active_dedupe_unique')
+      .on(t.kind, t.dedupeKey)
+      .where(sql`${t.state} in ('queued', 'running')`),
+    index('jobs_queued_idx')
+      .on(t.runAfter)
+      .where(sql`${t.state} = 'queued'`),
+    index('jobs_running_lease_idx')
+      .on(t.leaseExpiresAt)
+      .where(sql`${t.state} = 'running'`),
+    index('jobs_org_kind_idx').on(t.organizationId, t.kind, t.createdAt),
+    check('jobs_state_check', sql`${t.state} in ('queued', 'running', 'succeeded', 'failed')`),
+    check('jobs_attempts_check', sql`${t.attempts} >= 0 and ${t.maxAttempts} >= 1`),
+    pgPolicy('tenant_isolation', {
+      as: 'permissive',
+      for: 'all',
+      to: appRole,
+      using: sql`${t.organizationId} = ${currentOrganization}`,
+      withCheck: sql`${t.organizationId} = ${currentOrganization}`,
+    }),
+  ],
+).enableRLS();
+
+/**
+ * Compteurs d’usage réconciliables (DATA-008) : `observed_value` consommé, `reserved_value`
+ * réservé par des opérations en cours. Toute réservation se fait sous verrou de la ligne.
+ */
+export const usageCounters = pgTable(
+  'usage_counters',
+  {
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id),
+    category: text('category', { enum: ['storage_bytes'] }).notNull(),
+    observedValue: bigint('observed_value', { mode: 'number' }).notNull().default(0),
+    reservedValue: bigint('reserved_value', { mode: 'number' }).notNull().default(0),
+    measuredAt: timestamp('measured_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.organizationId, t.category] }),
+    check('usage_counters_category_check', sql`${t.category} in ('storage_bytes')`),
+    check('usage_counters_values_check', sql`${t.observedValue} >= 0 and ${t.reservedValue} >= 0`),
+    tenantPolicy(t.organizationId),
   ],
 ).enableRLS();

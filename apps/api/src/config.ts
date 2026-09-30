@@ -27,12 +27,31 @@ export interface SecurityConfig {
   presenceTimeoutSeconds: number;
 }
 
+/** Bibliothèque média (ADR-009) ; valeurs proposées, à valider par le responsable produit. */
+export interface MediaConfig {
+  /** Rétention de la corbeille avant purge définitive (MED-008, 30 j proposés). */
+  trashRetentionDays: number;
+  /** Validité d’une URL d’envoi direct. */
+  uploadUrlMinutes: number;
+  /** Validité d’une URL d’aperçu remise au dashboard. */
+  previewUrlSeconds: number;
+}
+
+export function defaultMediaConfig(env: NodeJS.ProcessEnv = process.env): MediaConfig {
+  return {
+    trashRetentionDays: readNumber(env, 'PIXLOVA_MEDIA_TRASH_RETENTION_DAYS', 30, 1, 3650),
+    uploadUrlMinutes: readNumber(env, 'PIXLOVA_MEDIA_UPLOAD_URL_MINUTES', 15, 1, 120),
+    previewUrlSeconds: readNumber(env, 'PIXLOVA_MEDIA_PREVIEW_URL_SECONDS', 300, 30, 3600),
+  };
+}
+
 export interface ApiConfig {
   /** Listener exposé via le tunnel public : `/api/v1`, `/player/v1`, webhooks. */
   public: ListenerConfig;
   /** Listener réservé au réseau privé : `/internal/v1` (API-001). */
   internal: ListenerConfig;
   security: SecurityConfig;
+  media: MediaConfig;
 }
 
 function readPort(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -97,6 +116,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       port: readPort(env, 'INTERNAL_PORT', 3001),
     },
     security: defaultSecurityConfig(env),
+    media: defaultMediaConfig(env),
   };
   if (config.public.port === config.internal.port) {
     throw new Error('Les listeners public et interne doivent utiliser des ports distincts.');

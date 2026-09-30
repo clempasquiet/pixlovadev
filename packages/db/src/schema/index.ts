@@ -4,4 +4,5 @@ export * from './operations.js';
 export * from './auth.js';
 export * from './access.js';
 export * from './player-auth.js';
+export * from './media.js';
 export { appRole, currentOrganization } from './common.js';

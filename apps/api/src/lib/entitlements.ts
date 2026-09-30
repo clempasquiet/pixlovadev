@@ -7,14 +7,28 @@ export interface EntitlementsProvider {
   maxUsers(organizationId: string): Promise<number>;
   /** Displays actifs autorisés (BILL-002) : slots inclus + extras confirmés + dérogations. */
   displaySlots(organizationId: string): Promise<number>;
+  /** Stockage média en octets (BILL-005, ADR-009) : originaux, corbeille comprise. */
+  storageBytes(organizationId: string): Promise<number>;
 }
 
-/** Offre gratuite (BILL-003) : un utilisateur et un Display actif. Seule source avant L08. */
+/** Free : 2 Go (10⁹ octets), valeur indicative de BILL-003 à valider. */
+export const FREE_STORAGE_BYTES = 2_000_000_000;
+
+/** Offre gratuite (BILL-003) : un utilisateur, un Display actif, 2 Go. Seule source avant L08. */
 export const FREE_ENTITLEMENTS: EntitlementsProvider = {
   maxUsers: async () => 1,
   displaySlots: async () => 1,
+  storageBytes: async () => FREE_STORAGE_BYTES,
 };
 
-export function fixedEntitlements(maxUsers: number, displaySlots = 1): EntitlementsProvider {
-  return { maxUsers: async () => maxUsers, displaySlots: async () => displaySlots };
+export function fixedEntitlements(
+  maxUsers: number,
+  displaySlots = 1,
+  storageBytes = FREE_STORAGE_BYTES,
+): EntitlementsProvider {
+  return {
+    maxUsers: async () => maxUsers,
+    displaySlots: async () => displaySlots,
+    storageBytes: async () => storageBytes,
+  };
 }

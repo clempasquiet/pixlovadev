@@ -2,10 +2,10 @@
 
 API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backend-api-orm-jobs.md)) :
 
-- **public** : `/health`, `/api/v1` (dashboard, session par cookie) ;
+- **public** : `/health`, `/api/v1` (dashboard, session par cookie), `/player/v1` ; `/storage/v1` seulement avec le pilote de stockage local (développement) ;
 - **interne** : `/internal/v1`, réseau privé uniquement.
 
-## Routes `/api/v1` disponibles (L01)
+## Routes `/api/v1` disponibles (L01 à L03)
 
 | Domaine | Routes |
 |---|---|
@@ -19,6 +19,8 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 | Parc | `POST /players/pair` (Idempotency-Key), `GET /players`, `PATCH /players/:id`, `POST /players/:id/revoke` |
 | Displays | `GET/POST /displays`, `GET/PATCH /displays/:id`, `PUT/DELETE /displays/:id/assignment` (Idempotency-Key) |
 | Groupes | `GET/POST /display-groups`, `PUT /display-groups/:id/members` |
+| Médias (L03, [ADR-009](../../docs/architecture/adr/0009-bibliotheque-media-stockage-pipeline.md)) | `POST /media/upload-session` (Idempotency-Key), `/media/upload-session/:id/complete`, `/media/upload-session/:id/abort` ; `GET /media?folder_id=&type=&status=&tag=&q=&trash=&limit=&cursor=`, `GET /media/usage`, `GET/PATCH/DELETE /media/:id`, `GET /media/:id/usages`, `GET /media/:id/assets/:variant/url`, `POST /media/:id/restore`, `/media/:id/purge`, `/media/:id/retry` |
+| Dossiers et tags | `GET/POST /media-folders`, `PATCH/DELETE /media-folders/:id`, `GET /tags` |
 | Audit | `GET /audit?limit=&cursor=` |
 
 ## Routes `/player/v1` (L02, [ADR-008](../../docs/architecture/adr/0008-appairage-players-displays.md))
@@ -43,7 +45,11 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 | `PIXLOVA_SESSION_IDLE_HOURS`, `PIXLOVA_SESSION_ABSOLUTE_DAYS`, `PIXLOVA_RECENT_AUTH_MINUTES` | Durées de session |
 | `PIXLOVA_REQUIRE_MFA_FOR_ADMINS` | MFA exigée des administrateurs pour les actions sensibles (défaut `true`) |
 | `PIXLOVA_MAILER=console` | Emails affichés dans la console (développement ; refusé en production) |
-| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS` | Quotas de développement avant L08 (refusés en production) |
+| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES` | Quotas de développement avant L08 (refusés en production) |
+| `PIXLOVA_STORAGE_DRIVER` | `s3` (production) ou `local` (développement, refusé en production) |
+| `PIXLOVA_STORAGE_LOCAL_ROOT`, `PIXLOVA_STORAGE_LOCAL_SECRET`, `PIXLOVA_STORAGE_PUBLIC_URL` | Pilote local : répertoire, secret HMAC des URLs signées, origine publique facultative |
+| `PIXLOVA_S3_BUCKET`, `PIXLOVA_S3_REGION`, `PIXLOVA_S3_ENDPOINT`, `PIXLOVA_S3_PUBLIC_ENDPOINT`, `PIXLOVA_S3_FORCE_PATH_STYLE`, `PIXLOVA_S3_ACCESS_KEY_ID`, `PIXLOVA_S3_SECRET_ACCESS_KEY` | Pilote S3 compatible (fournisseur choisi avec L09-I) |
+| `PIXLOVA_MEDIA_TRASH_RETENTION_DAYS`, `PIXLOVA_MEDIA_UPLOAD_URL_MINUTES`, `PIXLOVA_MEDIA_PREVIEW_URL_SECONDS` | Corbeille (30 j), URL d’envoi (15 min), URL d’aperçu (300 s) |
 | `PIXLOVA_PAIRING_CODE_MINUTES`, `PIXLOVA_PLAYER_TOKEN_MINUTES`, `PIXLOVA_HEARTBEAT_SECONDS`, `PIXLOVA_PRESENCE_TIMEOUT_SECONDS` | Durées Player (5 min, 15 min, 30 s, 90 s) |
 | `PIXLOVA_TRUST_PROXY` | `true` derrière la passerelle de confiance (adresse IP client) |
 

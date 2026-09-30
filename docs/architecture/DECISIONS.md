@@ -22,6 +22,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-006](adr/0006-authentification-sessions.md) | Argon2id, sessions opaques par cookie, CSRF, TOTP, jetons à usage unique, outbox email | L01 |
 | [ADR-007](adr/0007-rbac-scopes.md) | Rôles V1, permissions nommées, scopes par site, délégation, dernier Owner | L01 |
 | [ADR-008](adr/0008-appairage-players-displays.md) | Appairage par code, clé Ed25519 et jeton court des Players, slots sous verrou, affectations générationnelles, idempotence | L02 |
+| [ADR-009](adr/0009-bibliotheque-media-stockage-pipeline.md) | Stockage objet abstrait (S3 ou local signé), upload en quarantaine, file de tâches PostgreSQL à bail, pipeline sharp/FFmpeg, quota sur les originaux, corbeille, visibilité par site | L03 |
 
 ## ADR proposés (en attente de preuves)
 
@@ -35,9 +36,8 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 |---|---|---|
 | Renderer, IPC et profils Linux/Windows | L00 (prototype, ADR-005 proposée) puis L06-N | Mesures matérielles, acceptation de l’ADR-005, matrice de compatibilité |
 | Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
-| Visibilité des contenus par site (`visibility_scope`) | L03 | Extension de l’ADR-007 |
 | Matrice RBAC : confirmation produit des valeurs de l’ADR-007 | Responsable produit | Validation ou PR du catalogue |
-| Limites de médias, cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
+| Limites de médias (proposées par l’ADR-009, à valider), cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
 | Prix, quotas, grâce, downgrade et annulation sans sélection | L08 | Matrice des transitions ; validation produit avant activation payante |
 | Domaines principaux, stockage/CDN, hébergement et secrets | L09-I | ADR de déploiement et configuration staging |
 | Rétention, DPA, sous-traitants et effacement offline | L09-R | Politique validée et recette d’effacement |

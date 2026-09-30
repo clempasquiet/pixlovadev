@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppLayout, RequireSession } from './layout.js';
 import { AccountPage } from './pages/account.js';
 import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
+import { LibraryPage } from './pages/library.js';
 import {
   AcceptInvitationPage,
   LoginPage,
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'organizations/new', element: <CreateOrganizationPage /> },
+          { path: 'library', element: <LibraryPage /> },
           { path: 'displays', element: <DisplaysPage /> },
           { path: 'displays/:id', element: <DisplayDetailPage /> },
           { path: 'players', element: <PlayersPage /> },
