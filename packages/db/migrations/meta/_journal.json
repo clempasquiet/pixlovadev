@@ -71,6 +71,20 @@
       "when": 1790724030077,
       "tag": "0009_compositions_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790726546233,
+      "tag": "0010_playlists_programs_manifests",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790726555544,
+      "tag": "0011_playlists_programs_manifests_grants",
+      "breakpoints": true
     }
   ]
 }

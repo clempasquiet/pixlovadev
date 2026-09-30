@@ -17,7 +17,9 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { createdAt, deletedAt, id, organizationId, tenantPolicy, updatedAt } from './common.js';
+import { compositions, playlists } from './content.js';
 import { organizations, sites, users } from './identity.js';
+import { media } from './media.js';
 
 /**
  * Installation Player (PLY-001). `id` permanent, jamais réutilisé ; l’empreinte machine
@@ -115,10 +117,24 @@ export const displays = pgTable(
     lifecycleStatus: text('lifecycle_status', { enum: ['active', 'inactive', 'archived'] })
       .notNull()
       .default('active'),
-    /** Repli local sans contenu programmé (PLN-010) ; le contenu de repli arrive avec L05. */
-    fallbackMode: text('fallback_mode', { enum: ['standby_screen'] })
+    /**
+     * Repli local sans contenu programmé (PLN-010, ADR-011) : écran d’attente, ou contenu
+     * publié désigné par exactement une des clés `fallback_*`.
+     */
+    fallbackMode: text('fallback_mode', { enum: ['standby_screen', 'content'] })
       .notNull()
       .default('standby_screen'),
+    fallbackMediaId: uuid('fallback_media_id'),
+    fallbackCompositionId: uuid('fallback_composition_id'),
+    fallbackPlaylistId: uuid('fallback_playlist_id'),
+    /** Révision désirée de la configuration compilée (DATA-010) ; incrémentée à chaque changement pertinent. */
+    configRevision: bigint('config_revision', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
+    /** Dernier numéro de manifest alloué, sous verrou de la ligne (PROTO-013). */
+    manifestVersion: bigint('manifest_version', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
     /** Incrémentée à chaque (ré)affectation (DATA-006). */
     assignmentGeneration: bigint('assignment_generation', { mode: 'bigint' })
       .notNull()
@@ -143,7 +159,26 @@ export const displays = pgTable(
       sql`${t.lifecycleStatus} in ('active', 'inactive', 'archived')`,
     ),
     check('displays_generation_check', sql`${t.assignmentGeneration} >= 0`),
-    check('displays_fallback_check', sql`${t.fallbackMode} in ('standby_screen')`),
+    check(
+      'displays_fallback_check',
+      sql`(${t.fallbackMode} = 'standby_screen' and num_nonnulls(${t.fallbackMediaId}, ${t.fallbackCompositionId}, ${t.fallbackPlaylistId}) = 0) or (${t.fallbackMode} = 'content' and num_nonnulls(${t.fallbackMediaId}, ${t.fallbackCompositionId}, ${t.fallbackPlaylistId}) = 1)`,
+    ),
+    check('displays_revision_check', sql`${t.configRevision} >= 0 and ${t.manifestVersion} >= 0`),
+    foreignKey({
+      name: 'displays_fallback_media_same_tenant_fk',
+      columns: [t.organizationId, t.fallbackMediaId],
+      foreignColumns: [media.organizationId, media.id],
+    }),
+    foreignKey({
+      name: 'displays_fallback_composition_same_tenant_fk',
+      columns: [t.organizationId, t.fallbackCompositionId],
+      foreignColumns: [compositions.organizationId, compositions.id],
+    }),
+    foreignKey({
+      name: 'displays_fallback_playlist_same_tenant_fk',
+      columns: [t.organizationId, t.fallbackPlaylistId],
+      foreignColumns: [playlists.organizationId, playlists.id],
+    }),
     tenantPolicy(t.organizationId),
   ],
 ).enableRLS();
