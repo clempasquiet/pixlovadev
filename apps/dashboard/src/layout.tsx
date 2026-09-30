@@ -90,6 +90,8 @@ export function AppLayout() {
             <NavLink to="/campaigns">Campagnes</NavLink>
             <NavLink to="/displays">Écrans</NavLink>
             <NavLink to="/players">Players</NavLink>
+            <NavLink to="/supervision">Supervision</NavLink>
+            <NavLink to="/incidents">Incidents</NavLink>
             <NavLink to="/sites">Sites</NavLink>
             <NavLink to="/members">Membres</NavLink>
             <NavLink to="/audit">Journal d’audit</NavLink>

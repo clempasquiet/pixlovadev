@@ -143,11 +143,11 @@ export class NetworkPlayer {
 
   constructor(private readonly apiUrl: string) {}
 
-  private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async call<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${this.apiUrl}/player/v1${path}`, {
       method,
       headers: {
-        'content-type': 'application/json',
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -215,8 +215,18 @@ export class NetworkPlayer {
     this.token = token.access_token;
   }
 
-  async heartbeat(): Promise<void> {
-    await this.call('POST', '/heartbeat', { uptime_seconds: 10, renderer: 'ok', displays: [] });
+  async heartbeat(
+    displays: { display_id: string; assignment_generation: string }[] = [],
+  ): Promise<{ pending_commands: number }> {
+    return this.call('POST', '/heartbeat', {
+      uptime_seconds: 10,
+      renderer: 'ok',
+      displays: displays.map((d) => ({
+        ...d,
+        manifest_applied_version: null,
+        playback: 'playing',
+      })),
+    });
   }
 
   config() {
