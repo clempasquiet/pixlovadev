@@ -96,7 +96,7 @@ export interface CompileOptions {
   now: Date;
   horizonMs?: number;
   /** Tests : exécuté entre la préparation et la validation sous verrou (révision concurrente). */
-  beforeCommit?: () => Promise<void>;
+  beforeCommit?: () => Promise<unknown>;
 }
 
 async function record(
