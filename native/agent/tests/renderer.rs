@@ -44,6 +44,11 @@ async fn start(renderer: &str, args: Vec<String>, watchdog: Duration) -> Running
         serde_json::json!({ "keys": [{ "kid": MANIFEST_KID, "public_key": pixlova_contracts::player_auth::public_key_b64u(&manifest_key()) }] }).to_string(),
     )
     .unwrap();
+    std::fs::write(
+        trust_dir.join("command-keys.json"),
+        serde_json::json!({ "keys": [{ "kid": COMMAND_KID, "public_key": pixlova_contracts::player_auth::public_key_b64u(&command_key()) }] }).to_string(),
+    )
+    .unwrap();
     let data = dir.path().join("data");
     let mut config = AgentConfig::load(
         Some(data.clone()),
@@ -116,9 +121,12 @@ async fn renderer_sans_affichage_et_watchdog() {
     .await;
     assert!(running.data.join("state/healthy").exists());
     // Renderer figé (SIGSTOP) : arrêt forcé par le watchdog puis relance et restauration.
-    let pid = running.status()["renderer"]["pid"]
-        .as_i64()
-        .expect("pid du renderer");
+    // L’état local est réécrit à la fin de chaque tour de synchronisation.
+    eventually("pid du renderer publié", 30, || {
+        running.status()["renderer"]["pid"].as_i64().is_some()
+    })
+    .await;
+    let pid = running.status()["renderer"]["pid"].as_i64().unwrap();
     assert!(
         std::process::Command::new("kill")
             .args(["-STOP", &pid.to_string()])
@@ -171,5 +179,32 @@ async fn renderer_webkitgtk_premiere_image() {
         running.status()["renderer"]["status"]["displays"][0]["playback"] == "playing"
     })
     .await;
+    // Capture réelle de la vue WebKitGTK (SUP-004), envoyée au stockage simulé.
+    let screenshot = "88888888-8888-4888-8888-000000000030";
+    let command = "77777777-7777-4777-8777-000000000030";
+    running.api.queue_command(&command_payload(
+        command,
+        "TAKE_SCREENSHOT",
+        Some((DISPLAY, "2")),
+        serde_json::json!({ "screenshot_id": screenshot }),
+    ));
+    eventually("capture WebKitGTK envoyée", 60, || {
+        running.api.result(command).is_some()
+    })
+    .await;
+    assert_eq!(
+        running.api.result(command).unwrap()["status"],
+        "success",
+        "{:?}",
+        running.api.result(command)
+    );
+    let png = running.api.state().uploads[screenshot].clone();
+    assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
+    let width = u32::from_be_bytes(png[16..20].try_into().unwrap());
+    let height = u32::from_be_bytes(png[20..24].try_into().unwrap());
+    assert!(width >= 320 && height >= 180, "{width}x{height}");
+    if let Some(out) = env("PIXLOVA_TEST_SCREENSHOT_OUT") {
+        std::fs::write(out, &png).unwrap();
+    }
     running.stop().await;
 }

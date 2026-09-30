@@ -23,6 +23,8 @@ pub enum MessageType {
     Activate,
     GetStatus,
     Reload,
+    /// Capture de la vue d’un Display (SUP-004) ; réponse `READY` avec l’image.
+    Screenshot,
     // Renderer → agent
     Hello,
     Ready,
@@ -35,7 +37,12 @@ impl MessageType {
     pub fn from_agent(self) -> bool {
         matches!(
             self,
-            Self::Configure | Self::Prepare | Self::Activate | Self::GetStatus | Self::Reload
+            Self::Configure
+                | Self::Prepare
+                | Self::Activate
+                | Self::GetStatus
+                | Self::Reload
+                | Self::Screenshot
         )
     }
 }
@@ -163,6 +170,22 @@ pub struct ActivatePayload {
     pub manifest_id: String,
 }
 
+/// `SCREENSHOT` : image de la vue du Display, telle que rendue par la WebView.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScreenshotRequest {
+    pub display_id: String,
+}
+
+/// Réponse `READY` à `SCREENSHOT` : PNG encodé en base64 standard.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScreenshotReply {
+    pub display_id: String,
+    pub mime_type: String,
+    pub data_base64: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HelloPayload {
@@ -258,5 +281,10 @@ mod tests {
             "MALFORMED_MESSAGE"
         );
         assert!(MessageType::Prepare.from_agent() && !MessageType::Ready.from_agent());
+        assert!(MessageType::Screenshot.from_agent());
+        assert!(
+            Envelope::decode(r#"{"protocol_version":1,"message_id":"a","type":"SCREENSHOT","correlation_id":null,"payload":{"display_id":"d"}}"#)
+                .is_ok()
+        );
     }
 }

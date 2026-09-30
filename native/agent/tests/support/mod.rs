@@ -47,6 +47,41 @@ pub fn sign(payload: &Value, key: &SigningKey, kid: &str) -> String {
     json!({ "protected": protected, "payload": payload, "signature": signature }).to_string()
 }
 
+pub const COMMAND_KID: &str = "test-command-a";
+
+/// Clé de commande de test, distincte de la clé des manifests (ADR-014).
+pub fn command_key() -> SigningKey {
+    SigningKey::from_bytes(&[7; 32])
+}
+
+pub fn sign_command(payload: &Value) -> String {
+    let protected = json!({ "type": "SIGNAGE_COMMAND_V1", "alg": "Ed25519", "kid": COMMAND_KID });
+    let input = canonical_bytes(&json!({ "protected": protected, "payload": payload }));
+    let signature = URL_SAFE_NO_PAD.encode(command_key().sign(&input).to_bytes());
+    json!({ "protected": protected, "payload": payload, "signature": signature }).to_string()
+}
+
+/// Commande valide pour le Player de test, expirant dans dix minutes.
+pub fn command_payload(
+    id: &str,
+    kind: &str,
+    display: Option<(&str, &str)>,
+    params: Value,
+) -> Value {
+    let now = pixlova_agent::clock::SystemClock.now_millis();
+    json!({
+        "command_id": id,
+        "organization_id": ORG,
+        "player_id": PLAYER,
+        "display_id": display.map(|d| d.0),
+        "assignment_generation": display.map(|d| d.1),
+        "type": kind,
+        "issued_at": format_instant(now),
+        "expires_at": format_instant(now + 600_000),
+        "params": params,
+    })
+}
+
 pub fn payload_hash(payload: &Value) -> String {
     canonical_sha256(payload)
 }
@@ -183,6 +218,18 @@ pub struct MockState {
     pub outputs: Vec<Value>,
     pub range_requests: Vec<String>,
     pub asset_requests: u32,
+    /// Enveloppes de commandes distribuées tant qu’elles ne sont ni accusées ni terminées.
+    pub commands: Vec<(String, String)>,
+    pub acks: Vec<String>,
+    pub results: Vec<Value>,
+    pub events: Vec<Value>,
+    pub dropped_reported: Vec<u64>,
+    /// Événements refusés (le cloud ne les accuse pas) : simule une perte d’accusé.
+    pub reject_events: bool,
+    pub status_reports: Vec<Value>,
+    pub screenshot_sessions: Vec<Value>,
+    pub uploads: HashMap<String, Vec<u8>>,
+    pub completed_screenshots: Vec<String>,
 }
 
 pub type Shared = Arc<Mutex<MockState>>;
@@ -327,8 +374,141 @@ async fn heartbeat(
     if let Err(response) = guard(&state, &headers) {
         return response;
     }
-    state.lock().unwrap().heartbeats.push(body);
-    Json(json!({ "server_time": format_instant(pixlova_agent::clock::SystemClock.now_millis()), "stale_displays": [] })).into_response()
+    let mut s = state.lock().unwrap();
+    s.heartbeats.push(body);
+    let pending = s.commands.len();
+    Json(json!({ "server_time": format_instant(pixlova_agent::clock::SystemClock.now_millis()), "stale_displays": [], "pending_commands": pending })).into_response()
+}
+
+async fn events(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let mut s = state.lock().unwrap();
+    if s.reject_events {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE");
+    }
+    let batch = body["events"].as_array().cloned().unwrap_or_default();
+    assert!(!batch.is_empty() && batch.len() <= 500, "lot conforme");
+    s.dropped_reported
+        .push(body["dropped_count"].as_u64().unwrap());
+    let accepted: Vec<Value> = batch.iter().map(|e| e["event_id"].clone()).collect();
+    for event in batch {
+        if !s.events.iter().any(|e| e["event_id"] == event["event_id"]) {
+            s.events.push(event);
+        }
+    }
+    Json(json!({ "accepted": accepted })).into_response()
+}
+
+async fn player_status(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    state.lock().unwrap().status_reports.push(body);
+    StatusCode::NO_CONTENT.into_response()
+}
+
+async fn commands(State(state): State<Shared>, headers: HeaderMap) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let s = state.lock().unwrap();
+    let raw: Vec<&String> = s.commands.iter().map(|(_, raw)| raw).collect();
+    Json(json!({ "commands": raw })).into_response()
+}
+
+async fn command_ack(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let mut s = state.lock().unwrap();
+    s.acks.push(id.clone());
+    s.commands.retain(|(command, _)| *command != id);
+    Json(json!({ "status": "acknowledged" })).into_response()
+}
+
+async fn command_result(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    assert_eq!(body["command_id"], id.as_str());
+    let mut s = state.lock().unwrap();
+    s.commands.retain(|(command, _)| *command != id);
+    let status = body["status"].clone();
+    s.results.push(body);
+    Json(json!({ "status": status })).into_response()
+}
+
+async fn screenshot_session(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let id = body["screenshot_id"].as_str().unwrap().to_owned();
+    state.lock().unwrap().screenshot_sessions.push(body);
+    Json(json!({
+        "upload": { "method": "PUT", "url": format!("/upload/{id}"), "headers": { "content-type": "image/png" } },
+        "expires_at": "2099-01-01T00:00:00Z",
+    }))
+    .into_response()
+}
+
+async fn upload(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Response {
+    state.lock().unwrap().uploads.insert(id, body.to_vec());
+    StatusCode::OK.into_response()
+}
+
+async fn screenshot_complete(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let mut s = state.lock().unwrap();
+    let session = s
+        .screenshot_sessions
+        .iter()
+        .find(|b| b["screenshot_id"] == id.as_str())
+        .cloned();
+    let valid = match (session, s.uploads.get(&id)) {
+        (Some(session), Some(bytes)) => {
+            session["sha256"] == sha256_hex(bytes).as_str()
+                && session["size_bytes"] == bytes.len() as u64
+        }
+        _ => false,
+    };
+    if !valid {
+        return error(StatusCode::UNPROCESSABLE_ENTITY, "CHECKSUM_MISMATCH");
+    }
+    s.completed_screenshots.push(id);
+    Json(json!({ "status": "available" })).into_response()
 }
 
 async fn manifest(
@@ -473,6 +653,20 @@ impl MockApi {
             .route("/player/v1/manifest", get(manifest))
             .route("/player/v1/assets/{id}/url", get(asset_url))
             .route("/player/v1/manifests/{id}/status", post(status))
+            .route("/player/v1/events", post(events))
+            .route("/player/v1/status", post(player_status))
+            .route("/player/v1/commands", get(commands))
+            .route("/player/v1/commands/{id}/ack", post(command_ack))
+            .route("/player/v1/commands/{id}/result", post(command_result))
+            .route(
+                "/player/v1/screenshots/upload-session",
+                post(screenshot_session),
+            )
+            .route(
+                "/player/v1/screenshots/{id}/complete",
+                post(screenshot_complete),
+            )
+            .route("/upload/{id}", axum::routing::put(upload))
             .route("/storage/{id}", get(storage))
             .with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -511,6 +705,26 @@ impl MockApi {
         self.state()
             .manifests
             .insert(display_id.to_owned(), (raw, "autre".into()));
+    }
+
+    /// Met une commande signée à disposition du Player.
+    pub fn queue_command(&self, payload: &Value) {
+        self.queue_raw_command(
+            payload["command_id"].as_str().unwrap(),
+            sign_command(payload),
+        );
+    }
+
+    pub fn queue_raw_command(&self, id: &str, raw: String) {
+        self.state().commands.push((id.to_owned(), raw));
+    }
+
+    pub fn result(&self, id: &str) -> Option<Value> {
+        self.state()
+            .results
+            .iter()
+            .find(|r| r["command_id"] == id)
+            .cloned()
     }
 
     pub fn statuses(&self) -> Vec<(String, Option<String>)> {
@@ -605,6 +819,17 @@ pub async fn fake_renderer(
                     }
                     MessageType::GetStatus => {
                         out.push(reply(MessageType::Status, json!({ "displays": [] })))
+                    }
+                    MessageType::Screenshot => {
+                        use base64::engine::general_purpose::STANDARD;
+                        out.push(reply(
+                            MessageType::Ready,
+                            json!({
+                                "display_id": envelope.payload["display_id"],
+                                "mime_type": "image/png",
+                                "data_base64": STANDARD.encode(TestAsset::png(1).bytes),
+                            }),
+                        ));
                     }
                     _ => {}
                 }

@@ -66,7 +66,7 @@ async fn harness_with_space(free: Option<u64>) -> Harness {
         .register(
             "11111111-1111-4111-8111-111111111111",
             &identity,
-            pixlova_agent::platform::capabilities("0.1.0", None),
+            pixlova_agent::platform::capabilities("0.1.0", None, false),
             &pixlova_agent::platform::detect_outputs(None),
         )
         .await

@@ -107,6 +107,10 @@ pub fn run(socket: PathBuf, blobs: PathBuf) -> ! {
             MessageType::GetStatus => {
                 writer.reply(&envelope, MessageType::Status, status(&active));
             }
+            // Aucune image rendue : une capture serait une invention.
+            MessageType::Screenshot => {
+                writer.error(&envelope, "SCREENSHOT_UNSUPPORTED", "renderer headless");
+            }
             _ => {}
         }
     }

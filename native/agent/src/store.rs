@@ -19,10 +19,11 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    min_reader_level: 1,
-    sql: r#"
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        min_reader_level: 1,
+        sql: r#"
 CREATE TABLE installation (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   installation_id TEXT NOT NULL,
@@ -106,7 +107,44 @@ CREATE TABLE updates (
   updated_at TEXT NOT NULL
 );
 "#,
-}];
+    },
+    // L07 (ADR-014) : file d’événements bornée et journal durable des commandes.
+    Migration {
+        version: 2,
+        min_reader_level: 1,
+        sql: r#"
+CREATE TABLE events (
+  local_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL UNIQUE,
+  boot_id TEXT NOT NULL,
+  seq INTEGER NOT NULL,
+  observed_at TEXT NOT NULL,
+  type TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  display_id TEXT,
+  assignment_generation TEXT,
+  payload TEXT NOT NULL,
+  droppable INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE event_losses (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  dropped INTEGER NOT NULL
+);
+CREATE TABLE commands (
+  command_id TEXT PRIMARY KEY,
+  command_hash TEXT NOT NULL,
+  type TEXT NOT NULL,
+  state TEXT NOT NULL,
+  ack_sent INTEGER NOT NULL DEFAULT 0,
+  result TEXT,
+  result_sent INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  received_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+"#,
+    },
+];
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -839,6 +877,264 @@ impl Store {
     }
 }
 
+/// Événement à transmettre (PROTO-019), dans l’ordre de sa production locale.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewEvent {
+    pub event_id: String,
+    pub boot_id: String,
+    pub seq: u64,
+    pub observed_at: String,
+    pub kind: String,
+    pub severity: &'static str,
+    pub display_id: Option<String>,
+    pub assignment_generation: Option<String>,
+    pub payload: serde_json::Value,
+    /// Mesure répétitive : éliminée en premier quand la file est pleine.
+    pub droppable: bool,
+}
+
+/// Commande inscrite durablement (PROTO-008) : identifiant, empreinte, état local.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandRow {
+    pub command_id: String,
+    pub command_hash: String,
+    pub kind: String,
+    /// `received` (inscrite), `running` (lancée), `done` (résultat enregistré).
+    pub state: String,
+    pub ack_sent: bool,
+    /// Résultat `CommandResult` en JSON.
+    pub result: Option<String>,
+    pub result_sent: bool,
+    pub expires_at: String,
+}
+
+impl Store {
+    // --- File d’événements (PROTO-019) ------------------------------------------------------
+
+    /// Ajoute un événement ; au-delà de `max` événements, le plus ancien éliminable (sinon le
+    /// plus ancien) est retiré et compté comme perdu.
+    pub fn push_event(&self, event: &NewEvent, max: u64) -> StoreResult<()> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        let count: i64 = tx.query_row("SELECT count(*) FROM events", [], |row| row.get(0))?;
+        if count as u64 >= max {
+            let excess = count as u64 - max + 1;
+            let removed = tx.execute(
+                "DELETE FROM events WHERE local_id IN (
+                   SELECT local_id FROM events ORDER BY droppable DESC, local_id LIMIT ?1)",
+                [excess as i64],
+            )?;
+            tx.execute(
+                "INSERT INTO event_losses (id, dropped) VALUES (1, ?1)
+                 ON CONFLICT (id) DO UPDATE SET dropped = dropped + excluded.dropped",
+                [removed as i64],
+            )?;
+        }
+        tx.execute(
+            "INSERT INTO events (event_id, boot_id, seq, observed_at, type, severity, display_id,
+               assignment_generation, payload, droppable)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                event.event_id,
+                event.boot_id,
+                event.seq as i64,
+                event.observed_at,
+                event.kind,
+                event.severity,
+                event.display_id,
+                event.assignment_generation,
+                event.payload.to_string(),
+                event.droppable,
+            ],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Prochain lot à transmettre, au format `PlayerEvent`.
+    pub fn pending_events(&self, limit: u32) -> StoreResult<Vec<serde_json::Value>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT event_id, boot_id, seq, observed_at, type, severity, display_id,
+               assignment_generation, payload FROM events ORDER BY local_id LIMIT ?1",
+        )?;
+        let rows = stmt.query_map([limit], |row| {
+            let payload: String = row.get(8)?;
+            Ok(serde_json::json!({
+                "event_id": row.get::<_, String>(0)?,
+                "boot_id": row.get::<_, String>(1)?,
+                "seq": row.get::<_, i64>(2)?,
+                "observed_at": row.get::<_, String>(3)?,
+                "type": row.get::<_, String>(4)?,
+                "severity": row.get::<_, String>(5)?,
+                "display_id": row.get::<_, Option<String>>(6)?,
+                "assignment_generation": row.get::<_, Option<String>>(7)?,
+                "payload": serde_json::from_str::<serde_json::Value>(&payload)
+                    .unwrap_or_else(|_| serde_json::json!({})),
+            }))
+        })?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    pub fn event_count(&self) -> StoreResult<u64> {
+        let count: i64 = self
+            .conn()
+            .query_row("SELECT count(*) FROM events", [], |row| row.get(0))?;
+        Ok(count as u64)
+    }
+
+    /// Retire les événements accusés par le cloud, et seulement eux.
+    pub fn ack_events(&self, event_ids: &[String]) -> StoreResult<()> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        for id in event_ids {
+            tx.execute("DELETE FROM events WHERE event_id = ?1", [id])?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn dropped_events(&self) -> StoreResult<u64> {
+        let dropped: Option<i64> = self
+            .conn()
+            .query_row("SELECT dropped FROM event_losses WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .optional()?;
+        Ok(dropped.unwrap_or(0).max(0) as u64)
+    }
+
+    /// Soustrait les pertes déclarées dans un lot accusé (d’autres ont pu s’ajouter depuis).
+    pub fn consume_dropped(&self, reported: u64) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE event_losses SET dropped = max(dropped - ?1, 0) WHERE id = 1",
+            [reported as i64],
+        )?;
+        Ok(())
+    }
+
+    // --- Journal des commandes (PROTO-008) --------------------------------------------------
+
+    /// Identifiant → empreinte des commandes déjà inscrites.
+    pub fn command_hashes(&self) -> StoreResult<std::collections::HashMap<String, String>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare("SELECT command_id, command_hash FROM commands")?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Inscrit une commande avant tout effet ; `result` est fourni pour un refus immédiat.
+    pub fn record_command(&self, row: &CommandRow, now: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "INSERT INTO commands (command_id, command_hash, type, state, ack_sent, result,
+               result_sent, expires_at, received_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 0, ?5, 0, ?6, ?7, ?7)",
+            params![
+                row.command_id,
+                row.command_hash,
+                row.kind,
+                row.state,
+                row.result,
+                row.expires_at,
+                now
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn command(&self, command_id: &str) -> StoreResult<Option<CommandRow>> {
+        Ok(self
+            .conn()
+            .query_row(
+                "SELECT command_id, command_hash, type, state, ack_sent, result, result_sent,
+                   expires_at FROM commands WHERE command_id = ?1",
+                [command_id],
+                command_row,
+            )
+            .optional()?)
+    }
+
+    pub fn set_command_running(&self, command_id: &str, now: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE commands SET state = 'running', updated_at = ?2
+             WHERE command_id = ?1 AND state = 'received'",
+            params![command_id, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn finish_command(&self, command_id: &str, result: &str, now: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE commands SET state = 'done', result = ?2, updated_at = ?3
+             WHERE command_id = ?1 AND state <> 'done'",
+            params![command_id, result, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn mark_command_ack(&self, command_id: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE commands SET ack_sent = 1 WHERE command_id = ?1",
+            [command_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn mark_result_sent(&self, command_id: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE commands SET result_sent = 1 WHERE command_id = ?1",
+            [command_id],
+        )?;
+        Ok(())
+    }
+
+    /// Commandes dans un état donné (reprise après redémarrage).
+    pub fn commands_in_state(&self, state: &str) -> StoreResult<Vec<CommandRow>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT command_id, command_hash, type, state, ack_sent, result, result_sent,
+               expires_at FROM commands WHERE state = ?1 ORDER BY received_at",
+        )?;
+        let rows = stmt.query_map([state], command_row)?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// ACK et résultats encore à transmettre.
+    pub fn command_outbox(&self) -> StoreResult<Vec<CommandRow>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT command_id, command_hash, type, state, ack_sent, result, result_sent,
+               expires_at FROM commands
+             WHERE (ack_sent = 0 AND state <> 'done') OR (result IS NOT NULL AND result_sent = 0)
+             ORDER BY received_at LIMIT 50",
+        )?;
+        let rows = stmt.query_map([], command_row)?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Oublie les commandes terminées, transmises et expirées : elles ne peuvent plus être
+    /// redistribuées, la déduplication n’en a plus besoin.
+    pub fn prune_commands(&self, expired_before: &str) -> StoreResult<usize> {
+        Ok(self.conn().execute(
+            "DELETE FROM commands WHERE state = 'done' AND result_sent = 1 AND expires_at < ?1",
+            [expired_before],
+        )?)
+    }
+}
+
+fn command_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<CommandRow> {
+    Ok(CommandRow {
+        command_id: row.get(0)?,
+        command_hash: row.get(1)?,
+        kind: row.get(2)?,
+        state: row.get(3)?,
+        ack_sent: row.get(4)?,
+        result: row.get(5)?,
+        result_sent: row.get(6)?,
+        expires_at: row.get(7)?,
+    })
+}
+
 /// Mise à jour enregistrée : `release_id`, version, état, détail.
 pub type UpdateRow = (String, String, String, Option<String>);
 
@@ -874,7 +1170,7 @@ mod tests {
         let (_dir, store) = store();
         let first = store.installation_id(NOW).unwrap();
         assert_eq!(store.installation_id(NOW).unwrap(), first);
-        assert_eq!(store.schema_version().unwrap(), 1);
+        assert_eq!(store.schema_version().unwrap(), 2);
     }
 
     #[test]
@@ -938,6 +1234,82 @@ mod tests {
         let row = store.display("d1").unwrap().unwrap();
         assert_eq!(row.current_manifest, None);
         assert_eq!(row.highest_version, None);
+    }
+
+    fn event(n: u64, droppable: bool) -> NewEvent {
+        NewEvent {
+            event_id: format!("00000000-0000-4000-8000-{n:012}"),
+            boot_id: "11111111-1111-4111-8111-111111111111".into(),
+            seq: n,
+            observed_at: NOW.into(),
+            kind: if droppable {
+                "METRIC"
+            } else {
+                "PLAYBACK_ERROR"
+            }
+            .into(),
+            severity: "info",
+            display_id: None,
+            assignment_generation: None,
+            payload: serde_json::json!({ "n": n }),
+            droppable,
+        }
+    }
+
+    #[test]
+    fn file_d_evenements_bornee_et_accusee() {
+        let (_dir, store) = store();
+        store.push_event(&event(1, false), 3).unwrap();
+        store.push_event(&event(2, true), 3).unwrap();
+        store.push_event(&event(3, false), 3).unwrap();
+        // Pleine : la mesure éliminable part d’abord, puis le plus ancien.
+        store.push_event(&event(4, false), 3).unwrap();
+        store.push_event(&event(5, false), 3).unwrap();
+        let pending = store.pending_events(10).unwrap();
+        let seqs: Vec<i64> = pending.iter().map(|e| e["seq"].as_i64().unwrap()).collect();
+        assert_eq!(seqs, [3, 4, 5]);
+        assert_eq!(store.dropped_events().unwrap(), 2);
+        assert_eq!(pending[0]["payload"]["n"], 3);
+        store
+            .ack_events(&[pending[0]["event_id"].as_str().unwrap().to_owned()])
+            .unwrap();
+        assert_eq!(store.event_count().unwrap(), 2);
+        store.consume_dropped(2).unwrap();
+        assert_eq!(store.dropped_events().unwrap(), 0);
+    }
+
+    #[test]
+    fn journal_des_commandes_durable() {
+        let (_dir, store) = store();
+        let row = CommandRow {
+            command_id: "c1".into(),
+            command_hash: "h1".into(),
+            kind: "GET_STATUS".into(),
+            state: "received".into(),
+            ack_sent: false,
+            result: None,
+            result_sent: false,
+            expires_at: "2026-10-01T10:10:00Z".into(),
+        };
+        store.record_command(&row, NOW).unwrap();
+        assert!(
+            store.record_command(&row, NOW).is_err(),
+            "identifiant unique"
+        );
+        assert_eq!(store.command_hashes().unwrap()["c1"], "h1");
+        assert_eq!(store.command_outbox().unwrap().len(), 1);
+        store.mark_command_ack("c1").unwrap();
+        store.set_command_running("c1", NOW).unwrap();
+        assert_eq!(store.commands_in_state("running").unwrap().len(), 1);
+        assert!(store.command_outbox().unwrap().is_empty());
+        store.finish_command("c1", "{}", NOW).unwrap();
+        assert_eq!(
+            store.command_outbox().unwrap()[0].result.as_deref(),
+            Some("{}")
+        );
+        store.mark_result_sent("c1").unwrap();
+        assert_eq!(store.prune_commands("2026-10-01T10:00:00Z").unwrap(), 0);
+        assert_eq!(store.prune_commands("2026-10-02T00:00:00Z").unwrap(), 1);
     }
 
     #[test]

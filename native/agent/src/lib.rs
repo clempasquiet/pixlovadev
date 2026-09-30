@@ -23,6 +23,7 @@ pub mod pipeline;
 pub mod platform;
 pub mod runtime;
 pub mod store;
+pub mod supervision;
 pub mod supervisor;
 pub mod trust;
 pub mod updater;
