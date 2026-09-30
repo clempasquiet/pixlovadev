@@ -42,6 +42,31 @@ export const DEFAULT_MEDIA_LIMITS: MediaLimits = {
   outputMaxFps: 60,
 };
 
+/**
+ * Limites d’envoi ajustées au transport (ADR-015) : un tunnel ou un proxy qui borne la taille
+ * d’une requête impose de refuser plus tôt, avec un message clair, plutôt qu’en cours
+ * d’envoi. Seules des valeurs plus basses que les limites par défaut sont acceptées.
+ */
+export function mediaLimitsFromEnv(
+  env: Record<string, string | undefined>,
+  defaults: MediaLimits = DEFAULT_MEDIA_LIMITS,
+): MediaLimits {
+  const cap = (name: string, fallback: number): number => {
+    const raw = env[name];
+    if (raw === undefined || raw === '') return fallback;
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 1_000_000 || value > fallback) {
+      throw new Error(`${name} doit être un entier entre 1000000 et ${fallback}.`);
+    }
+    return value;
+  };
+  return {
+    ...defaults,
+    imageMaxBytes: cap('PIXLOVA_MEDIA_IMAGE_MAX_BYTES', defaults.imageMaxBytes),
+    videoMaxBytes: cap('PIXLOVA_MEDIA_VIDEO_MAX_BYTES', defaults.videoMaxBytes),
+  };
+}
+
 export function mediaCategoryOf(mimeType: string): MediaCategory | null {
   return Object.hasOwn(ACCEPTED_MEDIA_MIME_TYPES, mimeType)
     ? (ACCEPTED_MEDIA_MIME_TYPES[mimeType] ?? null)

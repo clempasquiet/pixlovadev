@@ -28,6 +28,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-012](adr/0012-player-natif-agent-cache-mises-a-jour.md) | Player natif : agent et renderer séparés, SQLite additive, cache SHA-256 épinglé, activation atomique confirmée par la première image, IPC local authentifié, watchdog, mises à jour signées avec lanceur A/B et retour arrière | L06-N |
 | [ADR-013](adr/0013-player-web.md) | Player Web : identité par profil navigateur (clé WebCrypto non extractible), clés de confiance livrées avec l’application, IndexedDB et Cache API vérifiée, quota et éviction, service worker d’application versionné, lecture partagée avec le natif (`@pixlova/player-core`), limites assumées | L06-W |
 | [ADR-014](adr/0014-supervision-commandes-alertes.md) | Supervision : signaux distincts (présence, santé, rendu, sortie, capture), commandes signées par une clé dédiée via HTTPS (WSS reporté), captures privées à rétention courte, timeline corrélée, incidents dédupliqués avec maintenance et corrélation plateforme, métriques à cardinalité bornée | L07 |
+| [ADR-015](adr/0015-infrastructure-recette.md) | Recette mono-serveur Docker Compose : images épinglées non root, réseaux internes, passerelle Caddy à origine unique, stockage S3 privé (versitygw), Mailpit, Cloudflare Tunnel ; mode `recette`, SMTP, limites d’envoi bornées par le transport ; sauvegarde, restauration et retour arrière exercés | L09-I |
 
 ## ADR proposés (en attente de preuves)
 
@@ -44,7 +45,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | Matrice RBAC : confirmation produit des valeurs de l’ADR-007 | Responsable produit | Validation ou PR du catalogue |
 | Limites de médias (proposées par l’ADR-009, à valider), cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
 | Prix, quotas, grâce, downgrade et annulation sans sélection | L08 | Matrice des transitions ; validation produit avant activation payante |
-| Domaines principaux, stockage/CDN, hébergement et secrets | L09-I | ADR de déploiement et configuration staging |
+| Hébergement, stockage/CDN, relais email et secrets de **production** | Mandat de déploiement (après L09-I) | Recette : [ADR-015](adr/0015-infrastructure-recette.md) ; production à décider |
 | Rétention, DPA, sous-traitants et effacement offline | L09-R | Politique validée et recette d’effacement |
 | SLO, PRA, support et plateformes supportées | L09-R | Mesures réelles et engagement approuvé avant lancement |
 

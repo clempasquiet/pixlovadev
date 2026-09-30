@@ -43,3 +43,8 @@ test-results/
 
 # Environnements Python locaux (outils de test)
 .venv*/
+
+# Instance de recette : secrets, clés publiques de l’instance et sauvegardes (ADR-015)
+infra/recette/.env
+infra/recette/trust/
+infra/recette/backups/

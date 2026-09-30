@@ -1,6 +1,6 @@
 # Runbooks de supervision
 
-Procédures d’exploitation des incidents et signaux de la supervision ([ADR-014](../architecture/adr/0014-supervision-commandes-alertes.md)). Elles décrivent le logiciel livré par L07. Les seuils marqués **[à valider]** sont ceux du code, en attente de validation par le responsable produit. L’hébergement, la sauvegarde et le plan de reprise relèvent de L09.
+Procédures d’exploitation des incidents et signaux de la supervision ([ADR-014](../architecture/adr/0014-supervision-commandes-alertes.md)). Elles décrivent le logiciel livré par L07. Les seuils marqués **[à valider]** sont ceux du code, en attente de validation par le responsable produit. Le déploiement de recette, la sauvegarde et la restauration sont décrits dans [RECETTE.md](RECETTE.md) ; le plan de reprise de production relève de L09-R.
 
 ## Principes
 
