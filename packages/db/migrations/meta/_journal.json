@@ -85,6 +85,20 @@
       "when": 1790726555544,
       "tag": "0011_playlists_programs_manifests_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790774686450,
+      "tag": "0012_supervision",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790774687612,
+      "tag": "0013_supervision_grants",
+      "breakpoints": true
     }
   ]
 }

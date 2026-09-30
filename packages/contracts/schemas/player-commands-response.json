@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/player-commands-response.json",
+  "type": "object",
+  "required": [
+    "commands"
+  ],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 65536
+      },
+      "maxItems": 20
+    }
+  },
+  "additionalProperties": false
+}

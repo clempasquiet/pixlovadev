@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/command-ack-request.json",
+  "type": "object",
+  "required": [
+    "acknowledged_at"
+  ],
+  "properties": {
+    "acknowledged_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    }
+  },
+  "additionalProperties": false
+}

@@ -34,6 +34,8 @@ export const organizations = pgTable(
     status: text('status', { enum: ['active', 'suspended', 'deletion_pending', 'deleted'] })
       .notNull()
       .default('active'),
+    /** Captures à la demande autorisées (SUP-004) ; désactivables par l’organisation. */
+    screenshotsEnabled: boolean('screenshots_enabled').notNull().default(true),
     deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
     purgeAfter: timestamp('purge_after', { withTimezone: true }),
     createdAt: createdAt(),
@@ -92,6 +94,8 @@ export const memberships = pgTable(
     status: text('status', { enum: ['active', 'suspended', 'revoked'] })
       .notNull()
       .default('active'),
+    /** Emails d’alerte de supervision (SUP-006) ; désabonnement individuel. */
+    alertEmails: boolean('alert_emails').notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
