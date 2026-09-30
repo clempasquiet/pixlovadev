@@ -7,6 +7,7 @@
  * servent qu’aux tests et ne doivent jamais figurer dans un trust store réel.
  */
 import { sha256 } from '@noble/hashes/sha2.js';
+import { buildPlayerValidators } from './validators.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import {
   COMMAND_ENVELOPE_TYPE,
@@ -311,6 +312,7 @@ interface Vector {
 
 export function buildArtifacts(): Map<string, string> {
   const files = new Map<string, string>();
+  files.set('src/generated/player-validators.ts', buildPlayerValidators());
 
   for (const [name, schema] of Object.entries(ROOT_SCHEMAS)) {
     const { $id, ...rest } = schema as unknown as Record<string, unknown>;

@@ -1,15 +1,20 @@
 import { Ajv2020, type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js';
+import { PRECOMPILED } from './generated/player-validators.js';
 import { ROOT_SCHEMAS, type RootSchemaName } from './schemas/index.js';
 
 /**
- * Validateurs JSON Schema compilés à la demande.
- * Limite connue : Ajv génère du code (`new Function`) ; le Player Web, soumis à une CSP
- * sans `unsafe-eval`, utilisera des validateurs précompilés (suivi L06-W).
+ * Validateurs JSON Schema. Les documents reçus par un Player (manifest, commande) ont des
+ * validateurs précompilés : aucun code n’est généré à l’exécution, ce qui permet au
+ * Player Web une CSP sans `unsafe-eval` (ADR-013). Les autres sont compilés à la demande.
  */
+const precompiled = PRECOMPILED as Partial<Record<RootSchemaName, ValidateFunction>>;
+
 let ajv: Ajv2020 | undefined;
 const cache = new Map<RootSchemaName, ValidateFunction>();
 
 export function validator(name: RootSchemaName): ValidateFunction {
+  const ready = precompiled[name];
+  if (ready) return ready;
   let validate = cache.get(name);
   if (!validate) {
     ajv ??= new Ajv2020({ strict: true, allErrors: false, allowUnionTypes: true });
