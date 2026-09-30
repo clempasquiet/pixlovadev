@@ -1,7 +1,7 @@
 [package]
 name = "pixlova-agent"
-version = "0.0.0"
-description = "Agent natif pixlova : identité, synchronisation, cache et supervision du renderer."
+version = "0.1.0"
+description = "Agent natif pixlova : identité, synchronisation, cache vérifié, activation atomique, supervision du renderer et mises à jour."
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
@@ -9,4 +9,33 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pixlova-agent"
+path = "src/main.rs"
+
 [dependencies]
+pixlova-contracts = { path = "../contracts" }
+base64 = "0.22.1"
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+fs4 = { version = "0.13.1", features = ["sync"] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["rustls-tls", "json", "stream"] }
+rusqlite = { version = "0.37.0", features = ["bundled"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.10.9"
+tar = "0.4.44"
+thiserror = "2.0.17"
+tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros", "net", "io-util", "fs", "time", "sync", "signal", "process"] }
+tracing = "0.1.41"
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+uuid = { version = "1.18.1", features = ["v4"] }
+futures-util = "0.3.31"
+
+[dev-dependencies]
+tempfile = "3.23.0"
+axum = "0.8.6"
