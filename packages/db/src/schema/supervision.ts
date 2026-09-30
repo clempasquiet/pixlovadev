@@ -19,21 +19,28 @@ import { displays, players } from './fleet.js';
 import { organizations, users } from './identity.js';
 
 /**
- * Dernier statut déclaré par un Player (OBS-003, ADR-014) : une ligne par Player,
- * remplacée à chaque envoi. Mesures `NULL` = non disponibles, jamais zéro.
+ * Dernier état connu d’un Player (SUP-001, OBS-003, ADR-014) : une ligne par Player.
+ * Le heartbeat (30 s) met à jour le renderer et la lecture par Display ; le statut
+ * complet (moins fréquent) met à jour les mesures. Mesures `NULL` = non disponibles.
  */
 export const playerStatus = pgTable(
   'player_status',
   {
     playerId: uuid('player_id').primaryKey(),
     organizationId: organizationId(),
-    observedAt: timestamp('observed_at', { withTimezone: true }).notNull(),
-    receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
-    renderer: text('renderer').notNull(),
+    heartbeatReceivedAt: timestamp('heartbeat_received_at', { withTimezone: true }),
+    renderer: text('renderer'),
+    /** Lecture déclarée par Display au dernier heartbeat. */
+    displays: jsonb('displays')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    statusObservedAt: timestamp('status_observed_at', { withTimezone: true }),
+    statusReceivedAt: timestamp('status_received_at', { withTimezone: true }),
     rendererRestarts: integer('renderer_restarts'),
     diskFreeBytes: bigint('disk_free_bytes', { mode: 'number' }),
     diskTotalBytes: bigint('disk_total_bytes', { mode: 'number' }),
-    payload: jsonb('payload').notNull(),
+    /** Dernier statut complet (`PlayerStatus`). */
+    payload: jsonb('payload'),
   },
   (t) => [
     foreignKey({

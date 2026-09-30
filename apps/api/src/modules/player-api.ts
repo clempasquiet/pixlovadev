@@ -24,6 +24,7 @@ import { Strict, Uuid } from './schemas.js';
 import { rateLimit } from '../http/context.js';
 import type { Services } from '../http/services.js';
 import { randomToken, safeEqual, tokenHash } from '../lib/crypto.js';
+import { cloudEvent, outstandingCommandCount } from '../lib/supervision.js';
 
 export interface PlayerContext {
   playerId: string;
@@ -391,36 +392,45 @@ export function playerApiRoutes(app: FastifyInstance, services: Services): void 
     const player = await authenticatePlayer(request, services);
     const body = request.body as HeartbeatPayload;
     const now = services.now();
-    const stale = await withTenant(services.db, player.organizationId, async (tx) => {
+    const result = await withTenant(services.db, player.organizationId, async (tx) => {
+      const [previous] = await tx
+        .select({ lastSeenAt: schema.players.lastSeenAt })
+        .from(schema.players)
+        .where(eq(schema.players.id, player.playerId))
+        .for('update');
       await tx
         .update(schema.players)
         .set({ lastSeenAt: now })
         .where(eq(schema.players.id, player.playerId));
-      const announced = body.displays.map((d) => d.display_id);
-      if (announced.length === 0) return [];
-      const current = await tx
-        .select({
-          displayId: schema.displayAssignments.displayId,
-          generation: schema.displayAssignments.generation,
-        })
-        .from(schema.displayAssignments)
-        .innerJoin(
-          schema.playerOutputs,
-          eq(schema.playerOutputs.id, schema.displayAssignments.playerOutputId),
-        )
-        .where(
-          and(
-            eq(schema.playerOutputs.playerId, player.playerId),
-            isNull(schema.displayAssignments.endedAt),
-            inArray(schema.displayAssignments.displayId, announced),
-          ),
-        );
-      const valid = new Map(current.map((c) => [c.displayId, String(c.generation)]));
-      return body.displays
-        .filter((d) => valid.get(d.display_id) !== d.assignment_generation)
-        .map((d) => d.display_id);
+      const gapMs = previous?.lastSeenAt ? now.getTime() - previous.lastSeenAt.getTime() : null;
+      if (gapMs !== null && gapMs > services.security.presenceTimeoutSeconds * 1000) {
+        await cloudEvent(tx, {
+          organizationId: player.organizationId,
+          playerId: player.playerId,
+          type: 'PRESENCE_RESTORED',
+          severity: 'info',
+          at: now,
+          payload: { offline_seconds: Math.round(gapMs / 1000) },
+        });
+      }
+      const heartbeat = {
+        heartbeatReceivedAt: now,
+        renderer: body.renderer,
+        displays: body.displays,
+      };
+      await tx
+        .insert(schema.playerStatus)
+        .values({ playerId: player.playerId, organizationId: player.organizationId, ...heartbeat })
+        .onConflictDoUpdate({ target: schema.playerStatus.playerId, set: heartbeat });
+      const pending = await outstandingCommandCount(tx, player.playerId, now);
+      const stale = await staleDisplays(tx, player, body);
+      return { stale, pending };
     });
-    return { server_time: formatInstant(now), stale_displays: stale };
+    return {
+      server_time: formatInstant(now),
+      stale_displays: result.stale,
+      pending_commands: result.pending,
+    };
   });
 
   /** Dernier manifest désiré d’une affectation active de ce Player (ADR-011). */
@@ -574,6 +584,37 @@ export function playerApiRoutes(app: FastifyInstance, services: Services): void 
       });
     },
   );
+}
+
+/** Displays annoncés dont l’affectation n’est plus la courante. */
+async function staleDisplays(
+  tx: Transaction,
+  player: PlayerContext,
+  body: HeartbeatPayload,
+): Promise<string[]> {
+  const announced = body.displays.map((d) => d.display_id);
+  if (announced.length === 0) return [];
+  const current = await tx
+    .select({
+      displayId: schema.displayAssignments.displayId,
+      generation: schema.displayAssignments.generation,
+    })
+    .from(schema.displayAssignments)
+    .innerJoin(
+      schema.playerOutputs,
+      eq(schema.playerOutputs.id, schema.displayAssignments.playerOutputId),
+    )
+    .where(
+      and(
+        eq(schema.playerOutputs.playerId, player.playerId),
+        isNull(schema.displayAssignments.endedAt),
+        inArray(schema.displayAssignments.displayId, announced),
+      ),
+    );
+  const valid = new Map(current.map((c) => [c.displayId, String(c.generation)]));
+  return body.displays
+    .filter((d) => valid.get(d.display_id) !== d.assignment_generation)
+    .map((d) => d.display_id);
 }
 
 const STATE_RANK: Record<string, number> = {

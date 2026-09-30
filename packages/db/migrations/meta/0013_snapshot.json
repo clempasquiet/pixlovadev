@@ -1,6 +1,6 @@
 {
-  "id": "52dcf9eb-a5f1-401a-8f4f-6f48d24c6a23",
-  "prevId": "bab7eaac-5668-445d-8155-389faaa6b5ad",
+  "id": "46bbde3b-66c4-4ed8-bc72-ebc62d72e1e3",
+  "prevId": "63ada2b6-9152-4842-8cc2-ffa3e69e2867",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7580,23 +7580,36 @@
           "primaryKey": false,
           "notNull": true
         },
-        "observed_at": {
-          "name": "observed_at",
+        "heartbeat_received_at": {
+          "name": "heartbeat_received_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
-        },
-        "received_at": {
-          "name": "received_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "renderer": {
           "name": "renderer",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "displays": {
+          "name": "displays",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "status_observed_at": {
+          "name": "status_observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_received_at": {
+          "name": "status_received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "renderer_restarts": {
           "name": "renderer_restarts",
@@ -7620,7 +7633,7 @@
           "name": "payload",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},

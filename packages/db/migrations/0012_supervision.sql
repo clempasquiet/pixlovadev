@@ -67,13 +67,15 @@ ALTER TABLE "player_commands" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "player_status" (
 	"player_id" uuid PRIMARY KEY NOT NULL,
 	"organization_id" uuid NOT NULL,
-	"observed_at" timestamp with time zone NOT NULL,
-	"received_at" timestamp with time zone NOT NULL,
-	"renderer" text NOT NULL,
+	"heartbeat_received_at" timestamp with time zone,
+	"renderer" text,
+	"displays" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"status_observed_at" timestamp with time zone,
+	"status_received_at" timestamp with time zone,
 	"renderer_restarts" integer,
 	"disk_free_bytes" bigint,
 	"disk_total_bytes" bigint,
-	"payload" jsonb NOT NULL
+	"payload" jsonb
 );
 --> statement-breakpoint
 ALTER TABLE "player_status" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint

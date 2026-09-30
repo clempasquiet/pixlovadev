@@ -9,7 +9,12 @@ import { join } from 'node:path';
 import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import type { TestDatabase } from '@pixlova/db/testing';
 import { LocalObjectStorage } from '@pixlova/storage';
-import { defaultMediaConfig, defaultSecurityConfig, type SecurityConfig } from './config.js';
+import {
+  defaultMediaConfig,
+  defaultSupervisionConfig,
+  defaultSecurityConfig,
+  type SecurityConfig,
+} from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
 import { dispatchEmails, MemoryMailer } from './lib/email.js';
@@ -64,6 +69,10 @@ export function createTestServices(
     security: { ...defaultSecurityConfig({}), requireMfaForAdmins: false, ...security },
     storage,
     media: { ...defaultMediaConfig({}), limits: DEFAULT_MEDIA_LIMITS },
+    supervision: {
+      ...defaultSupervisionConfig({}),
+      commandKey: { kid: 'command-test', secretKey: new Uint8Array(randomBytes(32)) },
+    },
     now: () => clock.now,
   };
   return {

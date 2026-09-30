@@ -64,9 +64,13 @@ Une valeur indisponible, par exemple sur le Player Web, reste « non disponible 
 
   ```
   pending → sent → acknowledged → success | failed | rejected | unknown
-                                   \→ expired (non lancée avant expiration)
-  pending/sent → cancelled
+  pending | sent → expired   (non récupérée ou non accusée avant expiration)
+  pending → cancelled        (seulement avant distribution au Player)
   ```
+
+  - `sent` : récupérée par le Player (`GET /player/v1/commands`), toujours redistribuée jusqu’à son ACK pour survivre à un redémarrage du Player.
+  - Une commande `expired` côté cloud après sa distribution reste acceptée si le Player l’accuse ou en rend le résultat : il a pu la lancer juste avant l’échéance, et son résultat fait foi.
+  - Une commande déjà distribuée ne peut plus être annulée : le Player a pu la lancer.
 
   L’ACK signifie « reçue et inscrite durablement », jamais « réussie ». Transport et résultat sont affichés séparément.
 - **Côté Player** :
@@ -98,7 +102,9 @@ Une valeur indisponible, par exemple sur le Player Web, reste « non disponible 
   - présence perdue ou retrouvée ;
   - commande demandée, reçue ou terminée ;
   - incident ouvert ou résolu.
-- **Timeline d’un Display** : fusion, triée par instant observé, de ces événements, des livraisons de manifests (désiré, reçu, prêt, appliqué, échec), des changements d’affectation et des publications (journal d’audit).
+- **Timeline d’un Display** : fusion, triée par instant observé, de ces événements, des livraisons de manifests (désiré, reçu, prêt, appliqué, échec) et des changements d’affectation.
+  - Les événements d’un Player sans Display n’y figurent que pendant son affectation à ce Display.
+  - Une publication apparaît par le manifest désiré qu’elle produit (identifiant et version).
   - Chaque entrée montre l’instant observé et l’instant de réception quand ils diffèrent (événements rattrapés après une coupure).
   - La corrélation publication → manifest → activation passe par l’identifiant de manifest et la version (OBS-001).
 

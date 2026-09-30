@@ -61,6 +61,7 @@ const services: Services = {
   security: config.security,
   storage: createStorageFromEnv(),
   media: { ...config.media, limits: DEFAULT_MEDIA_LIMITS },
+  supervision: config.supervision,
   now: () => new Date(),
 };
 

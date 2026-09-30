@@ -39,6 +39,40 @@ export interface MediaConfig {
   previewUrlSeconds: number;
 }
 
+/**
+ * Supervision (ADR-014). La clé de commande est distincte de la clé des manifests ; sans
+ * elle, les commandes distantes sont indisponibles (503), le reste de l’API fonctionne.
+ */
+export interface SupervisionConfig {
+  commandKey: { kid: string; secretKey: Uint8Array } | null;
+  /** Durée de validité par défaut d’une commande [à valider]. */
+  commandTtlSeconds: number;
+  /** Rétention des captures (DEC-11, 24 h proposé) [à valider]. */
+  screenshotRetentionHours: number;
+}
+
+const KEY_ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
+
+export function defaultSupervisionConfig(env: NodeJS.ProcessEnv = process.env): SupervisionConfig {
+  const kid = env.PIXLOVA_COMMAND_KEY_ID;
+  const seed = env.PIXLOVA_COMMAND_SIGNING_KEY;
+  let commandKey: SupervisionConfig['commandKey'] = null;
+  if (kid || seed) {
+    const secretKey = seed ? Buffer.from(seed, 'base64url') : null;
+    if (!kid || !KEY_ID.test(kid) || !secretKey || secretKey.length !== 32) {
+      throw new Error(
+        'PIXLOVA_COMMAND_KEY_ID et PIXLOVA_COMMAND_SIGNING_KEY (32 octets base64url) vont ensemble.',
+      );
+    }
+    commandKey = { kid, secretKey: new Uint8Array(secretKey) };
+  }
+  return {
+    commandKey,
+    commandTtlSeconds: readNumber(env, 'PIXLOVA_COMMAND_TTL_SECONDS', 600, 30, 86_400),
+    screenshotRetentionHours: readNumber(env, 'PIXLOVA_SCREENSHOT_RETENTION_HOURS', 24, 1, 24 * 30),
+  };
+}
+
 export function defaultMediaConfig(env: NodeJS.ProcessEnv = process.env): MediaConfig {
   return {
     trashRetentionDays: readNumber(env, 'PIXLOVA_MEDIA_TRASH_RETENTION_DAYS', 30, 1, 3650),
@@ -54,6 +88,7 @@ export interface ApiConfig {
   internal: ListenerConfig;
   security: SecurityConfig;
   media: MediaConfig;
+  supervision: SupervisionConfig;
 }
 
 function readPort(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -123,6 +158,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     },
     security: defaultSecurityConfig(env),
     media: defaultMediaConfig(env),
+    supervision: defaultSupervisionConfig(env),
   };
   if (config.public.port === config.internal.port) {
     throw new Error('Les listeners public et interne doivent utiliser des ports distincts.');

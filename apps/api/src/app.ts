@@ -16,6 +16,8 @@ import { mediaRoutes } from './modules/media.js';
 import { memberRoutes } from './modules/members.js';
 import { organizationRoutes } from './modules/organizations.js';
 import { playerApiRoutes } from './modules/player-api.js';
+import { supervisionPlayerRoutes } from './modules/supervision-player.js';
+import { supervisionRoutes } from './modules/supervision.js';
 import { localStorageRoutes } from './modules/storage.js';
 
 export interface AppOptions {
@@ -65,6 +67,7 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
   playlistRoutes(app, services);
   programRoutes(app, services);
   displayProgramRoutes(app, services);
+  supervisionRoutes(app, services);
   auditRoutes(app, services);
 }
 
@@ -72,6 +75,7 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
 async function playerV1(app: FastifyInstance, services: Services): Promise<void> {
   registerPlayerCors(app, services.security.webPlayerOrigins);
   playerApiRoutes(app, services);
+  supervisionPlayerRoutes(app, services);
 }
 
 /**
