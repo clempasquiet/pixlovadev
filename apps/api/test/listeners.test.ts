@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { Writable } from 'node:stream';
 import { buildInternalApp, buildPublicApp } from '../src/app.js';
+import { loggerOptions, Metrics } from '../src/observability.js';
 import { loadConfig } from '../src/config.js';
 
 const apps: FastifyInstance[] = [];
@@ -71,5 +73,58 @@ describe('configuration', () => {
   it('refuse des ports identiques ou invalides', () => {
     expect(() => loadConfig({ PUBLIC_PORT: '4000', INTERNAL_PORT: '4000' })).toThrow();
     expect(() => loadConfig({ PUBLIC_PORT: '70000' })).toThrow();
+  });
+});
+
+describe('observabilité (OBS-001, OBS-002)', () => {
+  it('métriques sur le seul listener interne, labels à cardinalité bornée', async () => {
+    const metrics = new Metrics();
+    const pub = track(buildPublicApp({ metrics }));
+    const internal = track(
+      buildInternalApp({
+        metrics,
+        gauges: async () => [
+          {
+            name: 'pixlova_players',
+            help: 'test',
+            samples: [{ labels: { presence: 'online' }, value: 2 }],
+          },
+        ],
+      }),
+    );
+    await pub.inject({ method: 'GET', url: '/health' });
+    await pub.inject({
+      method: 'GET',
+      url: '/storage/v1/objects/org/0f0f/x?sig=secret-signature',
+    });
+    expect((await pub.inject({ method: 'GET', url: '/internal/v1/metrics' })).statusCode).toBe(404);
+    const response = await internal.inject({ method: 'GET', url: '/internal/v1/metrics' });
+    expect(response.headers['content-type']).toMatch(/^text\/plain; version=0.0.4/);
+    const text = response.body;
+    expect(text).toContain(
+      'pixlova_http_requests_total{route="/health",method="GET",status_class="2xx"} 1',
+    );
+    expect(text).toContain('route="unmatched"');
+    expect(text).toContain('pixlova_players{presence="online"} 2');
+    expect(text).not.toMatch(/secret-signature|0f0f/);
+  });
+
+  it('journaux expurgés : ni jeton, ni cookie, ni URL signée', async () => {
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk, _encoding, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    const app = track(buildPublicApp({ logger: { ...loggerOptions('info'), stream } }));
+    await app.inject({
+      method: 'GET',
+      url: '/player/v1/assets/x/url?manifest_id=y&sig=secret-signature',
+      headers: { authorization: 'Bearer jeton-secret', cookie: 'session=cookie-secret' },
+    });
+    const output = lines.join('');
+    expect(output).toContain('/player/v1/assets/x/url');
+    expect(output).not.toMatch(/secret-signature|jeton-secret|cookie-secret/);
   });
 });

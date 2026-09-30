@@ -4,6 +4,7 @@ import { LocalObjectStorage } from '@pixlova/storage';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { ApiError, registerErrorHandling } from './errors.js';
 import { registerPlayerCors } from './http/player-cors.js';
+import { instrument, type Gauge, type Metrics } from './observability.js';
 import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
@@ -25,6 +26,10 @@ export interface AppOptions {
   logger?: FastifyServerOptions['logger'];
   /** Dépendances des routes `/api/v1` ; absentes, seules les routes techniques sont servies. */
   services?: Services;
+  /** Registre des métriques du processus, partagé entre les deux listeners (OBS-002). */
+  metrics?: Metrics;
+  /** Mesures de l’état du parc, lues à chaque collecte (listener interne). */
+  gauges?: () => Promise<Gauge[]>;
 }
 
 function createBase(options: AppOptions): FastifyInstance {
@@ -92,6 +97,7 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
     }
   });
   app.get('/health', async () => ({ status: 'ok' }));
+  if (options.metrics) instrument(app, options.metrics);
   const { services } = options;
   if (services) {
     void app.register((instance) => apiV1(instance, services), { prefix: '/api/v1' });
@@ -112,5 +118,12 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
 export function buildInternalApp(options: AppOptions = {}): FastifyInstance {
   const app = createBase(options);
   app.get('/internal/v1/health', async () => ({ status: 'ok' }));
+  const { metrics, gauges } = options;
+  if (metrics) {
+    app.get('/internal/v1/metrics', async (_request, reply) => {
+      const text = metrics.render(gauges ? await gauges() : []);
+      return reply.header('content-type', 'text/plain; version=0.0.4; charset=utf-8').send(text);
+    });
+  }
   return app;
 }

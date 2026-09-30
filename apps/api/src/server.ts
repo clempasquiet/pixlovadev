@@ -8,6 +8,7 @@ import { loadConfig } from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
 import { dispatchAlertNotifications } from './lib/alert-notifications.js';
+import { collectGauges, loggerOptions, Metrics } from './observability.js';
 import { ConsoleMailer, dispatchEmails, type Mailer } from './lib/email.js';
 import { FREE_ENTITLEMENTS, FREE_STORAGE_BYTES, fixedEntitlements } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
@@ -66,8 +67,14 @@ const services: Services = {
   now: () => new Date(),
 };
 
-const publicApp = buildPublicApp({ logger: true, services });
-const internalApp = buildInternalApp({ logger: true });
+const metrics = new Metrics();
+const publicApp = buildPublicApp({ logger: loggerOptions(), services, metrics });
+const internalApp = buildInternalApp({
+  logger: loggerOptions(),
+  metrics,
+  gauges: () =>
+    collectGauges(services.system, config.security.presenceTimeoutSeconds, services.now()),
+});
 
 let emailTimer: NodeJS.Timeout | undefined;
 if (mailer) {

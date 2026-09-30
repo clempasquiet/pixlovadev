@@ -13,6 +13,7 @@ import { skipDatabaseTests } from '@pixlova/db/testing';
 import type { Client } from './support/harness.js';
 import { createHarness, createOrganization, signUp, type Harness } from './support/harness.js';
 import { SimulatedPlayer, capabilities } from './support/player.js';
+import { collectGauges, Metrics } from '../src/observability.js';
 
 function key(): Record<string, string> {
   return { 'idempotency-key': `test-${randomUUID()}` };
@@ -690,6 +691,16 @@ describe.skipIf(skipDatabaseTests)('Supervision, commandes et captures (L07)', (
       expect((await rival.get('/alerts')).json().items).toEqual([]);
       const view = (await owner.get(`/displays/${display}/supervision`)).json();
       expect(view.alerts[0]).toMatchObject({ rule: 'delivery_failed' });
+    });
+
+    it('mesures agrégées du parc sans identifiant (OBS-002)', async () => {
+      const gauges = await collectGauges(h.services.system, 90, h.clock.now);
+      const text = new Metrics().render(gauges);
+      expect(text).toMatch(/pixlova_players\{presence="(online|offline|unknown)"\} \d+/);
+      expect(text).toContain('pixlova_alerts_open{rule="delivery_failed",severity="error"} 1');
+      expect(text).toContain('pixlova_email_outbox_pending');
+      expect(text).not.toContain(org.id);
+      expect(text).not.toContain(display);
     });
 
     it('fenêtres de maintenance bornées, autorisées et auditées', async () => {
