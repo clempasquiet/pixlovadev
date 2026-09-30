@@ -2,6 +2,7 @@
 //! l’environnement puis la ligne de commande. Aucune clé de confiance n’est configurable
 //! depuis le réseau (PROTO-012).
 
+use crate::platform::OutputReport;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -36,6 +37,8 @@ pub struct AgentConfig {
     pub renderer_watchdog: Duration,
     /// Intervalle de contrôle du manifest désiré.
     pub sync_interval: Duration,
+    /// Sorties déclarées à la place de la détection (développement, machines sans DRM).
+    pub virtual_outputs: Option<Vec<OutputReport>>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -51,6 +54,7 @@ struct FileConfig {
     activation_timeout_seconds: Option<u64>,
     renderer_watchdog_seconds: Option<u64>,
     sync_interval_seconds: Option<u64>,
+    virtual_outputs: Option<Vec<OutputReport>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -135,6 +139,17 @@ impl AgentConfig {
                     .or(file.sync_interval_seconds),
                 60,
             ),
+            virtual_outputs: if overrides.virtual_outputs.is_empty() {
+                file.virtual_outputs
+            } else {
+                Some(
+                    overrides
+                        .virtual_outputs
+                        .iter()
+                        .map(|spec| parse_virtual_output(spec))
+                        .collect::<Result<_, _>>()?,
+                )
+            },
             data_dir,
         })
     }
@@ -170,6 +185,30 @@ pub struct CliOverrides {
     pub renderer_external: bool,
     pub reserve_bytes: Option<u64>,
     pub sync_interval_seconds: Option<u64>,
+    /// `CLE:LARGEURxHAUTEUR`, répétable.
+    pub virtual_outputs: Vec<String>,
+}
+
+fn parse_virtual_output(spec: &str) -> Result<OutputReport, ConfigError> {
+    let invalid =
+        || ConfigError::Invalid(format!("sortie virtuelle invalide {spec} (CLE:1920x1080)"));
+    let (key, size) = spec.rsplit_once(':').ok_or_else(invalid)?;
+    let (width, height) = size.split_once('x').ok_or_else(invalid)?;
+    let (width, height): (u32, u32) = (
+        width.parse().map_err(|_| invalid())?,
+        height.parse().map_err(|_| invalid())?,
+    );
+    if key.is_empty() || key.len() > 128 || width == 0 || height == 0 {
+        return Err(invalid());
+    }
+    Ok(OutputReport {
+        output_key: key.to_owned(),
+        connector_type: Some("virtual".to_owned()),
+        width: Some(width),
+        height: Some(height),
+        refresh_hz: Some(60.0),
+        connected: Some(true),
+    })
 }
 
 fn read_file_config(path: &Path) -> Result<FileConfig, ConfigError> {

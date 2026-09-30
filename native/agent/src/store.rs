@@ -668,6 +668,8 @@ impl Store {
     }
 
     /// Activation abandonnée : l’ancien reste courant, le candidat est déclaré en échec.
+    /// `retry` conserve le candidat en `staging` pour une nouvelle tentative (échec
+    /// transitoire : coupure, renderer relancé) ; sinon il est écarté.
     pub fn abort_activation(
         &self,
         display_id: &str,
@@ -675,6 +677,7 @@ impl Store {
         code: &str,
         detail: &str,
         now: &str,
+        retry: bool,
     ) -> StoreResult<()> {
         let mut conn = self.conn();
         let tx = conn.transaction()?;
@@ -683,9 +686,10 @@ impl Store {
             params![display_id, manifest_id],
         )?;
         tx.execute(
-            "UPDATE displays SET staging_manifest = CASE WHEN staging_manifest = ?2 THEN NULL
-               ELSE staging_manifest END, last_error = ?3, updated_at = ?4 WHERE display_id = ?1",
-            params![display_id, manifest_id, code, now],
+            "UPDATE displays SET staging_manifest = CASE WHEN staging_manifest = ?2 AND NOT ?5
+               THEN NULL ELSE staging_manifest END, last_error = ?3, updated_at = ?4
+             WHERE display_id = ?1",
+            params![display_id, manifest_id, code, now, retry],
         )?;
         tx.execute(
             "INSERT INTO delivery_outbox (manifest_id, state, error_code, detail, observed_at)
@@ -962,7 +966,7 @@ mod tests {
             Some("m2")
         );
         store
-            .abort_activation("d1", "m3", "PREPARATION_FAILED", "décodage", NOW)
+            .abort_activation("d1", "m3", "PREPARATION_FAILED", "décodage", NOW, false)
             .unwrap();
         let row = store.display("d1").unwrap().unwrap();
         assert_eq!(row.current_manifest.as_deref(), Some("m2"));

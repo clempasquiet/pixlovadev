@@ -6,9 +6,19 @@
 //! jamais du contenu : la sélection est compilée au cloud et exécutée par la page de
 //! lecture partagée.
 
+#[cfg(not(unix))]
+compile_error!(
+    "pixlova-agent cible Linux en V1 : le portage Windows (Named Pipe, DPAPI, service) est décrit dans l’ADR-012"
+);
+
+pub mod cache;
 pub mod clock;
+pub mod cloud;
 pub mod config;
 pub mod identity;
+pub mod ipc;
+pub mod pipeline;
+pub mod platform;
 pub mod store;
 pub mod trust;
 

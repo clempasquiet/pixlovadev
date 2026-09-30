@@ -9,6 +9,7 @@
 pub mod canonical;
 pub mod command;
 pub mod instant;
+pub mod ipc;
 pub mod manifest;
 pub mod player_auth;
 pub mod schema;
