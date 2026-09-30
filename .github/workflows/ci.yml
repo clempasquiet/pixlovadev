@@ -70,6 +70,8 @@ jobs:
         run: pnpm --filter @pixlova/render-lab run test:browser
       - name: Dashboard de bout en bout (Chromium, API et PostgreSQL réels)
         run: pnpm --filter @pixlova/dashboard run test:browser
+      - name: Page de lecture du Player dans Chromium (pont IPC simulé)
+        run: pnpm --filter @pixlova/player-shell run test:browser
 
   rust:
     name: Rust (fmt, clippy, tests)
@@ -85,7 +87,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Construire le renderer (tests de l’agent avec le vrai binaire, sans affichage)
+        run: cargo build -p pixlova-renderer --locked
       - run: cargo test --workspace --locked
+        env:
+          PIXLOVA_TEST_RENDERER: ${{ github.workspace }}/target/debug/pixlova-renderer
 
   native-render:
     name: Rendu natif WebKitGTK (comparaison avec Chromium)
@@ -104,8 +110,8 @@ jobs:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
       - name: Installer les dépendances depuis le lockfile
         run: pnpm install --frozen-lockfile
-      - name: Construire le banc de rendu et ses dépendances
-        run: pnpm --filter @pixlova/render-lab... run build
+      - name: Construire le banc de rendu, la page de lecture et leurs dépendances
+        run: pnpm --filter @pixlova/render-lab... --filter @pixlova/player-shell... run build
       - name: Installer Chromium (version liée à playwright-core)
         run: pnpm --filter @pixlova/render-lab exec playwright-core install --with-deps chromium
       - name: Relevé des compositions de référence dans Chromium
@@ -126,3 +132,55 @@ jobs:
           pnpm --filter @pixlova/render-lab run compare-render \
             "$PWD/apps/render-lab/test-results/measure-chromium.json" "$RUNNER_TEMP/measure-webkit.json" \
             --markdown "$GITHUB_STEP_SUMMARY"
+      - name: Agent + renderer WebKitGTK jusqu’à la première image (Xvfb)
+        run: |
+          cargo build -p pixlova-agent -p pixlova-renderer --locked
+          PIXLOVA_TEST_RENDERER="$PWD/target/debug/pixlova-renderer" \
+          PIXLOVA_TEST_SHELL_DIR="$PWD/apps/player-shell/dist" \
+          timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" \
+            cargo test -p pixlova-agent --locked --test renderer renderer_webkitgtk_premiere_image
+
+  native-e2e:
+    name: Player natif de bout en bout (API, worker, PostgreSQL, agent, renderer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Base éphémère de test uniquement (aucune donnée réelle) ; digest à épingler avec L09-I.
+        image: postgres:16
+        env:
+          POSTGRES_USER: pixlova_ci
+          POSTGRES_PASSWORD: pixlova_ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pixlova_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PIXLOVA_TEST_DATABASE_URL: postgres://pixlova_ci:pixlova_ci@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Activer pnpm (version épinglée par packageManager)
+        run: corepack enable
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      - name: Installer les dépendances depuis le lockfile
+        run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - name: Bibliothèques du renderer (WebKitGTK), serveur X virtuel et FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev xvfb ffmpeg
+      - name: Installer la chaîne Rust épinglée
+        run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo build -p pixlova-agent -p pixlova-renderer --locked
+      - name: Parcours avec renderer sans affichage
+        run: timeout 600 node apps/api/scripts/e2e-native-player.mjs
+      - name: Parcours avec renderer WebKitGTK (Xvfb)
+        run: timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" node apps/api/scripts/e2e-native-player.mjs --webview

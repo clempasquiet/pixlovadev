@@ -1,0 +1,35 @@
+# Service système du Player natif pixlova (ADR-012) : lanceur A/B puis agent.
+# L’agent n’a aucun droit graphique ; le renderer est lancé par la session kiosk.
+[Unit]
+Description=pixlova — lanceur et agent du Player natif
+Wants=network-online.target time-sync.target
+After=network-online.target time-sync.target
+
+[Service]
+Type=simple
+User=pixlova
+Group=pixlova
+Environment=PIXLOVA_DATA_DIR=/var/lib/pixlova
+ExecStart=/usr/lib/pixlova/pixlova-launcher --data-dir /var/lib/pixlova --release-trust /usr/lib/pixlova/trust -- run
+Restart=always
+RestartSec=2
+# Un arrêt ne doit jamais toucher au contenu local : l’agent le reprend au démarrage.
+KillMode=control-group
+TimeoutStopSec=20
+
+# Durcissement : le Player n’a besoin que de ses données et du réseau sortant.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/pixlova
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+LockPersonality=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

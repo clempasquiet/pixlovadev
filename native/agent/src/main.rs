@@ -210,7 +210,11 @@ fn init_logging(config: &AgentConfig) -> Option<tracing_appender::non_blocking::
     };
     tracing_subscriber::registry()
         .with(filter)
-        .with(fmt::layer().with_writer(std::io::stderr))
+        .with(
+            fmt::layer()
+                .with_ansi(std::io::IsTerminal::is_terminal(&std::io::stderr()))
+                .with_writer(std::io::stderr),
+        )
         .with(file_layer)
         .init();
     guard

@@ -23,14 +23,14 @@ Le renderer (WebView système, ADR-005) ne doit détenir aucun secret.
 
 | Binaire | Rôle | Compte |
 |---|---|---|
-| `pixlova-launcher` | Choisit la version active, compte les démarrages, revient en arrière (A/B) | service système, utilisateur dédié `pixlova` |
+| `pixlova-launcher` | Choisit la version active, compte les démarrages, revient en arrière (A/B) ; binaire de la crate de l’agent, installé hors des versions | service système, utilisateur dédié `pixlova` |
 | `pixlova-agent` | Identité, API Player, SQLite, cache, activation, IPC, supervision, mises à jour | lancé par le lanceur |
 | `pixlova-renderer` | WebView plein écran, page de lecture, aucun secret | session kiosk du même utilisateur `pixlova` |
 
 - Même utilisateur Unix pour l’agent et le renderer : l’IPC peut authentifier le pair par `SO_PEERCRED` et l’agent peut arrêter un renderer figé.
 - Le renderer reste lancé par la session graphique (unité `systemd --user`, `Restart=always`) : l’agent n’a pas de droits graphiques.
 - En développement (`--renderer spawn`), l’agent lance lui-même le renderer.
-- **Windows** : service (agent) distinct d’une tâche planifiée à l’ouverture de la session kiosk (renderer), IPC par Named Pipe restreint au compte. La conception est documentée ; l’implémentation et sa qualification Windows restent à faire (hors de portée de l’environnement de développement actuel). Le renderer WebView2 est déjà mesuré (ADR-005).
+- **Windows** : service (agent) distinct d’une tâche planifiée à l’ouverture de la session kiosk (renderer), IPC par Named Pipe restreint au compte. La conception est décrite dans [Player natif sous Windows](../player-natif-windows.md) ; l’implémentation et sa qualification restent à faire (l’agent refuse de compiler hors Unix). Le renderer WebView2 est déjà mesuré (ADR-005).
 
 ### Bibliothèques (NAT-001)
 
@@ -74,7 +74,7 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
 
 ### Cache et téléchargements (NAT-008 étapes 3 à 5, NAT-009, NAT-010)
 
-- Chaque asset est téléchargé via `GET /player/v1/assets/:id/url?manifest_id=` (URL courte), dans `cache/tmp/<sha256>.part`.
+- Chaque asset est téléchargé via `GET /player/v1/assets/:id/url?manifest_id=` (URL courte), dans `cache/tmp/<sha256>.part`. Une URL relative (stockage local signé) est résolue sur l’origine de l’API ; toute autre forme est refusée. L’empreinte et la taille annoncées doivent être celles du manifest signé.
 - Une reprise par `Range` n’a lieu que si le fichier partiel correspond au même SHA-256 attendu et à la même taille annoncée. Une URL expirée est redemandée.
 - Taille et SHA-256 sont vérifiés sur le fichier complet, puis le fichier est renommé atomiquement. Un blob au contenu faux est supprimé et jamais servi.
 - **Épinglage** : les blobs des manifests current, previous et staging de chaque Display, ainsi que ceux de leur fallback. Le nettoyage n’évince que les blobs non épinglés, du plus ancien usage au plus récent, au-delà du budget.
@@ -100,7 +100,7 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
 
 - Socket Unix `0600` dans `run/`, pair vérifié par `SO_PEERCRED` (même uid), une seule connexion renderer à la fois.
 - Messages JSON par lignes, 16 Mio au plus. Enveloppe : `protocol_version`, `message_id`, `type`, `correlation_id`, `payload`.
-  - Commandes : `LOAD_MANIFEST`, `PREPARE`, `ACTIVATE`, `GET_STATUS`, `RELOAD`.
+  - Commandes : `CONFIGURE` (Displays à ouvrir, écran d’appairage, de révocation ou d’attente), `PREPARE` (manifest vérifié et empreintes), `ACTIVATE`, `GET_STATUS`, `RELOAD`.
   - Réponses et événements : `HELLO`, `READY`, `STATUS`, `ERROR`, `FRAME_PRESENTED`.
   - Tout type inconnu est refusé.
 - Le renderer reçoit le manifest vérifié et la correspondance `asset_id → sha256`. Il sert les fichiers par le protocole `pixlova://asset/<sha256>` :
@@ -110,6 +110,8 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
 
   Il ne reçoit aucun jeton ni aucune URL cloud.
 - La page de lecture (`apps/player-shell`) est construite avec le moteur partagé et sera réutilisée par le Player Web (L06-W). Elle exécute `selectAt` localement : les fins de créneaux et d’overrides sont respectées hors ligne (NAT-011, PROTO-014).
+- Le protocole est défini une seule fois dans `pixlova-contracts::ipc`, partagé par l’agent et le renderer. Le renderer relaie chaque message vers la page de la fenêtre concernée ; il n’envoie ses `STATUS` que si chaque page a répondu depuis moins de 20 s, pour qu’une page figée déclenche le watchdog.
+- Un mode `--headless` du renderer applique le même protocole sans WebView (vérification des blobs, première image simulée) pour les parcours de bout en bout sans écran.
 
 ### Supervision (PLY-004)
 
@@ -117,6 +119,13 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
 - Sans message pendant **30 s [à valider]**, l’agent tue le processus (même utilisateur). La session le relance, ou l’agent lui-même en mode `spawn`.
 - **Boucle de crashs** : au-delà de 5 redémarrages en 5 minutes, attente croissante jusqu’à 60 s, et état `degraded` déclaré.
 - À chaque (re)connexion, l’agent renvoie le manifest current de chaque Display depuis SQLite : un renderer relancé hors ligne reprend sans le cloud.
+
+### Appairage et révocation (PROTO-001 à PROTO-003)
+
+- Sans association, l’agent s’enregistre et le renderer affiche le code sur chaque sortie. Un code expiré entraîne un nouvel enregistrement.
+- Le jeton d’accès reste en mémoire ; un `401` le fait oublier et redemander par challenge.
+- Une révocation explicite (`PLAYER_REVOKED`) arrête la synchronisation, retire les contenus de l’organisation de l’écran et propose un nouvel appairage **[à valider]**. Les blobs restent dans le cache jusqu’à leur éviction ; le cloud ne prétend pas les avoir effacés.
+- Une panne réseau n’est jamais traitée comme une révocation.
 
 ### Horloge (NAT-012)
 
@@ -133,13 +142,14 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
 
   La clé de release est vérifiée avant tout téléchargement ou extraction.
 - **Paquet** : archive tar vérifiée (taille, SHA-256), extraite dans `versions/<version>.tmp` en refusant les chemins absolus ou sortants, puis renommée.
-- **Lanceur A/B** (`state/launcher.json`) :
+- **Lanceur A/B** (`state/launcher.json`, lien `versions/active` suivi par l’unité du renderer) :
   - il démarre la version `pending` ;
   - l’agent écrit un marqueur de santé seulement après : SQLite ouverte, IPC prêt, renderer connecté, première image ou écran d’attente affiché. Un accès cloud n’est pas requis (NAT-014) ;
   - **3 démarrages sans santé, ou 2 min sans marqueur [à valider]**, provoquent le retour à la version précédente ;
-  - la release est alors **bloquée localement** et ne sera pas réinstallée automatiquement. L’erreur est publiée à la reconnexion.
+  - la release est alors **bloquée localement** et ne sera pas réinstallée automatiquement. L’historique (installée, promue, revenue en arrière) est conservé et visible dans `diagnose` ; sa déclaration au cloud arrive avec la distribution des releases.
+  - après une bascule, l’agent arrête une fois un renderer d’une autre version ; la session le relance depuis `versions/active`.
 - **Base** : en cas de retour arrière, la copie d’avant migration n’est restaurée que si l’association (organisation, Player) y est identique à l’actuelle. Sinon la base courante, compatible grâce aux migrations additives, est conservée (NAT-015).
-- **V1 = mise à jour manuelle** (`pixlova-agent update apply <dossier>`). La distribution par le cloud (`GET /player/v1/releases/desired`) et l’affichage des versions souhaitée et installée relèvent d’un lot ultérieur.
+- **V1 = mise à jour manuelle** (`pixlova-agent update apply --release <release.json> --package <paquet.tar>`, puis redémarrage du service). Les métadonnées sont signées par `scripts/release/sign-release.mjs` dans l’environnement de release. La distribution par le cloud (`GET /player/v1/releases/desired`) et l’affichage des versions souhaitée et installée relèvent d’un lot ultérieur.
 
 ### Sorties et diagnostic
 
@@ -172,6 +182,6 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
   - paquet non signé, altéré ou sortant du dossier ;
   - lanceur (3 échecs, délai, blocage) ;
   - restauration conditionnelle de la base.
-- **Bout en bout** : l’agent réel est lancé contre l’API et le worker réels, avec un renderer de test. Parcours : appairage, heartbeat réel, manifest publié, préparation, première image, appliqué, coupure réseau et diffusion continue.
+- **Bout en bout** (`apps/api/scripts/e2e-native-player.mjs`, CI `native-e2e`) : agent et renderer réels contre l’API, le worker et PostgreSQL réels. Parcours : appairage par le code affiché, sortie déclarée, image envoyée et préparée, planning publié, manifest vérifié, première image, appliqué visible au dashboard, heartbeat, API arrêtée puis relancée.
 - **Renderer réel sous Xvfb** : chargement d’un manifest et première image.
 - **Matériel** : procédure dans `docs/quality/PLAYER-NATIF.md` (Linux, Windows, HDMI, 24 h hors ligne, coupure de courant).

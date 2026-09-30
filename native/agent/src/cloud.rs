@@ -156,6 +156,8 @@ struct AccessToken {
 #[derive(Clone)]
 pub struct Cloud {
     http: reqwest::Client,
+    /// Origine de l’API (`https://hôte[:port]`), pour les URLs de stockage relatives.
+    origin: String,
     base: String,
     token: Arc<Mutex<Option<AccessToken>>>,
 }
@@ -205,11 +207,34 @@ impl Cloud {
             .https_only(!is_local(api_url))
             .build()
             .map_err(|e| CloudError::Protocol(e.to_string()))?;
+        let trimmed = api_url.trim_end_matches('/');
+        let origin = trimmed
+            .find("://")
+            .and_then(|scheme| {
+                trimmed[scheme + 3..]
+                    .find('/')
+                    .map(|path| &trimmed[..scheme + 3 + path])
+            })
+            .unwrap_or(trimmed)
+            .to_owned();
         Ok(Self {
             http,
-            base: format!("{}/player/v1", api_url.trim_end_matches('/')),
+            origin,
+            base: format!("{trimmed}/player/v1"),
             token: Arc::new(Mutex::new(None)),
         })
+    }
+
+    /// URL de téléchargement absolue : une URL relative désigne l’origine de l’API
+    /// (stockage local signé) ; toute autre forme est refusée.
+    pub fn absolute_url(&self, url: &str) -> Option<String> {
+        if url.starts_with("https://") || url.starts_with("http://") {
+            Some(url.to_owned())
+        } else if url.starts_with('/') && !url.starts_with("//") {
+            Some(format!("{}{url}", self.origin))
+        } else {
+            None
+        }
     }
 
     /// Client HTTP pour les téléchargements (URLs de stockage signées, sans jeton Player).
@@ -460,4 +485,24 @@ impl Cloud {
 
 fn is_local(url: &str) -> bool {
     url.starts_with("http://127.0.0.1") || url.starts_with("http://localhost")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resout_les_urls_de_stockage_relatives_sur_l_origine_de_l_api() {
+        let cloud = Cloud::new("https://api.example.test/prefixe/").unwrap();
+        assert_eq!(
+            cloud.absolute_url("/storage/v1/objects/a?sig=x").as_deref(),
+            Some("https://api.example.test/storage/v1/objects/a?sig=x")
+        );
+        assert_eq!(
+            cloud.absolute_url("https://cdn.example.test/a").as_deref(),
+            Some("https://cdn.example.test/a")
+        );
+        assert_eq!(cloud.absolute_url("//evil.test/a"), None);
+        assert_eq!(cloud.absolute_url("file:///etc/passwd"), None);
+    }
 }

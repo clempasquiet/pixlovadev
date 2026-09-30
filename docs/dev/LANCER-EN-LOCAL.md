@@ -1,6 +1,6 @@
 # Lancer pixlova en local (développement)
 
-Ce guide démarre l’API et le dashboard sur votre poste pour essayer le parcours disponible : compte, organisation, sites, membres, invitations, audit, appairage d’un Player simulé, Displays, remplacement et bibliothèque média. Il ne concerne ni la recette ni la production (lot L09-I).
+Ce guide démarre l’API et le dashboard sur votre poste pour essayer le parcours disponible : compte, organisation, sites, membres, invitations, audit, appairage d’un Player simulé ou du Player natif Linux, Displays, remplacement, bibliothèque média, compositions et programmation. Il ne concerne ni la recette ni la production (lot L09-I).
 
 ## Prérequis
 
@@ -79,7 +79,7 @@ Ouvrir **http://localhost:5173**, puis « Créer un compte ». Les emails ne son
 
 ## Simuler un Player
 
-En attendant les Players natif et Web (lot L06), un simulateur utilise le vrai protocole d’appairage et d’authentification. Il utilise une clé Ed25519 locale, envoie un heartbeat toutes les 30 s et déclare deux sorties virtuelles :
+Sans Player réel, un simulateur utilise le vrai protocole d’appairage et d’authentification. Il utilise une clé Ed25519 locale, envoie un heartbeat toutes les 30 s et déclare deux sorties virtuelles :
 
 ```sh
 pnpm --filter @pixlova/api run simulate-player
@@ -108,7 +108,40 @@ Les **Modèles** sont réservés aux offres payantes : `PIXLOVA_DEV_FEATURES=tem
    - **Diffuser maintenant** interrompt la programmation pour une durée bornée ;
    - **Diffusion** distingue les versions désirée, préparée et appliquée.
 
-Chaque publication fait compiler par le worker un manifest signé par écran affecté. Le simulateur télécharge chaque nouveau manifest à son heartbeat (30 s au plus). Il contrôle son schéma et sa cohérence, puis le déclare préparé et appliqué. Ces états sont **simulés** : il ne télécharge aucun asset et n’affiche rien. Les Players réels arrivent avec le lot L06.
+Chaque publication fait compiler par le worker un manifest signé par écran affecté. Le simulateur télécharge chaque nouveau manifest à son heartbeat (30 s au plus). Il contrôle son schéma et sa cohérence, puis le déclare préparé et appliqué. Ces états sont **simulés** : il ne télécharge aucun asset et n’affiche rien. Le Player natif ci-dessous, lui, télécharge, vérifie et affiche réellement.
+
+## Essayer le Player natif (Linux)
+
+Prérequis : Rust ([ADR-001](../architecture/adr/0001-outillage-workspace-versions.md)) et WebKitGTK (`sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev`). Windows n’est pas encore pris en charge par l’agent ([conception](../architecture/player-natif-windows.md)).
+
+1. Construire l’agent, le renderer et la page de lecture :
+
+   ```sh
+   cargo build -p pixlova-agent -p pixlova-renderer
+   pnpm --filter @pixlova/player-shell... run build
+   ```
+
+2. Installer la clé **publique** des manifests, dérivée de `PIXLOVA_MANIFEST_SIGNING_KEY` (`apps/api/.env`) :
+
+   ```sh
+   mkdir -p work/player-trust
+   node --env-file=apps/api/.env -e "import('./packages/contracts/dist/index.js').then(c => console.log(JSON.stringify({ keys: [{ kid: process.env.PIXLOVA_MANIFEST_KEY_ID, public_key: c.encodeBase64url(c.publicKeyFromSecret(c.decodeBase64url(process.env.PIXLOVA_MANIFEST_SIGNING_KEY))) }] })))" > work/player-trust/manifest-keys.json
+   ```
+
+3. Démarrer le Player (API et worker lancés) :
+
+   ```sh
+   target/debug/pixlova-agent run --data-dir work/player --api-url http://127.0.0.1:3000 \
+     --trust-dir work/player-trust --renderer-program target/debug/pixlova-renderer \
+     --renderer-arg --shell-dir --renderer-arg apps/player-shell/dist --renderer-arg --windowed \
+     --virtual-output HDMI-1:1920x1080
+   ```
+
+   Une fenêtre affiche le code d’appairage. Appairez le Player dans le dashboard, affectez sa sortie `HDMI-1` à un écran, puis publiez un planning : l’image ou la composition s’affiche dans la fenêtre et la fiche de l’écran indique « appliqué ». Sans `--virtual-output`, les sorties réelles sont lues dans `/sys/class/drm`.
+
+4. `target/debug/pixlova-agent diagnose --data-dir work/player` affiche l’état local (versions, cache, renderer, horloge), sans secret. Arrêtez l’API : la diffusion continue. `work/player` peut être supprimé pour repartir d’une installation neuve.
+
+L’installation sur une machine dédiée (service, session kiosk, mises à jour signées) est décrite dans [Qualification matérielle du Player natif](../quality/PLAYER-NATIF.md).
 
 ## Arrêter et repartir de zéro
 

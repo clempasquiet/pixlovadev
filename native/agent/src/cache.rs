@@ -260,7 +260,13 @@ impl Cache {
         if url.sha256 != asset.sha256 || url.size_bytes != asset.size_bytes {
             return Err(CacheError::AssetMismatch(asset.asset_id.clone()));
         }
-        self.download(&cloud.downloader(), &url.url, asset, url.range_supported)
+        let Some(address) = cloud.absolute_url(&url.url) else {
+            return Err(CacheError::Download {
+                asset: asset.asset_id.clone(),
+                detail: "URL de téléchargement invalide".into(),
+            });
+        };
+        self.download(&cloud.downloader(), &address, asset, url.range_supported)
             .await
     }
 

@@ -16,8 +16,15 @@ Une case cochée sans résultat reproductible ne vaut pas validation.
 
 | Plateforme | Implémentation | Qualification |
 |---|---|---|
-| Linux x86_64 (Debian 13 / Ubuntu 24.04, session kiosk Wayland ou X11) | En cours (L06-N) | À mesurer |
-| Windows 11 x64 | Conception seulement (ADR-012) | Non commencée |
+| Linux x86_64 (Debian 13 / Ubuntu 24.04, session kiosk Wayland ou X11) | Disponible (L06-N) ; vérifiée en CI sous Xvfb, sans matériel | À mesurer |
+| Windows 11 x64 | [Conception seulement](../architecture/player-natif-windows.md) | Non commencée |
+
+## Installation d’essai
+
+1. Construire un paquet : `scripts/release/package-player.sh <clés-publiques> pixlova.tar` (voir `native/README.md`), l’extraire sur la machine.
+2. `sudo ./install.sh --api-url https://…` : compte `pixlova`, service `pixlova-launcher`, unité utilisateur `pixlova-renderer`.
+3. Configurer l’ouverture de session automatique du compte `pixlova` sur une session graphique minimale (par exemple GDM `AutomaticLogin` ou `cage`), puis redémarrer.
+4. Le code d’appairage s’affiche en plein écran.
 
 ## Essais
 
@@ -43,7 +50,9 @@ Une case cochée sans résultat reproductible ne vaut pas validation.
 ## Commandes utiles
 
 ```sh
-pixlova-agent diagnose --data-dir /var/lib/pixlova   # rapport JSON sans secret
+sudo -u pixlova /var/lib/pixlova/versions/active/pixlova-agent diagnose   # rapport JSON sans secret
 journalctl -u pixlova-launcher -f                     # journaux du service
 systemctl --user -M pixlova@ status pixlova-renderer  # renderer de la session kiosk
+sudo -u pixlova /var/lib/pixlova/versions/active/pixlova-agent update apply --release release.json --package pixlova.tar
+sudo systemctl restart pixlova-launcher               # essai de la version installée
 ```
