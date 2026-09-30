@@ -2233,8 +2233,11 @@ dependencies = [
 
 [[package]]
 name = "pixlova-renderer"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
+ "pixlova-contracts",
+ "serde_json",
+ "sha2",
  "tao",
  "wry",
 ]

@@ -143,6 +143,7 @@ impl Runtime {
                 health: this.health.clone(),
                 mode: this.config.renderer.clone(),
                 socket: this.config.socket_path(),
+                blobs: this.config.cache_dir().join("blobs"),
                 watchdog: this.config.renderer_watchdog,
             }
             .run(this.shutdown.clone()),
@@ -634,6 +635,7 @@ impl Runtime {
             "renderer": {
                 "state": self.health.state().as_str(),
                 "connected": self.link.is_connected(),
+                "pid": self.link.peer_pid(),
                 "restarts_5min": self.health.restarts_in_window(),
                 "status": self.link.last_status(),
             },

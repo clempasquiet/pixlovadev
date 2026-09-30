@@ -71,6 +71,16 @@ impl TestAsset {
             bytes,
         }
     }
+    /// Image PNG 1×1 décodable par un vrai moteur de rendu.
+    pub fn png(n: u32) -> Self {
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+            .unwrap();
+        Self {
+            id: format!("77777777-7777-4777-8777-{n:012}"),
+            bytes,
+        }
+    }
     pub fn sha(&self) -> String {
         sha256_hex(&self.bytes)
     }

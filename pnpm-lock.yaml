@@ -307,6 +307,22 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
 
+  apps/player-shell:
+    dependencies:
+      '@pixlova/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@pixlova/render-engine':
+        specifier: workspace:*
+        version: link:../../packages/render-engine
+    devDependencies:
+      playwright-core:
+        specifier: 1.56.1
+        version: 1.56.1
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
+
   apps/render-lab:
     dependencies:
       '@pixlova/contracts':

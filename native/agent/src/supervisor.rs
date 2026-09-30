@@ -137,6 +137,8 @@ pub struct Supervisor {
     pub health: RendererHealth,
     pub mode: RendererMode,
     pub socket: PathBuf,
+    /// Cache vérifié servi par le renderer (`pixlova://asset/<sha256>`).
+    pub blobs: PathBuf,
     pub watchdog: Duration,
 }
 
@@ -154,7 +156,7 @@ impl Supervisor {
         match self.mode {
             RendererMode::Spawn { program, args } => {
                 tokio::select! {
-                    _ = spawn_loop(program, args, self.socket, self.link, self.health.clone(), kill) => {}
+                    _ = spawn_loop(program, args, (self.socket, self.blobs), self.link, self.health.clone(), kill) => {}
                     _ = shutdown.notified() => {}
                 }
                 self.health.lock().stopped = true;
@@ -222,7 +224,7 @@ async fn kill_process(pid: i32) {
 async fn spawn_loop(
     program: PathBuf,
     args: Vec<String>,
-    socket: PathBuf,
+    (socket, blobs): (PathBuf, PathBuf),
     link: RendererLink,
     health: RendererHealth,
     kill: Arc<Notify>,
@@ -231,6 +233,7 @@ async fn spawn_loop(
         let child = tokio::process::Command::new(&program)
             .args(&args)
             .env("PIXLOVA_AGENT_SOCKET", &socket)
+            .env("PIXLOVA_BLOBS_DIR", &blobs)
             .kill_on_drop(true)
             .spawn();
         let delay = match child {
@@ -300,6 +303,7 @@ mod tests {
                 args: vec![],
             },
             socket: "/nonexistent".into(),
+            blobs: "/nonexistent".into(),
             watchdog: Duration::from_secs(30),
         };
         let task = tokio::spawn(supervisor.run(shutdown.clone()));
