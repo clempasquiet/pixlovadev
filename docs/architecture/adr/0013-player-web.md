@@ -114,13 +114,14 @@ Une préparation incomplète laisse le dernier manifest valide à l’écran et 
 
 ## Vérification
 
-- **Tests dans Chromium réel**, contre l’API, le worker et PostgreSQL réels :
-  - appairage ;
-  - isolation : manifest d’un autre Player refusé, jeton d’un autre Player refusé ;
-  - activation complète et asset corrompu refusé ;
-  - quota plein avec éviction, puis `STORAGE_QUOTA_EXCEEDED` ;
-  - fermeture puis reprise ;
-  - hors ligne après amorçage, avec rechargement ;
-  - profil effacé : nouvelle installation.
-- **Tests unitaires** : politique d’éviction et de quota, capacités.
+- **Chromium réel** (`apps/web-player/test/web-player.browser.test.ts`), contre l’API, le worker et PostgreSQL réels :
+  - appairage par le code affiché, activation complète, état « appliqué » visible au dashboard ;
+  - asset altéré en transit refusé (`CHECKSUM_MISMATCH`), contenu courant conservé, puis reprise ;
+  - manifest altéré refusé (`SIGNATURE_INVALID`) ;
+  - fermeture et réouverture sans nouvel appairage ;
+  - rechargement hors ligne après amorçage, servi par le service worker ;
+  - quota plein (`STORAGE_QUOTA_EXCEEDED`), contenu courant conservé ;
+  - données du site effacées : nouvelle installation ; clé non extractible.
+- **Isolation** : un manifest d’un autre Player, d’une autre organisation ou d’une génération périmée est refusé par `evaluateManifestCandidate`, couverte par les vecteurs partagés avec Rust ; l’API n’accepte que le jeton du Player (tests de l’API).
+- **Tests unitaires** : politique d’éviction et de quota, capacités déclarées (validées par le schéma).
 - **Matrice** : [PLAYER-WEB](../../quality/PLAYER-WEB.md).
