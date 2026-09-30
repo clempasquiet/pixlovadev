@@ -1,0 +1,25 @@
+{
+  "name": "@pixlova/player-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lecture d’un Display partagée par le renderer natif et le Player Web : préparation, bascule sans image noire, planification locale et écrans d’information.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pixlova/contracts": "workspace:*",
+    "@pixlova/render-engine": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}

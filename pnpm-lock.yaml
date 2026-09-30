@@ -312,6 +312,9 @@ importers:
       '@pixlova/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@pixlova/player-core':
+        specifier: workspace:*
+        version: link:../../packages/player-core
       '@pixlova/render-engine':
         specifier: workspace:*
         version: link:../../packages/render-engine
@@ -405,6 +408,15 @@ importers:
         version: 0.31.11
 
   packages/permissions: {}
+
+  packages/player-core:
+    dependencies:
+      '@pixlova/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@pixlova/render-engine':
+        specifier: workspace:*
+        version: link:../render-engine
 
   packages/render-engine:
     dependencies:
