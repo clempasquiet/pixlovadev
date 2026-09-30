@@ -63,7 +63,9 @@ export const users = pgTable(
   {
     id: id(),
     emailNormalized: text('email_normalized').notNull(),
+    displayName: text('display_name'),
     passwordHash: text('password_hash'),
+    passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     status: text('status', { enum: ['active', 'disabled'] })
       .notNull()

@@ -1,0 +1,26 @@
+# Environnement de DÉVELOPPEMENT local uniquement : mots de passe fixes et connus,
+# ports liés à 127.0.0.1. L’infrastructure de recette et de production relève de L09-I.
+name: pixlova-dev
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pixlova_admin
+      POSTGRES_PASSWORD: pixlova_admin_dev
+      POSTGRES_DB: postgres
+    ports:
+      - 127.0.0.1:5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../packages/db/sql/bootstrap-roles.sql:/docker-entrypoint-initdb.d/10-bootstrap-roles.sql:ro
+      - ./init-dev.sql:/docker-entrypoint-initdb.d/20-init-dev.sql:ro
+    healthcheck:
+      test: [CMD, pg_isready, -U, pixlova_admin]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7
+    ports:
+      - 127.0.0.1:6379:6379
+volumes:
+  postgres-data:

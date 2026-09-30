@@ -11,6 +11,10 @@ Ce dépôt contient le cadre de développement, le cahier des charges et le work
 3. Lire les chapitres utiles du [cahier des charges](docs/spec/INDEX.md), puis le [registre des décisions](docs/architecture/DECISIONS.md).
 4. Créer une branche et une pull request limitée au ticket, avec ses preuves de validation.
 
+## Essayer en local
+
+Le parcours compte → organisation → membres est utilisable sur un poste de développement : [docs/dev/LANCER-EN-LOCAL.md](docs/dev/LANCER-EN-LOCAL.md).
+
 ## Références
 
 | Document | Usage |

@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
@@ -15,7 +19,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "migrations:generate": "drizzle-kit generate",
-    "migrations:check": "drizzle-kit check"
+    "migrations:check": "drizzle-kit check",
+    "migrate": "node dist/migrate.js"
   },
   "dependencies": {
     "drizzle-orm": "0.45.3",
@@ -24,5 +29,10 @@
   "devDependencies": {
     "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11"
-  }
+  },
+  "files": [
+    "dist",
+    "migrations",
+    "sql"
+  ]
 }

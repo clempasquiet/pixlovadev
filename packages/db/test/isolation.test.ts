@@ -7,7 +7,7 @@ import {
   skipDatabaseTests,
   sqlState,
   type TestDatabase,
-} from './support/database.js';
+} from '../src/testing.js';
 
 const { auditLogs, displayAssignments, displays, organizations, playerOutputs, players, sites } =
   schema;

@@ -15,6 +15,20 @@
       "when": 1790712797242,
       "tag": "0001_role_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790716592248,
+      "tag": "0002_identity_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790716602564,
+      "tag": "0003_identity_access_grants",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,6 @@
 /**
+ * Outils de test (entrée `@pixlova/db/testing`, jamais importée par du code de production).
+ *
  * Base PostgreSQL éphémère pour les tests : rôles créés par `sql/bootstrap-roles.sql`,
  * base dédiée possédée par `pixlova_owner`, migrations appliquées par ce rôle.
  *
@@ -10,16 +12,13 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { createDatabase, runMigrations, type Database } from '../../src/index.js';
+import { createDatabase, runMigrations, type Database } from './index.js';
 
 export const adminUrl = process.env.PIXLOVA_TEST_DATABASE_URL;
 export const skipDatabaseTests = !adminUrl && !process.env.CI;
 
 const TEST_PASSWORD = 'pixlova-test-only';
-const bootstrapSql = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../sql/bootstrap-roles.sql',
-);
+const bootstrapSql = resolve(dirname(fileURLToPath(import.meta.url)), '../sql/bootstrap-roles.sql');
 
 export interface TestDatabase {
   owner: pg.Pool;
