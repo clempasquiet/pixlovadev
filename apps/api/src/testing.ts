@@ -17,6 +17,7 @@ import {
 } from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
+import { dispatchAlertNotifications } from './lib/alert-notifications.js';
 import { dispatchEmails, MemoryMailer } from './lib/email.js';
 import { MemoryRateLimiter } from './lib/rate-limit.js';
 
@@ -94,6 +95,12 @@ export function createTestServices(
     storage,
     storageRoot,
     flushEmails: async () => {
+      await dispatchAlertNotifications(
+        database.system,
+        services.cipher,
+        services.security.appBaseUrl,
+        100,
+      );
       await dispatchEmails(database.system, services.cipher, mailer, 100);
     },
   };

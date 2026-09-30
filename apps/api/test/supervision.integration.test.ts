@@ -619,4 +619,113 @@ describe.skipIf(skipDatabaseTests)('Supervision, commandes et captures (L07)', (
       ).toBe(true);
     });
   });
+
+  describe('incidents, notifications et maintenance (SUP-006 à SUP-008)', () => {
+    /** Incident tel que l’écrit le worker : ligne `alerts` et notification en outbox. */
+    async function workerIncident(targetId: string, kind = 'opened') {
+      const [alert] = await h.database.system
+        .insert(schema.alerts)
+        .values({
+          organizationId: org.id,
+          rule: 'delivery_failed',
+          severity: 'error',
+          targetType: 'display',
+          targetId,
+          siteId: org.siteId,
+          openedAt: h.clock.now,
+          notifiedOpenAt: h.clock.now,
+          details: { name: 'Vitrine' },
+        })
+        .onConflictDoNothing()
+        .returning();
+      const row =
+        alert ??
+        (
+          await h.database.system
+            .select()
+            .from(schema.alerts)
+            .where(and(eq(schema.alerts.targetId, targetId), eq(schema.alerts.status, 'open')))
+        )[0]!;
+      await h.database.system.insert(schema.outboxEvents).values({
+        organizationId: org.id,
+        aggregateType: 'alert',
+        aggregateId: row.id,
+        eventType: 'alert.notification',
+        payload: { alert_id: row.id, kind },
+      });
+      return row;
+    }
+
+    it('notifie les seuls membres autorisés et abonnés, une fois par notification', async () => {
+      const before = h.mailer.sent.length;
+      const alert = await workerIncident(display);
+      await h.flushEmails();
+      const sent = h.mailer.sent.slice(before);
+      expect(sent.map((m) => m.to)).toEqual(['owner@supervision.test']);
+      expect(sent[0]!.subject).toContain('Incident ouvert');
+      expect(sent[0]!.text).toContain(`/displays/${display}`);
+      await h.flushEmails();
+      expect(h.mailer.sent.length).toBe(before + 1);
+      // Désabonnement individuel : l’incident reste visible, aucun email.
+      const prefs = await owner.put('/supervision/preferences', { alert_emails: false });
+      expect(prefs.json()).toEqual({ alert_emails: false });
+      await h.database.system.insert(schema.outboxEvents).values({
+        organizationId: org.id,
+        aggregateType: 'alert',
+        aggregateId: alert.id,
+        eventType: 'alert.notification',
+        payload: { alert_id: alert.id, kind: 'reminder' },
+      });
+      await h.flushEmails();
+      expect(h.mailer.sent.length).toBe(before + 1);
+      await owner.put('/supervision/preferences', { alert_emails: true });
+      const listed = (await owner.get('/alerts')).json();
+      expect(listed.items[0]).toMatchObject({
+        id: alert.id,
+        rule: 'delivery_failed',
+        target_name: 'Vitrine',
+        status: 'open',
+      });
+      expect((await viewer.get('/alerts')).json().items).toHaveLength(1);
+      expect((await rival.get('/alerts')).json().items).toEqual([]);
+      const view = (await owner.get(`/displays/${display}/supervision`)).json();
+      expect(view.alerts[0]).toMatchObject({ rule: 'delivery_failed' });
+    });
+
+    it('fenêtres de maintenance bornées, autorisées et auditées', async () => {
+      const window = {
+        scope_type: 'display',
+        scope_id: display,
+        starts_at: h.clock.now.toISOString(),
+        ends_at: new Date(h.clock.now.getTime() + 3600_000).toISOString(),
+        reason: 'Remplacement de la dalle',
+      };
+      expect((await viewer.post('/maintenance-windows', window)).statusCode).toBe(403);
+      expect(
+        (
+          await owner.post('/maintenance-windows', {
+            ...window,
+            ends_at: new Date(h.clock.now.getTime() + 30 * 86_400_000).toISOString(),
+          })
+        ).statusCode,
+      ).toBe(422);
+      expect(
+        (await owner.post('/maintenance-windows', { ...window, scope_type: 'organization' }))
+          .statusCode,
+      ).toBe(422);
+      expect((await rival.post('/maintenance-windows', { ...window })).statusCode).toBe(404);
+      const created = await owner.post('/maintenance-windows', window);
+      expect(created.statusCode).toBe(201);
+      expect(created.json()).toMatchObject({ active: true, scope_type: 'display' });
+      expect((await viewer.get('/maintenance-windows')).json().items).toHaveLength(1);
+      const cancelled = await owner.post(`/maintenance-windows/${created.json().id}/cancel`);
+      expect(cancelled.json()).toMatchObject({ active: false });
+      expect((await owner.get('/maintenance-windows')).json().items).toEqual([]);
+      const audits = await h.database.system
+        .select()
+        .from(schema.auditLogs)
+        .where(eq(schema.auditLogs.action, 'maintenance.cancelled'));
+      expect(audits).toHaveLength(1);
+    });
+  });
 });

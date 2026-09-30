@@ -7,6 +7,7 @@ import { buildInternalApp, buildPublicApp } from './app.js';
 import { loadConfig } from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
+import { dispatchAlertNotifications } from './lib/alert-notifications.js';
 import { ConsoleMailer, dispatchEmails, type Mailer } from './lib/email.js';
 import { FREE_ENTITLEMENTS, FREE_STORAGE_BYTES, fixedEntitlements } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
@@ -72,9 +73,10 @@ let emailTimer: NodeJS.Timeout | undefined;
 if (mailer) {
   const activeMailer = mailer;
   emailTimer = setInterval(() => {
-    dispatchEmails(services.system, services.cipher, activeMailer).catch((error: unknown) =>
-      publicApp.log.error({ err: error }, 'envoi des emails en échec'),
-    );
+    // Notifications d’incident du worker (ADR-014) puis envoi de l’outbox email.
+    dispatchAlertNotifications(services.system, services.cipher, config.security.appBaseUrl)
+      .then(() => dispatchEmails(services.system, services.cipher, activeMailer))
+      .catch((error: unknown) => publicApp.log.error({ err: error }, 'envoi des emails en échec'));
   }, 2000);
 }
 

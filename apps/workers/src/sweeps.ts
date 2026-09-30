@@ -3,6 +3,8 @@ import { and, eq, inArray, isNotNull, isNull, lt, lte, sql } from 'drizzle-orm';
 import { renewManifestHorizons } from './programming/compile.js';
 import type { WorkerContext } from './context.js';
 import { MEDIA_PURGE } from './media/purge.js';
+import { evaluateAlerts, recordPresenceLost } from './supervision/alerts.js';
+import { pruneTimeline, purgeScreenshots } from './supervision/purge.js';
 
 const BATCH = 100;
 
@@ -123,4 +125,15 @@ export async function runSweeps(ctx: WorkerContext): Promise<void> {
   await schedulePurges(ctx);
   await pruneFinishedJobs(ctx);
   await renewManifestHorizons(ctx);
+  // Supervision (ADR-014) : une étape en échec n’empêche pas les suivantes.
+  for (const step of [recordPresenceLost, evaluateAlerts, purgeScreenshots, pruneTimeline]) {
+    try {
+      await step(ctx);
+    } catch (error) {
+      ctx.logger.error(
+        { step: step.name, error: String(error) },
+        'balayage de supervision en échec',
+      );
+    }
+  }
 }

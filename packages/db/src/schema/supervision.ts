@@ -248,6 +248,8 @@ export const alerts = pgTable(
     /** Condition de résolution vue pour la première fois (période stable). */
     clearingSince: timestamp('clearing_since', { withTimezone: true }),
     notifiedOpenAt: timestamp('notified_open_at', { withTimezone: true }),
+    /** Dernière notification (ouverture ou rappel), pour espacer les rappels. */
+    lastNotifiedAt: timestamp('last_notified_at', { withTimezone: true }),
     notifiedResolvedAt: timestamp('notified_resolved_at', { withTimezone: true }),
     /** Panne commune probable côté plateforme : notifications retenues. */
     suspectedPlatform: boolean('suspected_platform').notNull().default(false),

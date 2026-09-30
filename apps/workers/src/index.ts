@@ -7,6 +7,16 @@ export { hardenImageDecoder } from './media/image.js';
 export { compileHandler, renewManifestHorizons } from './programming/compile.js';
 export { DEFAULT_VIDEO_TOOLS, type VideoTools } from './media/video.js';
 export {
+  ALERT_NOTIFICATION,
+  DEFAULT_ALERTING,
+  PLAYBACK_ERROR_EVENTS,
+  evaluateAlerts,
+  recordPresenceLost,
+  type AlertingConfig,
+  type EvaluationReport,
+} from './supervision/alerts.js';
+export { pruneTimeline, purgeScreenshots } from './supervision/purge.js';
+export {
   cleanQuarantine,
   expireUploadSessions,
   pruneFinishedJobs,
