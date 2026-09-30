@@ -21,6 +21,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-004](adr/0004-schema-migrations-isolation-tenant.md) | Schéma initial, FK composites, RLS et rôles PostgreSQL, migrations | L00 |
 | [ADR-006](adr/0006-authentification-sessions.md) | Argon2id, sessions opaques par cookie, CSRF, TOTP, jetons à usage unique, outbox email | L01 |
 | [ADR-007](adr/0007-rbac-scopes.md) | Rôles V1, permissions nommées, scopes par site, délégation, dernier Owner | L01 |
+| [ADR-008](adr/0008-appairage-players-displays.md) | Appairage par code, clé Ed25519 et jeton court des Players, slots sous verrou, affectations générationnelles, idempotence | L02 |
 
 ## ADR proposés (en attente de preuves)
 

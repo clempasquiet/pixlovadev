@@ -8,6 +8,7 @@ export * from './manifest.js';
 export * from './command.js';
 export * from './ws.js';
 export * from './events.js';
+export * from './player-api.js';
 
 import { PlayerCapabilities } from './capabilities.js';
 import { CommandPayload, CommandResult, SignedCommand } from './command.js';
@@ -17,6 +18,20 @@ import { ErrorEnvelope } from './errors.js';
 import { PlayerEventBatch } from './events.js';
 import { ManifestPayload, SignedManifest } from './manifest.js';
 import { Organization } from './tenant.js';
+import {
+  HeartbeatResponse,
+  OutputsReportRequest,
+  PlayerAuthChallenge,
+  PlayerChallengeRequest,
+  PlayerChallengeResponse,
+  PlayerConfig,
+  PlayerPairRequest,
+  PlayerPairResponse,
+  PlayerRegisterRequest,
+  PlayerRegisterResponse,
+  PlayerTokenRequest,
+  PlayerTokenResponse,
+} from './player-api.js';
 import { HeartbeatPayload, WsMessage } from './ws.js';
 
 import { SCHEMA_BASE_URI } from './common.js';
@@ -45,5 +60,17 @@ export const ROOT_SCHEMAS = {
   'heartbeat.json': root('heartbeat.json', HeartbeatPayload),
   'ws-message.json': root('ws-message.json', WsMessage),
   'player-event-batch.json': root('player-event-batch.json', PlayerEventBatch),
+  'player-register-request.json': root('player-register-request.json', PlayerRegisterRequest),
+  'player-register-response.json': root('player-register-response.json', PlayerRegisterResponse),
+  'player-pair-request.json': root('player-pair-request.json', PlayerPairRequest),
+  'player-pair-response.json': root('player-pair-response.json', PlayerPairResponse),
+  'player-auth-challenge.json': root('player-auth-challenge.json', PlayerAuthChallenge),
+  'player-challenge-request.json': root('player-challenge-request.json', PlayerChallengeRequest),
+  'player-challenge-response.json': root('player-challenge-response.json', PlayerChallengeResponse),
+  'player-token-request.json': root('player-token-request.json', PlayerTokenRequest),
+  'player-token-response.json': root('player-token-response.json', PlayerTokenResponse),
+  'player-config.json': root('player-config.json', PlayerConfig),
+  'player-outputs-report.json': root('player-outputs-report.json', OutputsReportRequest),
+  'heartbeat-response.json': root('heartbeat-response.json', HeartbeatResponse),
 } as const;
 export type RootSchemaName = keyof typeof ROOT_SCHEMAS;

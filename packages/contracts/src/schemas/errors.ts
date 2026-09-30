@@ -46,6 +46,9 @@ export const ERROR_CODES = [
   'ALREADY_MEMBER',
   'INVITATION_PENDING',
   'INVITATION_INVALID',
+  // L02 — appairage, Displays et affectations (ADR-008)
+  'PAIRING_CODE_INVALID',
+  'DISPLAY_INACTIVE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

@@ -32,14 +32,22 @@ if (process.env.PIXLOVA_MAILER === 'console') {
 }
 
 const devMaxUsers = process.env.PIXLOVA_DEV_MAX_USERS;
-if (devMaxUsers && production) throw new Error('PIXLOVA_DEV_MAX_USERS est interdit en production.');
+const devDisplaySlots = process.env.PIXLOVA_DEV_DISPLAY_SLOTS;
+if ((devMaxUsers || devDisplaySlots) && production) {
+  throw new Error(
+    'PIXLOVA_DEV_MAX_USERS et PIXLOVA_DEV_DISPLAY_SLOTS sont interdits en production.',
+  );
+}
 
 const services: Services = {
   db: createDatabase(appPool),
   system: createDatabase(systemPool),
   cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
   limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
-  entitlements: devMaxUsers ? fixedEntitlements(Number(devMaxUsers)) : FREE_ENTITLEMENTS,
+  entitlements:
+    devMaxUsers || devDisplaySlots
+      ? fixedEntitlements(Number(devMaxUsers ?? 1), Number(devDisplaySlots ?? 1))
+      : FREE_ENTITLEMENTS,
   security: config.security,
   now: () => new Date(),
 };

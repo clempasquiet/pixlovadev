@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { ROLES, type Role } from '@pixlova/permissions';
 import { api, type Grant } from '../api.js';
 import { useActiveOrganization, useSession } from '../session.js';
@@ -77,7 +77,10 @@ export function HomePage() {
         <ol className="steps">
           <li className="done">Compte créé et adresse confirmée ({me?.user.email})</li>
           <li className="done">Organisation créée</li>
-          <li>Appairer un Player et créer un Display — disponible avec le lot L02</li>
+          <li>
+            <Link to="/players">Appairer un Player</Link> puis{' '}
+            <Link to="/displays">créer un Display</Link> et lui affecter une sortie
+          </li>
           <li>Importer un média et programmer une diffusion — lots L03 à L05</li>
         </ol>
       </div>

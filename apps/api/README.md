@@ -16,7 +16,14 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 | Sites | `GET/POST /sites`, `PATCH /sites/:id` |
 | Membres | `GET /members`, `PUT /members/:id/grants`, `DELETE /members/:id` |
 | Invitations | `GET/POST /invitations`, `POST /invitations/:id/revoke`, `/invitations/:id/resend`, `/invitations/accept` |
+| Parc | `POST /players/pair` (Idempotency-Key), `GET /players`, `PATCH /players/:id`, `POST /players/:id/revoke` |
+| Displays | `GET/POST /displays`, `GET/PATCH /displays/:id`, `PUT/DELETE /displays/:id/assignment` (Idempotency-Key) |
+| Groupes | `GET/POST /display-groups`, `PUT /display-groups/:id/members` |
 | Audit | `GET /audit?limit=&cursor=` |
+
+## Routes `/player/v1` (L02, [ADR-008](../../docs/architecture/adr/0008-appairage-players-displays.md))
+
+`POST /register`, `/pair`, `/token/challenge`, `/token/refresh` (sans jeton) ; `GET /config`, `POST /outputs`, `/heartbeat` (en-tête `Authorization: Bearer`).
 
 - Les routes d’une organisation exigent l’en-tête `x-organization-id`.
 - Les requêtes modifiantes exigent un en-tête `Origin` autorisé.
@@ -36,7 +43,8 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 | `PIXLOVA_SESSION_IDLE_HOURS`, `PIXLOVA_SESSION_ABSOLUTE_DAYS`, `PIXLOVA_RECENT_AUTH_MINUTES` | Durées de session |
 | `PIXLOVA_REQUIRE_MFA_FOR_ADMINS` | MFA exigée des administrateurs pour les actions sensibles (défaut `true`) |
 | `PIXLOVA_MAILER=console` | Emails affichés dans la console (développement ; refusé en production) |
-| `PIXLOVA_DEV_MAX_USERS` | Quota d’utilisateurs de développement avant L08 (refusé en production) |
+| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS` | Quotas de développement avant L08 (refusés en production) |
+| `PIXLOVA_PAIRING_CODE_MINUTES`, `PIXLOVA_PLAYER_TOKEN_MINUTES`, `PIXLOVA_HEARTBEAT_SECONDS`, `PIXLOVA_PRESENCE_TIMEOUT_SECONDS` | Durées Player (5 min, 15 min, 30 s, 90 s) |
 | `PIXLOVA_TRUST_PROXY` | `true` derrière la passerelle de confiance (adresse IP client) |
 
 ## Tests

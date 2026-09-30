@@ -43,9 +43,16 @@ export async function createTestDatabase(): Promise<TestDatabase> {
   const admin = new pg.Client({ connectionString: adminUrl });
   await admin.connect();
   try {
-    await admin.query(await readFile(bootstrapSql, 'utf8'));
-    for (const role of ['pixlova_owner', 'pixlova_app', 'pixlova_system']) {
-      await admin.query(`ALTER ROLE ${role} LOGIN PASSWORD '${TEST_PASSWORD}'`);
+    // Les rôles sont globaux au cluster : plusieurs suites (packages, fichiers) les
+    // initialisent en parallèle. Un verrou consultatif sérialise cette étape.
+    await admin.query('SELECT pg_advisory_lock(727601)');
+    try {
+      await admin.query(await readFile(bootstrapSql, 'utf8'));
+      for (const role of ['pixlova_owner', 'pixlova_app', 'pixlova_system']) {
+        await admin.query(`ALTER ROLE ${role} LOGIN PASSWORD '${TEST_PASSWORD}'`);
+      }
+    } finally {
+      await admin.query('SELECT pg_advisory_unlock(727601)');
     }
     await admin.query(`CREATE DATABASE ${name} OWNER pixlova_owner`);
   } finally {

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppLayout, RequireSession } from './layout.js';
 import { AccountPage } from './pages/account.js';
+import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
 import {
   AcceptInvitationPage,
   LoginPage,
@@ -38,6 +39,9 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'organizations/new', element: <CreateOrganizationPage /> },
+          { path: 'displays', element: <DisplaysPage /> },
+          { path: 'displays/:id', element: <DisplayDetailPage /> },
+          { path: 'players', element: <PlayersPage /> },
           { path: 'sites', element: <SitesPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'audit', element: <AuditPage /> },

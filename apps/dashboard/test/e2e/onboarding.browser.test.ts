@@ -3,87 +3,38 @@
  * réelle et PostgreSQL : inscription → vérification → connexion → organisation → site →
  * invitation → acceptation par un second compte → droits limités → audit.
  */
-import { mkdir } from 'node:fs/promises';
-import type { AddressInfo } from 'node:net';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { chromium, type Browser, type Page } from 'playwright-core';
-import { preview, type PreviewServer } from 'vite';
+import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildPublicApp } from '@pixlova/api';
-import { createTestServices, type TestServices } from '@pixlova/api/testing';
-import { createTestDatabase, skipDatabaseTests, type TestDatabase } from '@pixlova/db/testing';
-
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const output = resolve(root, 'test-results');
-const PASSWORD = 'une phrase de passe assez longue';
+import { skipDatabaseTests } from '@pixlova/db/testing';
+import {
+  emailLink as link,
+  login as signIn,
+  output,
+  register as signUp,
+  startStack,
+  type Stack,
+} from './support.js';
 
 describe.skipIf(skipDatabaseTests)('dashboard : premier parcours dans un vrai navigateur', () => {
-  let database: TestDatabase;
-  let test: TestServices;
-  let api: ReturnType<typeof buildPublicApp>;
-  let server: PreviewServer;
-  let browser: Browser;
-  let base: string;
-
+  let stack: Stack;
   beforeAll(async () => {
-    database = await createTestDatabase();
-    test = createTestServices(database, { cookieSecure: false });
-    test.setMaxUsers(5);
-    api = buildPublicApp({ services: test.services });
-    await api.listen({ host: '127.0.0.1', port: 0 });
-    process.env.PIXLOVA_API_URL = `http://127.0.0.1:${(api.server.address() as AddressInfo).port}`;
-    server = await preview({
-      root,
-      logLevel: 'silent',
-      preview: { port: 0, strictPort: false, host: '127.0.0.1' },
-    });
-    base = server.resolvedUrls!.local[0]!.replace(/\/$/, '');
-    // L’origine réelle du dashboard n’est connue qu’après démarrage.
-    test.services.security.allowedOrigins = [base];
-    test.services.security.appBaseUrl = base;
-    browser = await chromium.launch();
-    await mkdir(output, { recursive: true });
+    stack = await startStack();
   }, 120_000);
-
   afterAll(async () => {
-    await browser?.close();
-    await server?.close();
-    await api?.close();
-    await database?.close();
+    await stack?.close();
   });
-
-  async function emailLink(to: string, path: string): Promise<string> {
-    await test.flushEmails();
-    const link = test.mailer.linkFor(to, path);
-    if (!link) throw new Error(`Aucun lien ${path} pour ${to}`);
-    return link;
-  }
-
-  async function register(page: Page, email: string, name: string) {
-    await page.goto(`${base}/register`);
-    await page.getByLabel('Nom affiché').fill(name);
-    await page.getByLabel('Adresse email').fill(email);
-    await page.getByLabel('Mot de passe').fill(PASSWORD);
-    await page.getByRole('button', { name: 'Créer mon compte' }).click();
-    await page.getByRole('heading', { name: 'Vérifiez votre boîte mail' }).waitFor();
-    await page.goto(await emailLink(email, '/verify-email'));
-    await page.getByText('Adresse confirmée').waitFor();
-  }
-
-  async function login(page: Page, email: string) {
-    await page.getByLabel('Adresse email').fill(email);
-    await page.getByLabel('Mot de passe').fill(PASSWORD);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-  }
+  const emailLink = (to: string, path: string) => link(stack, to, path);
+  const register = (page: Parameters<typeof signUp>[1], email: string, name: string) =>
+    signUp(stack, page, email, name);
+  const login = signIn;
 
   it('crée une organisation, invite un gestionnaire de contenus limité à un site et trace les actions', async () => {
-    const owner = await browser.newPage();
+    const owner = await stack.browser.newPage();
     const pageErrors: string[] = [];
     owner.on('pageerror', (error) => pageErrors.push(error.message));
 
     await register(owner, 'owner@pixlova.test', 'Zoé');
-    await owner.goto(`${base}/login`);
+    await owner.goto(`${stack.base}/login`);
     await login(owner, 'owner@pixlova.test');
     await owner.getByRole('heading', { name: 'Créer une organisation' }).waitFor();
     await owner.getByLabel('Nom de l’organisation').fill('Crêperie Chez Zoé');
@@ -109,7 +60,7 @@ describe.skipIf(skipDatabaseTests)('dashboard : premier parcours dans un vrai na
     await owner.screenshot({ path: resolve(output, '02-membres.png'), fullPage: true });
 
     const invitation = await emailLink('carla@pixlova.test', '/invitations/accept');
-    const carla = await (await browser.newContext()).newPage();
+    const carla = await (await stack.browser.newContext()).newPage();
     await register(carla, 'carla@pixlova.test', 'Carla');
     await carla.goto(invitation);
     await carla.getByRole('link', { name: 'Se connecter' }).click();
@@ -131,8 +82,8 @@ describe.skipIf(skipDatabaseTests)('dashboard : premier parcours dans un vrai na
   }, 120_000);
 
   it('redirige une personne non connectée vers la connexion', async () => {
-    const page = await (await browser.newContext()).newPage();
-    await page.goto(`${base}/members`);
+    const page = await (await stack.browser.newContext()).newPage();
+    await page.goto(`${stack.base}/members`);
     await page.getByRole('heading', { name: 'Connexion' }).waitFor();
     expect(new URL(page.url()).searchParams.get('next')).toBe('/members');
   }, 60_000);

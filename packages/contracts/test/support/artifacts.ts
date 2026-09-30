@@ -17,8 +17,12 @@ import {
   encodeBase64url,
   publicKeyFromSecret,
   signEnvelope,
+  PLAYER_AUTH_AUDIENCE,
+  PLAYER_AUTH_TYPE,
+  signPlayerChallenge,
   type CommandPayload,
   type ManifestPayload,
+  type PlayerAuthChallenge,
 } from '../../src/index.js';
 
 const SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema';
@@ -744,6 +748,52 @@ export function buildArtifacts(): Map<string, string> {
       { input: '2026-09-29T18:00:00+02:00', micros: null },
       { input: '2026-09-29 18:00:00Z', micros: null },
     ]),
+  );
+  // --- Authentification Player (PROTO-002) ------------------------------------
+  const deviceSeed = seed('player-device-a');
+  const challenge: PlayerAuthChallenge = {
+    type: PLAYER_AUTH_TYPE,
+    audience: PLAYER_AUTH_AUDIENCE,
+    challenge_id: 'eeeeeeee-eeee-4eee-8eee-000000000001',
+    nonce: encodeBase64url(sha256(new TextEncoder().encode('nonce-1'))),
+    player_id: PLAYER,
+    installation_id: '12121212-1212-4212-8212-121212121212',
+    issued_at: '2026-09-29T18:00:00Z',
+    expires_at: '2026-09-29T18:01:00Z',
+  };
+  const signature = signPlayerChallenge(challenge, deviceSeed);
+  files.set(
+    'fixtures/player-auth-vectors.json',
+    json({
+      warning: 'CLÉ DE TEST UNIQUEMENT — graine publique.',
+      device_seed_hex: bytesToHex(deviceSeed),
+      public_key_b64u: encodeBase64url(publicKeyFromSecret(deviceSeed)),
+      signing_input: canonicalJson(challenge),
+      vectors: [
+        { name: 'valid', challenge, signature, valid: true },
+        {
+          name: 'nonce-altered',
+          challenge: {
+            ...challenge,
+            nonce: encodeBase64url(sha256(new TextEncoder().encode('nonce-2'))),
+          },
+          signature,
+          valid: false,
+        },
+        {
+          name: 'other-player',
+          challenge: { ...challenge, player_id: '66666666-6666-4666-8666-000000000009' },
+          signature,
+          valid: false,
+        },
+        {
+          name: 'wrong-key',
+          challenge,
+          signature: signPlayerChallenge(challenge, seed('player-device-b')),
+          valid: false,
+        },
+      ],
+    }),
   );
   return files;
 }

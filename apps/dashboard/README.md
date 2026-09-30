@@ -8,9 +8,11 @@ Disponible (L01) :
 - mot de passe oublié ;
 - création et sélection d’organisation ;
 - sites, membres, invitations et journal d’audit ;
-- compte : MFA TOTP avec codes de secours, sessions, changement de mot de passe.
+- compte : MFA TOTP avec codes de secours, sessions, changement de mot de passe ;
+- (L02) Players : appairage par code, présence datée, révocation ;
+- (L02) Écrans : Displays à résolution libre, licences, affectation et remplacement du Player, historique.
 
-Les sections Bibliothèque, Créateur, Playlists, Programmation et Écrans arrivent avec les lots L02 à L05.
+Les sections Bibliothèque, Créateur, Playlists et Programmation arrivent avec les lots L03 à L05.
 
 ```sh
 pnpm --filter @pixlova/dashboard dev             # http://localhost:5173, /api relayé vers PIXLOVA_API_URL (défaut http://127.0.0.1:3000)

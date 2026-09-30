@@ -115,6 +115,10 @@ export const displays = pgTable(
     lifecycleStatus: text('lifecycle_status', { enum: ['active', 'inactive', 'archived'] })
       .notNull()
       .default('active'),
+    /** Repli local sans contenu programmé (PLN-010) ; le contenu de repli arrive avec L05. */
+    fallbackMode: text('fallback_mode', { enum: ['standby_screen'] })
+      .notNull()
+      .default('standby_screen'),
     /** Incrémentée à chaque (ré)affectation (DATA-006). */
     assignmentGeneration: bigint('assignment_generation', { mode: 'bigint' })
       .notNull()
@@ -139,6 +143,7 @@ export const displays = pgTable(
       sql`${t.lifecycleStatus} in ('active', 'inactive', 'archived')`,
     ),
     check('displays_generation_check', sql`${t.assignmentGeneration} >= 0`),
+    check('displays_fallback_check', sql`${t.fallbackMode} in ('standby_screen')`),
     tenantPolicy(t.organizationId),
   ],
 ).enableRLS();

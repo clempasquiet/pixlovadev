@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/player-config.json",
+  "type": "object",
+  "required": [
+    "player_id",
+    "organization_id",
+    "heartbeat_interval_s",
+    "presence_timeout_s",
+    "assignments"
+  ],
+  "properties": {
+    "player_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "organization_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "heartbeat_interval_s": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 600
+    },
+    "presence_timeout_s": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 3600
+    },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "display_id",
+          "assignment_generation",
+          "output_key",
+          "display"
+        ],
+        "properties": {
+          "display_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "assignment_generation": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,18})$"
+          },
+          "output_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "display": {
+            "type": "object",
+            "required": [
+              "name",
+              "width",
+              "height",
+              "orientation",
+              "timezone"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "orientation": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "const": 0
+                  },
+                  {
+                    "type": "number",
+                    "const": 90
+                  },
+                  {
+                    "type": "number",
+                    "const": 180
+                  },
+                  {
+                    "type": "number",
+                    "const": 270
+                  }
+                ]
+              },
+              "timezone": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$",
+                "maxLength": 64
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 16
+    }
+  },
+  "additionalProperties": false
+}
