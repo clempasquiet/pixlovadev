@@ -3,6 +3,7 @@
 #   api     : API (listener public 3000, interne 127.0.0.1:3001), migrations et bucket
 #   worker  : worker média/manifests/alertes, avec FFmpeg
 #   gateway : passerelle Caddy (dashboard, Player Web, routage API et stockage)
+#   admin   : administration plateforme privée (listener 8081, console) — ADR-016
 # Utilisateurs non root, aucune dépendance de développement dans les images finales.
 
 ARG NODE_IMAGE=node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
@@ -18,6 +19,7 @@ RUN --mount=type=cache,id=pixlova-pnpm,target=/pnpm/store \
 RUN pnpm --workspace-concurrency=1 \
       --filter "@pixlova/api..." --filter "@pixlova/workers..." \
       --filter "@pixlova/dashboard..." --filter "@pixlova/web-player..." \
+      --filter "@pixlova/admin-console..." \
       run build
 
 # Dépendances de production seulement, liens du workspace conservés.
@@ -26,7 +28,8 @@ RUN --mount=type=cache,id=pixlova-pnpm,target=/pnpm/store \
     rm -rf node_modules apps/*/node_modules packages/*/node_modules \
  && pnpm install --frozen-lockfile --prod --offline \
       --filter "@pixlova/api..." --filter "@pixlova/workers..." \
- && rm -rf apps/dashboard apps/web-player apps/render-lab apps/player-shell scripts infra \
+ && rm -rf apps/dashboard apps/web-player apps/admin-console apps/render-lab apps/player-shell \
+      scripts infra \
       apps/*/src apps/*/test packages/*/src packages/*/test
 
 FROM ${NODE_IMAGE} AS node-base
@@ -41,6 +44,14 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.INTERNAL_PORT||3001)+'/internal/v1/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 CMD ["node", "apps/api/dist/server.js"]
+
+FROM node-base AS admin
+COPY --from=build /src/apps/admin-console/dist /app/admin-console
+ENV ADMIN_HOST=0.0.0.0 ADMIN_PORT=8081 PIXLOVA_ADMIN_CONSOLE_DIR=/app/admin-console
+EXPOSE 8081
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:8081/admin-ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+CMD ["node", "apps/api/dist/admin-server.js"]
 
 FROM node-base AS worker
 USER root

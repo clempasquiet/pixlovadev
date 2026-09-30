@@ -33,9 +33,12 @@ compose up -d --wait --quiet-pull
 step "Parcours utilisateur et reprise du worker"
 node "$recette/scripts/smoke.mjs" --worker-restart --save-state "$work/state.json"
 
+step "Administration plateforme (réseau privé, TOTP, révocation)"
+node "$recette/scripts/admin-smoke.mjs"
+
 step "Arrêt propre puis redémarrage"
 compose stop
-for service in api worker; do
+for service in api worker admin; do
   code=$(docker inspect -f '{{.State.ExitCode}}' "$(compose ps -a -q "$service")")
   echo "$service arrêté avec le code $code"
   [ "$code" -eq 0 ]

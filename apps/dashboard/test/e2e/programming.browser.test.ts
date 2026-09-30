@@ -99,14 +99,23 @@ describe.skipIf(skipDatabaseTests)(
         await page.screenshot({ path: resolve(output, '31-planning.png'), fullPage: true });
 
         // Le worker compile ; le Player reçoit un manifest signé et le déclare appliqué.
+        // Un manifest sans créneau, compilé à l’affectation de l’écran, peut être servi avant
+        // celui qui suit la publication : attendre celui qui porte le planning.
+        const keys = new Map([[stack.signer.kid, stack.signer.publicKey]]);
         let raw: string | null = null;
         await expect
-          .poll(async () => (raw = await player.manifest(displayId)) !== null, { timeout: 30_000 })
+          .poll(
+            async () => {
+              const candidate = await player.manifest(displayId);
+              const checked = candidate ? verifyManifest(candidate, keys) : null;
+              if (!checked?.ok || checked.manifest.timeline.length === 0) return false;
+              raw = candidate;
+              return true;
+            },
+            { timeout: 30_000 },
+          )
           .toBe(true);
-        const verified = verifyManifest(
-          raw!,
-          new Map([[stack.signer.kid, stack.signer.publicKey]]),
-        );
+        const verified = verifyManifest(raw!, keys);
         expect(verified.ok).toBe(true);
         if (!verified.ok) return;
         expect(verified.manifest.timeline[0]!.source.type).toBe('schedule');

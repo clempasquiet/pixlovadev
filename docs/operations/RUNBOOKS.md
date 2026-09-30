@@ -94,6 +94,20 @@ Procédures d’exploitation des incidents et signaux de la supervision ([ADR-01
   - conservée 24 h **[à valider]** puis purgée par le worker ;
   - chaque consultation est journalisée (`screenshot.viewed`).
 
+## Support client (console d’administration)
+
+Console privée décrite dans [RECETTE.md](RECETTE.md#5-administration-plateforme-privée) et l’[ADR-016](../architecture/adr/0016-administration-plateforme.md). Pas d’impersonation : le support ne se connecte jamais « en tant que » client.
+
+- **Client qui ne peut plus se connecter** : rechercher son compte par adresse exacte, avec un motif. Vérifier le statut, l’adresse vérifiée, le second facteur et les sessions actives.
+- **Appareil perdu ou session suspecte** : « Révoquer les sessions ». Le client se reconnecte avec son mot de passe et son second facteur.
+- **Téléphone TOTP et codes de secours perdus** (SuperAdmin) :
+  1. Vérifier l’identité hors de pixlova, par exemple par un contact déjà connu de l’organisation.
+  2. « Réinitialiser le second facteur », en recopiant l’adresse.
+  3. Le client réactive la MFA à sa prochaine connexion.
+- **Compte compromis** (SuperAdmin) : « Désactiver le compte ». Les sessions sont fermées et la connexion refusée jusqu’à réactivation.
+- **Média ou manifest bloqué** : dans **Tâches**, lire l’erreur de la tâche en échec, corriger la cause (fichier, stockage), puis la relancer avec un motif.
+- **Contrôle** : chaque consultation et action figure dans le **Journal** avec l’opérateur, le motif et l’état avant/après.
+
 ## Rotation des clés
 
 Trois clés distinctes : manifests (worker), releases (paquets) et commandes (API). Une même clé dans deux rôles est refusée par le Player natif.

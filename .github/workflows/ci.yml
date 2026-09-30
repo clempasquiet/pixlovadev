@@ -70,6 +70,8 @@ jobs:
         run: pnpm --filter @pixlova/render-lab run test:browser
       - name: Dashboard de bout en bout (Chromium, API et PostgreSQL réels)
         run: pnpm --filter @pixlova/dashboard run test:browser
+      - name: Console d’administration plateforme (Chromium, serveur admin et PostgreSQL réels)
+        run: pnpm --filter @pixlova/admin-console run test:browser
       - name: Page de lecture du Player dans Chromium (pont IPC simulé)
         run: pnpm --filter @pixlova/player-shell run test:browser
       - name: Player Web de bout en bout (Chromium, API, worker et PostgreSQL réels)

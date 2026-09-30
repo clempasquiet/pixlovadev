@@ -15,7 +15,7 @@ if ! cmp -s "$source_dir/env.backup" .env; then
 fi
 
 echo "Arrêt des services applicatifs…"
-compose stop cloudflared gateway api worker 2>/dev/null || compose stop gateway api worker
+compose stop cloudflared gateway admin api worker 2>/dev/null || compose stop gateway admin api worker
 compose up -d --wait postgres s3
 
 echo "Base de données…"

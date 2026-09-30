@@ -16,3 +16,6 @@ export {
   type EntitlementsProvider,
 } from './lib/entitlements.js';
 export { MemoryRateLimiter, RedisRateLimiter, type RateLimiter } from './lib/rate-limit.js';
+export { buildAdminApp, type AdminAppOptions } from './admin/app.js';
+export { loadAdminConfig, type AdminConfig } from './admin/config.js';
+export type { AdminServices } from './admin/services.js';

@@ -10,7 +10,7 @@ import { DataCipher } from './lib/crypto.js';
 import { dispatchAlertNotifications } from './lib/alert-notifications.js';
 import { collectGauges, loggerOptions, Metrics } from './observability.js';
 import { ConsoleMailer, dispatchEmails, SmtpMailer, type Mailer } from './lib/email.js';
-import { FREE_ENTITLEMENTS, FREE_STORAGE_BYTES, fixedEntitlements } from './lib/entitlements.js';
+import { deploymentFromEnv, entitlementsFromEnv } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
 
 function required(name: string): string {
@@ -21,17 +21,8 @@ function required(name: string): string {
 
 const config = loadConfig();
 const production = process.env.NODE_ENV === 'production';
-/**
- * Déploiement de recette (ADR-015) : binaires et garde-fous de production, mais quotas
- * fixes autorisés tant que la facturation (L08) n’existe pas. Jamais en production réelle.
- */
-const deployment = process.env.PIXLOVA_DEPLOYMENT ?? (production ? 'production' : 'development');
-if (!['production', 'recette', 'development'].includes(deployment)) {
-  throw new Error('PIXLOVA_DEPLOYMENT doit valoir production, recette ou development.');
-}
-if (production && deployment === 'development') {
-  throw new Error('PIXLOVA_DEPLOYMENT=development est incompatible avec NODE_ENV=production.');
-}
+// Déploiement de recette (ADR-015) : garde-fous de production, quotas fixes autorisés.
+const deployment = deploymentFromEnv();
 const appPool = new pg.Pool({ connectionString: required('DATABASE_URL'), max: 20 });
 const systemPool = new pg.Pool({ connectionString: required('DATABASE_SYSTEM_URL'), max: 5 });
 const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
@@ -52,34 +43,12 @@ if (process.env.PIXLOVA_MAILER === 'console') {
   throw new Error('PIXLOVA_MAILER est requis en production (vérification des comptes).');
 }
 
-const devMaxUsers = process.env.PIXLOVA_DEV_MAX_USERS;
-const devDisplaySlots = process.env.PIXLOVA_DEV_DISPLAY_SLOTS;
-const devStorageBytes = process.env.PIXLOVA_DEV_STORAGE_BYTES;
-const devFeatures = process.env.PIXLOVA_DEV_FEATURES;
-if (
-  (devMaxUsers || devDisplaySlots || devStorageBytes || devFeatures) &&
-  deployment === 'production'
-) {
-  throw new Error('Les variables PIXLOVA_DEV_* sont interdites en production.');
-}
-
 const services: Services = {
   db: createDatabase(appPool),
   system: createDatabase(systemPool),
   cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
   limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
-  entitlements:
-    devMaxUsers || devDisplaySlots || devStorageBytes || devFeatures
-      ? fixedEntitlements(
-          Number(devMaxUsers ?? 1),
-          Number(devDisplaySlots ?? 1),
-          devStorageBytes ? Number(devStorageBytes) : FREE_STORAGE_BYTES,
-          (devFeatures ?? '')
-            .split(',')
-            .map((f) => f.trim())
-            .filter(Boolean),
-        )
-      : FREE_ENTITLEMENTS,
+  entitlements: entitlementsFromEnv(process.env, deployment),
   security: config.security,
   storage: createStorageFromEnv(),
   media: { ...config.media, limits: mediaLimitsFromEnv(process.env) },

@@ -9,3 +9,4 @@ export * from './content.js';
 export * from './delivery.js';
 export * from './supervision.js';
 export { appRole, currentOrganization } from './common.js';
+export * from './platform.js';

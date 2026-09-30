@@ -66,6 +66,21 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_COMMAND_TTL_SECONDS`, `PIXLOVA_SCREENSHOT_RETENTION_HOURS` | Validité par défaut d’une commande (600 s) et rétention des captures (24 h) **[à valider]** |
 | `PIXLOVA_TRUST_PROXY` | `true` derrière la passerelle de confiance (adresse IP client) |
 
+## Administration plateforme (ADR-016)
+
+Point d’entrée distinct `node dist/admin-server.js` (conteneur `admin`, listener privé 8081, préfixe `/admin-api/v1`, console `apps/admin-console`). Jamais exposé par la passerelle publique.
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_PLATFORM_URL` | Connexion rôle `pixlova_platform` (lecture de support par colonnes, tables des opérateurs) |
+| `PIXLOVA_ADMIN_ALLOWED_ORIGINS` | Origines de la console (CSRF), par ex. `http://127.0.0.1:8081,http://localhost:8081` |
+| `PIXLOVA_ADMIN_COOKIE_SECURE` | `false` refusé en production |
+| `PIXLOVA_ADMIN_SESSION_IDLE_MINUTES`, `PIXLOVA_ADMIN_SESSION_ABSOLUTE_HOURS`, `PIXLOVA_ADMIN_RECENT_AUTH_MINUTES`, `PIXLOVA_ADMIN_ACTIVATION_HOURS` | 30 min, 8 h, 5 min, 24 h **[à valider]** |
+| `ADMIN_HOST`, `ADMIN_PORT`, `PIXLOVA_ADMIN_CONSOLE_DIR` | Écoute (127.0.0.1:8081 par défaut) et build de la console |
+| `REDIS_URL`, `PIXLOVA_DATA_KEYS`, `PIXLOVA_DEV_*` | Comme l’API (limitation, chiffrement des TOTP, droits appliqués affichés) |
+
+Amorçage et secours, depuis le serveur : `node dist/admin-cli.js create-operator --email … --name … --role super_admin` ou `reset-operator --email …` (code d’activation affiché une fois).
+
 ## Tests
 
 ```sh

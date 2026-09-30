@@ -80,4 +80,4 @@ Le dashboard doit authentifier des comptes globaux appartenant à plusieurs orga
 
 Tests d’intégration sur PostgreSQL réel (`apps/api/test/identity.integration.test.ts`) : parcours complet, attributs du cookie, empreinte seule en base, anti-énumération, mots de passe faibles, adresse non vérifiée, limitation, jeton de vérification consommé une fois sous concurrence, CSRF, révocations, expiration, réinitialisation, MFA (réauthentification, rejeu, secours), absence de secret dans l’audit.
 
-À traiter : transport email de production (L09-I), durées définitives et politique de récupération de compte sans code de secours (procédure support, L09-A), WebAuthn (post-V1).
+À traiter : transport email de production (L09-I), durées définitives et politique de récupération de compte sans code de secours (procédure support : réinitialisation du second facteur par un SuperAdmin, [ADR-016](0016-administration-plateforme.md)), WebAuthn (post-V1).

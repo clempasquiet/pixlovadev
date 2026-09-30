@@ -18,6 +18,8 @@ flowchart LR
   A -->|SMTP| M[mailpit]
   W[worker] --> P
   W --> S
+  O[Opérateur, tunnel SSH] -->|127.0.0.1:8081| AD[admin]
+  AD --> P
 ```
 
 Une seule adresse publique (par exemple `https://recette.example.com`) sert :
@@ -108,6 +110,40 @@ Le parcours passe par l’adresse publique, donc par Cloudflare. Il crée un com
 - **Limites d’envoi** : 95 Mo par vidéo et 50 Mo par image, car le plan gratuit Cloudflare refuse les requêtes de plus de 100 Mo. Un fichier plus gros est refusé avant l’envoi, avec « Fichier trop volumineux ».
 - **MFA des administrateurs** : elle reste exigée pour les actions sensibles, comme en production. Activez-la dans votre profil avant de gérer les membres.
 
+## 5. Administration plateforme (privée)
+
+La console d’administration ([ADR-016](../architecture/adr/0016-administration-plateforme.md)) tourne dans le conteneur `admin`. Elle écoute sur `127.0.0.1:8081` du serveur et **aucune route publique ni route du tunnel n’y mène**. Ne créez jamais de hostname public vers `admin:8081`.
+
+1. **Créer le premier SuperAdmin**, depuis le serveur :
+
+   ```sh
+   docker compose -f infra/recette/compose.yaml exec admin \
+     node apps/api/dist/admin-cli.js create-operator --email vous@exemple.fr --name "Votre nom" --role super_admin
+   ```
+
+   La commande affiche un **code d’activation**, une seule fois, valable 24 h.
+2. **Ouvrir la console depuis votre poste**, par un tunnel SSH : `ssh -L 8081:127.0.0.1:8081 utilisateur@serveur`, puis `http://localhost:8081/activate`.
+3. **Activer le compte.** Saisissez votre adresse, le code et un mot de passe d’au moins 12 caractères, puis scannez le QR code avec une application TOTP (Aegis, Google Authenticator, 1Password…). Le second facteur est obligatoire à chaque connexion.
+4. **Ajouter d’autres opérateurs** depuis la console, dans **Équipe** : rôles Support, Operator, BillingAdmin ou ContentAdmin. Le code d’activation affiché se transmet hors bande.
+
+**Ce que la console permet.** Toute consultation d’une organisation ou d’un compte demande un **motif**, journalisé. Les actions sensibles redemandent un code TOTP.
+- **Santé** de la plateforme, recherche d’**organisations** (usages, droits appliqués, parc, incidents).
+- **Comptes clients** par adresse exacte :
+  - révocation des sessions ;
+  - réinitialisation du second facteur d’un client qui a perdu son téléphone et ses codes de secours, après vérification de son identité hors de pixlova ;
+  - désactivation.
+- **Tâches en échec** (relance), **incidents**, **templates**, **journal** de la plateforme.
+
+**Opérateur ayant perdu son TOTP.** Un autre SuperAdmin clique sur « Réinitialiser les facteurs » dans **Équipe**. Sinon, depuis le serveur : `... admin-cli.js reset-operator --email <adresse>`.
+
+**Accès distant sans SSH (cible).** Il passe par une route **privée** Cloudflare (Zero Trust → Networks → Routes) avec le client Cloudflare One sur un poste enrôlé et une politique Access. Il n’est pas configuré par défaut.
+
+**Vérification** (ADM-006) : `node infra/recette/scripts/admin-smoke.mjs`. Le script vérifie :
+- l’absence de l’administration côté public et depuis la passerelle ;
+- l’activation avec TOTP, les droits bornés et la révocation.
+
+Il crée puis révoque un opérateur jetable `recette-admin-…@pixlova.invalid`.
+
 ## Exploitation courante
 
 ```sh
@@ -152,8 +188,9 @@ La restauration a été exercée après destruction complète des volumes (`ci-r
 ```sh
 infra/recette/scripts/backup.sh                     # 1. sauvegarde AVANT la mise à jour
 git fetch && git checkout <nouvelle-version>        # 2. code
-docker compose -f infra/recette/compose.yaml up -d --build --wait   # 3. migrations puis nouveaux services
-node infra/recette/scripts/smoke.mjs                # 4. vérification
+node infra/recette/scripts/init-recette.mjs --upgrade   # 3. variables apparues depuis (ex. rôle d’administration)
+docker compose -f infra/recette/compose.yaml up -d --build --wait   # 4. rôles, migrations puis nouveaux services
+node infra/recette/scripts/smoke.mjs                # 5. vérification
 ```
 
 Les migrations sont appliquées par `migrate` avant l’API et le worker. Elles sont rétrocompatibles : l’ancienne version peut en principe tourner sur le schéma migré (PRA-033). Le retour arrière :

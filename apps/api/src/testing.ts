@@ -105,3 +105,7 @@ export function createTestServices(
     },
   };
 }
+
+/** Outils des tests de la console d’administration (ADR-016). */
+export { currentStep, totpAt } from './lib/totp.js';
+export { createOperator } from './admin/operators.js';

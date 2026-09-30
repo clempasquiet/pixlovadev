@@ -34,7 +34,7 @@ export interface AppOptions {
   ready?: () => Promise<void>;
 }
 
-function createBase(options: AppOptions): FastifyInstance {
+export function createBase(options: AppOptions): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? false,
     // Identifiant généré côté serveur : un en-tête client n’est pas une source fiable.
@@ -94,7 +94,8 @@ async function playerV1(app: FastifyInstance, services: Services): Promise<void>
 export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
   const app = createBase(options);
   app.addHook('onRoute', (route) => {
-    if (route.url.startsWith('/internal')) {
+    // Ni routes internes ni administration plateforme sur le listener public (ADM-001).
+    if (route.url.startsWith('/internal') || route.url.startsWith('/admin-api')) {
       throw new Error(`Route interne interdite sur le listener public : ${route.url}`);
     }
   });
