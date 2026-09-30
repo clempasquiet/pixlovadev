@@ -12,7 +12,9 @@
  * Étapes : appairage par le code affiché, sortie déclarée, Display affecté, image
  * envoyée et préparée par le worker, planning publié, manifest signé téléchargé,
  * vérifié, préparé, première image, état « appliqué » visible au dashboard, heartbeat
- * réel ; puis API arrêtée : la diffusion locale continue ; API relancée : reconnexion.
+ * réel ; commande signée exécutée (statut), capture WebKitGTK consultée (`--webview`) ou
+ * refusée (sans affichage) ; puis API arrêtée : la diffusion locale continue ; API
+ * relancée : reconnexion et événements de la coupure rattrapés dans la chronologie.
  */
 import { spawn, execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -86,6 +88,13 @@ await mkdir(trustDir, { recursive: true });
 await writeFile(
   join(trustDir, 'manifest-keys.json'),
   JSON.stringify({ keys: [{ kid, public_key: encodeBase64url(publicKeyFromSecret(seed)) }] }),
+);
+const commandKey = test.services.supervision.commandKey;
+await writeFile(
+  join(trustDir, 'command-keys.json'),
+  JSON.stringify({
+    keys: [{ kid: commandKey.kid, public_key: encodeBase64url(publicKeyFromSecret(commandKey.secretKey)) }],
+  }),
 );
 
 // --- Agent et renderer réels ------------------------------------------------------------
@@ -224,7 +233,46 @@ try {
   if (!report.health_marker?.version) throw new Error('marqueur de santé absent');
   log(`état local : ${JSON.stringify({ current: local.current, renderer: report.runtime.renderer.state })}`);
 
+  // Commande signée : récupérée au heartbeat, vérifiée, accusée, exécutée (ADR-014).
+  const command = await call('POST', `/players/${player.id}/commands`, { type: 'GET_STATUS' }, key());
+  const done = await until('commande GET_STATUS exécutée', async () => {
+    const c = (await call('GET', `/players/${player.id}/commands`)).items.find((i) => i.id === command.id);
+    return ['success', 'failed', 'rejected'].includes(c?.status) ? c : null;
+  });
+  if (done.status !== 'success' || !done.acknowledged_at) throw new Error(`commande : ${JSON.stringify(done)}`);
+  const supervision = await call('GET', `/displays/${display.id}/supervision`);
+  if (!supervision.health?.metrics?.disk_total_bytes) throw new Error('statut complet absent');
+  log(`commande GET_STATUS réussie ; disque ${supervision.health.metrics.disk_free_bytes} / ${supervision.health.metrics.disk_total_bytes} octets`);
+
+  if (webview) {
+    const requested = await call('POST', `/displays/${display.id}/screenshots`, {}, key());
+    const shot = await until('capture WebKitGTK reçue', async () => {
+      const items = (await call('GET', `/displays/${display.id}/screenshots`)).items;
+      return items.find((i) => i.id === requested.screenshot.id && i.status === 'available') ?? null;
+    });
+    const { url } = await call('GET', `/screenshots/${shot.id}/url`);
+    const fetched = await fetch(new URL(url, `http://127.0.0.1:${port}`));
+    if (!fetched.ok) throw new Error(`lecture de la capture : ${fetched.status} ${url}`);
+    const image = Buffer.from(await fetched.arrayBuffer());
+    // En-tête PNG lu directement : le worker du même processus bloque le décodage de buffers.
+    const meta = {
+      format: image.subarray(1, 4).toString('latin1') === 'PNG' ? 'png' : 'autre',
+      width: image.readUInt32BE(16),
+      height: image.readUInt32BE(20),
+    };
+    if (meta.format !== 'png' || meta.width < 320) throw new Error(`capture invalide : ${meta.format} ${meta.width}`);
+    if (process.env.PIXLOVA_E2E_SCREENSHOTS) {
+      await writeFile(join(process.env.PIXLOVA_E2E_SCREENSHOTS, '3-capture-renderer.png'), image);
+    }
+    log(`capture WebKitGTK ${meta.width}×${meta.height} consultée`);
+  } else {
+    const refused = await call('POST', `/displays/${display.id}/screenshots`, {}, key()).catch((e) => e.message);
+    if (!String(refused).includes('CAPABILITY_UNSUPPORTED')) throw new Error(`capture headless : ${refused}`);
+    log('capture refusée pour un renderer sans affichage (capacité non déclarée)');
+  }
+
   // Cloud coupé : la diffusion continue sur l’état local.
+  const stoppedAt = Date.now();
   await app.close();
   log('API arrêtée');
   await until('agent hors ligne', async () => diagnose().runtime.online === false, 60);
@@ -240,6 +288,21 @@ try {
   await app.listen({ host: '127.0.0.1', port });
   await until('reconnexion au cloud', async () => diagnose().runtime.online === true, 60);
   log('reconnecté');
+  // Événements de la coupure : observés hors ligne, reçus après la reconnexion.
+  const caught = await until('événements de la coupure rattrapés', async () => {
+    const items = (await call('GET', `/displays/${display.id}/timeline?limit=200`)).items;
+    const lost = items.find((i) => i.type === 'CLOUD_UNREACHABLE' && i.source === 'player');
+    return lost && items.some((i) => i.type === 'CLOUD_RESTORED') ? { lost, items } : null;
+  }, 60);
+  // Horloge de l’API figée par le harnais de test : seul l’instant observé est comparé.
+  if (Date.parse(caught.lost.observed_at) < stoppedAt - 2000) {
+    throw new Error(`coupure non observée pendant l’arrêt : ${JSON.stringify(caught.lost)}`);
+  }
+  // Démarrage de l’agent : antérieur à l’affectation, hors de la chronologie de ce Display.
+  for (const type of ['COMMAND_REQUESTED', 'COMMAND_ACKNOWLEDGED', 'COMMAND_COMPLETED']) {
+    if (!caught.items.some((i) => i.type === type)) throw new Error(`chronologie sans ${type}`);
+  }
+  log('chronologie : coupure observée hors ligne puis transmise, commande et démarrage tracés');
   log('PARCOURS RÉUSSI');
 } catch (error) {
   exitCode = 1;

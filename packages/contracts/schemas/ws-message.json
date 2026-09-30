@@ -590,11 +590,69 @@
         "payload": {
           "type": "object",
           "required": [
+            "observed_at",
+            "renderer",
+            "renderer_restarts",
+            "storage_persistent",
             "metrics",
             "cache",
             "outputs"
           ],
           "properties": {
+            "observed_at": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+            },
+            "renderer": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "ok"
+                },
+                {
+                  "type": "string",
+                  "const": "starting"
+                },
+                {
+                  "type": "string",
+                  "const": "degraded"
+                },
+                {
+                  "type": "string",
+                  "const": "error"
+                },
+                {
+                  "type": "string",
+                  "const": "stopped"
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "renderer_restarts": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "storage_persistent": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "metrics": {
               "type": "object",
               "required": [
@@ -777,7 +835,8 @@
               "maxItems": 16
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "title": "PlayerStatus"
         }
       },
       "additionalProperties": false

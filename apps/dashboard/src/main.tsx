@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppLayout, RequireSession } from './layout.js';
 import { AccountPage } from './pages/account.js';
 import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
+import { FleetOverviewPage, IncidentsPage } from './pages/supervision.js';
 import { LibraryPage } from './pages/library.js';
 import { CompositionEditorPage } from './compositions/editor.js';
 import { CompositionsPage, TemplatesPage } from './compositions/pages.js';
@@ -63,6 +64,8 @@ const router = createBrowserRouter([
           { path: 'displays', element: <DisplaysPage /> },
           { path: 'displays/:id', element: <DisplayDetailPage /> },
           { path: 'players', element: <PlayersPage /> },
+          { path: 'supervision', element: <FleetOverviewPage /> },
+          { path: 'incidents', element: <IncidentsPage /> },
           { path: 'sites', element: <SitesPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'audit', element: <AuditPage /> },

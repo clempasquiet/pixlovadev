@@ -102,6 +102,10 @@ describe('WebSocket (PROTO-005)', () => {
       id: '22222222-2222-4222-8222-000000000002',
       timestamp: '2026-09-29T18:00:00Z',
       payload: {
+        observed_at: '2026-09-29T18:00:00Z',
+        renderer: 'unknown',
+        renderer_restarts: null,
+        storage_persistent: null,
         metrics: {
           cpu_percent: null,
           memory_used_bytes: null,

@@ -9,9 +9,15 @@ import { join } from 'node:path';
 import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import type { TestDatabase } from '@pixlova/db/testing';
 import { LocalObjectStorage } from '@pixlova/storage';
-import { defaultMediaConfig, defaultSecurityConfig, type SecurityConfig } from './config.js';
+import {
+  defaultMediaConfig,
+  defaultSupervisionConfig,
+  defaultSecurityConfig,
+  type SecurityConfig,
+} from './config.js';
 import type { Services } from './http/services.js';
 import { DataCipher } from './lib/crypto.js';
+import { dispatchAlertNotifications } from './lib/alert-notifications.js';
 import { dispatchEmails, MemoryMailer } from './lib/email.js';
 import { MemoryRateLimiter } from './lib/rate-limit.js';
 
@@ -64,6 +70,10 @@ export function createTestServices(
     security: { ...defaultSecurityConfig({}), requireMfaForAdmins: false, ...security },
     storage,
     media: { ...defaultMediaConfig({}), limits: DEFAULT_MEDIA_LIMITS },
+    supervision: {
+      ...defaultSupervisionConfig({}),
+      commandKey: { kid: 'command-test', secretKey: new Uint8Array(randomBytes(32)) },
+    },
     now: () => clock.now,
   };
   return {
@@ -85,6 +95,12 @@ export function createTestServices(
     storage,
     storageRoot,
     flushEmails: async () => {
+      await dispatchAlertNotifications(
+        database.system,
+        services.cipher,
+        services.security.appBaseUrl,
+        100,
+      );
       await dispatchEmails(database.system, services.cipher, mailer, 100);
     },
   };

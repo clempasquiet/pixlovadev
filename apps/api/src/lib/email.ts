@@ -12,7 +12,29 @@ export type EmailMessage =
       to: string;
       data: { link: string; organizationName: string; role: string };
     }
-  | { template: 'mfa_changed'; to: string; data: { enabled: boolean } };
+  | { template: 'mfa_changed'; to: string; data: { enabled: boolean } }
+  | {
+      template: 'alert';
+      to: string;
+      data: {
+        kind: 'opened' | 'resolved' | 'reminder';
+        rule: string;
+        severity: string;
+        targetName: string;
+        organizationName: string;
+        openedAt: string;
+        link: string;
+      };
+    };
+
+/** Libellés des règles d’alerte (ADR-014). */
+const ALERT_LABELS: Record<string, string> = {
+  player_offline: 'Player hors ligne',
+  manifest_not_applied: 'Programmation non appliquée',
+  delivery_failed: 'Échec de préparation du contenu',
+  playback_errors: 'Erreurs de lecture répétées',
+  disk_low: 'Espace disque faible',
+};
 
 export interface RenderedEmail {
   to: string;
@@ -67,6 +89,20 @@ export function renderEmail(message: EmailMessage): RenderedEmail {
           : 'Double authentification désactivée sur votre compte pixlova',
         text: `Bonjour,\n\nLa double authentification de votre compte a été ${message.data.enabled ? 'activée' : 'désactivée'}. Si ce n’est pas vous, contactez le support.${footer}`,
       };
+    case 'alert': {
+      const { data } = message;
+      const label = ALERT_LABELS[data.rule] ?? data.rule;
+      const state = {
+        opened: 'Incident ouvert',
+        reminder: 'Incident toujours ouvert',
+        resolved: 'Incident résolu',
+      }[data.kind];
+      return {
+        to: message.to,
+        subject: `[pixlova] ${state} : ${label} — ${data.targetName}`,
+        text: `Bonjour,\n\n${state} dans l’organisation « ${data.organizationName} ».\nRègle : ${label} (${data.severity})\nCible : ${data.targetName}\nOuvert le : ${data.openedAt}\n\nDétail et historique : ${data.link}\n\nVous recevez ce message car vous pouvez configurer ce parc. Désabonnement : préférences de supervision.${footer}`,
+      };
+    }
   }
 }
 

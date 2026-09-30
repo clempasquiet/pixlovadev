@@ -128,6 +128,8 @@ Prérequis : Rust ([ADR-001](../architecture/adr/0001-outillage-workspace-versio
    node --env-file=apps/api/.env -e "import('./packages/contracts/dist/index.js').then(c => console.log(JSON.stringify({ keys: [{ kid: process.env.PIXLOVA_MANIFEST_KEY_ID, public_key: c.encodeBase64url(c.publicKeyFromSecret(c.decodeBase64url(process.env.PIXLOVA_MANIFEST_SIGNING_KEY))) }] })))" > work/player-trust/manifest-keys.json
    ```
 
+   Pour les commandes distantes (statut, capture, redémarrage du renderer), faire de même avec `PIXLOVA_COMMAND_KEY_ID` / `PIXLOVA_COMMAND_SIGNING_KEY` vers `work/player-trust/command-keys.json`. Sans ce fichier, le Player refuse toute commande (`UNKNOWN_KEY`) et continue de diffuser.
+
 3. Démarrer le Player (API et worker lancés) :
 
    ```sh
@@ -145,7 +147,7 @@ L’installation sur une machine dédiée (service, session kiosk, mises à jour
 
 ## Essayer le Player Web
 
-1. Écrire la clé **publique** des manifests dans `apps/web-player/public/trust/manifest-keys.json` (même commande que pour le Player natif, avec ce chemin de sortie). Ce fichier est ignoré par Git.
+1. Écrire la clé **publique** des manifests dans `apps/web-player/public/trust/manifest-keys.json` (même commande que pour le Player natif, avec ce chemin de sortie), et celle des commandes dans `command-keys.json` à côté. Ces fichiers sont ignorés par Git.
 2. Démarrer le Player Web ; le serveur de développement relaie `/player/v1` et `/storage` vers l’API :
 
    ```sh

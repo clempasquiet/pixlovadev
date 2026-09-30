@@ -125,7 +125,14 @@ fn os_version() -> Option<String> {
 
 /// Capacités déclarées (PROTO-017) : elles guident le choix des variantes, ce ne sont ni
 /// des droits ni des preuves matérielles.
-pub fn capabilities(app_version: &str, storage_quota_bytes: Option<u64>) -> Value {
+///
+/// `screenshot` : la capture dépend du renderer réel (WebKitGTK) ; un renderer headless ou
+/// un autre moteur ne la déclare pas.
+pub fn capabilities(
+    app_version: &str,
+    storage_quota_bytes: Option<u64>,
+    screenshot: bool,
+) -> Value {
     json!({
         "player_type": "native",
         "app_version": app_version,
@@ -143,7 +150,7 @@ pub fn capabilities(app_version: &str, storage_quota_bytes: Option<u64>) -> Valu
         "max_canvas": { "width": 3840, "height": 2160 },
         "max_concurrent_videos": 1,
         "multi_output": "supported",
-        "screenshot": "unsupported",
+        "screenshot": if screenshot { "supported" } else { "unsupported" },
         "volume_control": "unsupported",
         "reboot_host": "unsupported",
         "persistent_storage": "granted",

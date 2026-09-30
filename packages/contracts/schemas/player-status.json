@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/player-status.json",
+  "type": "object",
+  "required": [
+    "observed_at",
+    "renderer",
+    "renderer_restarts",
+    "storage_persistent",
+    "metrics",
+    "cache",
+    "outputs"
+  ],
+  "properties": {
+    "observed_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "renderer": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "ok"
+        },
+        {
+          "type": "string",
+          "const": "starting"
+        },
+        {
+          "type": "string",
+          "const": "degraded"
+        },
+        {
+          "type": "string",
+          "const": "error"
+        },
+        {
+          "type": "string",
+          "const": "stopped"
+        },
+        {
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    },
+    "renderer_restarts": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "storage_persistent": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "cpu_percent",
+        "memory_used_bytes",
+        "memory_total_bytes",
+        "disk_free_bytes",
+        "disk_total_bytes",
+        "temperature_c"
+      ],
+      "properties": {
+        "cpu_percent": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "memory_used_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "memory_total_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disk_free_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disk_total_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temperature_c": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -50,
+              "maximum": 150
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cache": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "required_bytes",
+            "ready_bytes"
+          ],
+          "properties": {
+            "required_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "ready_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "output_key",
+          "connected",
+          "width",
+          "height",
+          "refresh_hz"
+        ],
+        "properties": {
+          "output_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "connected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refresh_hz": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 16
+    }
+  },
+  "additionalProperties": false,
+  "title": "PlayerStatus"
+}

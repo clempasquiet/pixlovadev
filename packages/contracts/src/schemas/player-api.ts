@@ -163,6 +163,8 @@ export const HeartbeatResponse = Type.Object(
     server_time: Instant,
     /** Displays annoncés avec une affectation qui n’est plus la courante : rafraîchir /config. */
     stale_displays: Type.Array(Uuid, { maxItems: 16 }),
+    /** Commandes valides en attente : le Player les récupère sans attendre (ADR-014). */
+    pending_commands: Type.Integer({ minimum: 0, maximum: 1000 }),
   },
   Strict,
 );
@@ -213,3 +215,57 @@ export const AssetUrlResponse = Type.Object(
   Strict,
 );
 export type AssetUrlResponse = Static<typeof AssetUrlResponse>;
+
+/** `POST /player/v1/events` : identifiants persistés ; le Player ne retire que ceux-là (PROTO-019). */
+export const PlayerEventsAck = Type.Object(
+  { accepted: Type.Array(Uuid, { maxItems: 500 }) },
+  Strict,
+);
+export type PlayerEventsAck = Static<typeof PlayerEventsAck>;
+
+/**
+ * `GET /player/v1/commands` : enveloppes `SIGNAGE_COMMAND_V1` encore valides, sous forme
+ * textuelle ; le Player les vérifie avant tout effet (PROTO-008, ADR-014).
+ */
+export const PlayerCommandsResponse = Type.Object(
+  { commands: Type.Array(Type.String({ minLength: 2, maxLength: 65_536 }), { maxItems: 20 }) },
+  Strict,
+);
+export type PlayerCommandsResponse = Static<typeof PlayerCommandsResponse>;
+
+/** `POST /player/v1/commands/:id/ack` : reçue et inscrite durablement, jamais « réussie ». */
+export const CommandAckRequest = Type.Object({ acknowledged_at: Instant }, Strict);
+export type CommandAckRequest = Static<typeof CommandAckRequest>;
+
+/** Taille maximale d’une capture (SUP-004). */
+export const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
+
+/** `POST /player/v1/screenshots/upload-session` : seulement pour une capture demandée. */
+export const ScreenshotUploadRequest = Type.Object(
+  {
+    command_id: Uuid,
+    screenshot_id: Uuid,
+    mime_type: Type.Literal('image/png'),
+    size_bytes: Type.Integer({ minimum: 1, maximum: SCREENSHOT_MAX_BYTES }),
+    sha256: Sha256Hex,
+    captured_at: Instant,
+  },
+  Strict,
+);
+export type ScreenshotUploadRequest = Static<typeof ScreenshotUploadRequest>;
+
+export const ScreenshotUploadResponse = Type.Object(
+  {
+    upload: Type.Object(
+      {
+        method: Type.Literal('PUT'),
+        url: Type.String({ minLength: 1, maxLength: 4096 }),
+        headers: Type.Record(Type.String({ maxLength: 64 }), Type.String({ maxLength: 512 })),
+      },
+      Strict,
+    ),
+    expires_at: Instant,
+  },
+  Strict,
+);
+export type ScreenshotUploadResponse = Static<typeof ScreenshotUploadResponse>;

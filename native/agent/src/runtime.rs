@@ -2,6 +2,8 @@
 //! supervision. Le cloud n’est jamais requis pour continuer à diffuser (NAT-011) :
 //! chaque étape réseau peut échouer sans toucher à l’état local validé.
 
+mod commands;
+
 use crate::cache::Cache;
 use crate::clock::{Clock, SystemClock, format_instant, parse_instant_millis};
 use crate::cloud::{Cloud, CloudError, Heartbeat, HeartbeatDisplay, PairStatus, PlayerConfig};
@@ -11,10 +13,13 @@ use crate::ipc::{IpcServer, RendererEvent, RendererLink};
 use crate::pipeline::Pipeline;
 use crate::platform::{OutputReport, capabilities, detect_outputs};
 use crate::store::Store;
+use crate::supervision::{EVENT_BATCH, EventLog, Severity};
 use crate::supervisor::{RendererHealth, Supervisor};
 use crate::trust::TrustAnchors;
+use pixlova_contracts::TrustStore;
 use pixlova_contracts::ipc::{ConfigurePayload, DisplaySurface, MessageType, Notice, Playback};
-use serde_json::json;
+use serde_json::{Value, json};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -24,6 +29,8 @@ use tokio::sync::Notify;
 pub const CLOCK_DRIFT_WARNING_MILLIS: i64 = 5 * 60_000;
 /// Nouvelle déclaration des sorties, même sans changement.
 const OUTPUTS_REFRESH: Duration = Duration::from_secs(10 * 60);
+/// Statut complet envoyé au plus tard à cet intervalle [à valider] (OBS-003).
+const STATUS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Debug, thiserror::Error)]
 pub enum RuntimeError {
@@ -39,6 +46,9 @@ struct Observed {
     last_sync_at: Option<String>,
     clock_offset_ms: Option<i64>,
     notice: Option<Notice>,
+    /// Début de la coupure cloud en cours (heure locale), pour l’événement de reprise.
+    offline_since: Option<i64>,
+    drift_reported: bool,
 }
 
 pub struct Runtime {
@@ -56,6 +66,13 @@ pub struct Runtime {
     observed: Arc<Mutex<Observed>>,
     started: Instant,
     shutdown: Arc<Notify>,
+    events: EventLog,
+    /// Clés des commandes, distinctes de celles des manifests (ADR-014).
+    command_trust: TrustStore,
+    screenshot_supported: bool,
+    /// Réveille la boucle principale (commande `FORCE_SYNC`).
+    wake: Arc<Notify>,
+    status_sent: Mutex<Option<Instant>>,
 }
 
 fn init<E: std::fmt::Display>(context: &str) -> impl FnOnce(E) -> RuntimeError + '_ {
@@ -82,12 +99,21 @@ impl Runtime {
         let cloud = Cloud::new(&config.api_url).map_err(init("client HTTP"))?;
         let server = IpcServer::bind(&config.socket_path()).map_err(init("socket IPC"))?;
         let link = RendererLink::new();
+        // La capture exige la WebView réelle ; un renderer headless ne la fournit pas.
+        let screenshot_supported = cfg!(target_os = "linux")
+            && match &config.renderer {
+                crate::config::RendererMode::External => true,
+                crate::config::RendererMode::Spawn { args, .. } => {
+                    !args.iter().any(|a| a == "--headless")
+                }
+            };
+        let events = EventLog::new(store.clone(), clock.clone());
         let health = RendererHealth::new(link.clone(), config.renderer_watchdog);
         let pipeline = Pipeline::new(
             store.clone(),
             cache.clone(),
             cloud.clone(),
-            trust.manifests,
+            trust.manifests.clone(),
             link.clone(),
             clock.clone(),
             config.activation_timeout,
@@ -107,6 +133,11 @@ impl Runtime {
                 observed: Arc::default(),
                 started: Instant::now(),
                 shutdown: Arc::new(Notify::new()),
+                events,
+                command_trust: trust.commands,
+                screenshot_supported,
+                wake: Arc::new(Notify::new()),
+                status_sent: Mutex::new(None),
             },
             server,
         ))
@@ -135,8 +166,17 @@ impl Runtime {
         if let Err(error) = self.cache.collect_garbage() {
             tracing::warn!(%error, "nettoyage du cache impossible");
         }
+        self.recover_commands();
+        self.events.record(
+            "AGENT_STARTED",
+            Severity::Info,
+            None,
+            json!({ "version": crate::AGENT_VERSION }),
+        );
         let _ = std::fs::remove_file(self.config.health_marker());
         let this = Arc::new(self);
+        // Abonné avant d’accepter des connexions : aucun `HELLO` précoce n’est manqué.
+        let renderer_events = this.link.subscribe();
         tokio::spawn(server.serve(this.link.clone()));
         let supervisor = tokio::spawn(
             Supervisor {
@@ -149,7 +189,7 @@ impl Runtime {
             }
             .run(this.shutdown.clone()),
         );
-        let events = tokio::spawn(this.clone().renderer_events());
+        let events = tokio::spawn(this.clone().renderer_events(renderer_events));
         tokio::select! {
             _ = this.clone().main_loop() => {}
             _ = this.shutdown.notified() => {}
@@ -183,14 +223,23 @@ impl Runtime {
 
     // --- Renderer -------------------------------------------------------------------------
 
-    async fn renderer_events(self: Arc<Self>) {
-        let mut events = self.link.subscribe();
+    async fn renderer_events(
+        self: Arc<Self>,
+        mut events: tokio::sync::broadcast::Receiver<RendererEvent>,
+    ) {
         let mut healthy = false;
         let mut renderer_version_checked = false;
+        let mut playback: HashMap<String, Playback> = HashMap::new();
         loop {
             match events.recv().await {
                 Ok(RendererEvent::Connected { pid, version, .. }) => {
                     tracing::info!(?pid, ?version, "renderer connecté");
+                    self.events.record(
+                        "RENDERER_CONNECTED",
+                        Severity::Info,
+                        None,
+                        json!({ "version": version }),
+                    );
                     // Après une mise à jour, le renderer de la session graphique peut être
                     // encore l’ancien : il est arrêté une fois et relancé depuis `active`.
                     if matches!(self.config.renderer, crate::config::RendererMode::External)
@@ -218,7 +267,39 @@ impl Runtime {
                     // version saine pour le lanceur, même hors ligne (NAT-014).
                     healthy = self.write_health_marker();
                 }
-                Ok(RendererEvent::Disconnected { .. }) => tracing::warn!("renderer déconnecté"),
+                Ok(RendererEvent::Disconnected { .. }) => {
+                    tracing::warn!("renderer déconnecté");
+                    self.events
+                        .record("RENDERER_DISCONNECTED", Severity::Warning, None, json!({}));
+                    playback.clear();
+                }
+                Ok(RendererEvent::Status(status)) => {
+                    // Passage en erreur de lecture d’un Display : un événement par transition.
+                    for display in status.displays {
+                        let previous =
+                            playback.insert(display.display_id.clone(), display.playback);
+                        if display.playback == Playback::Error && previous != Some(Playback::Error)
+                        {
+                            let generation = self
+                                .store
+                                .display(&display.display_id)
+                                .ok()
+                                .flatten()
+                                .map(|d| d.assignment_generation);
+                            self.events.record(
+                                "PLAYBACK_ERROR",
+                                Severity::Error,
+                                generation
+                                    .as_deref()
+                                    .map(|g| (display.display_id.as_str(), g)),
+                                json!({
+                                    "manifest_id": display.manifest_id,
+                                    "content_ref": display.content_ref,
+                                }),
+                            );
+                        }
+                    }
+                }
                 Ok(_) => {}
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
@@ -324,7 +405,10 @@ impl Runtime {
                 }
             };
             self.write_status();
-            tokio::time::sleep(pause).await;
+            tokio::select! {
+                () = tokio::time::sleep(pause) => {}
+                () = self.wake.notified() => {}
+            }
         }
     }
 
@@ -355,7 +439,7 @@ impl Runtime {
                 .register(
                     &installation,
                     &self.identity,
-                    capabilities(crate::AGENT_VERSION, None),
+                    capabilities(crate::AGENT_VERSION, None, self.screenshot_supported),
                     &outputs,
                 )
                 .await
@@ -417,12 +501,22 @@ impl Runtime {
     }
 
     fn cloud_ok(&self) {
-        let (_, now) = self.now();
+        let (now_millis, now) = self.now();
+        let offline_since = self.observed().offline_since;
         self.observe(|o| {
             o.online = true;
             o.last_cloud_error = None;
             o.last_sync_at = Some(now);
+            o.offline_since = None;
         });
+        if let Some(since) = offline_since {
+            self.events.record(
+                "CLOUD_RESTORED",
+                Severity::Info,
+                None,
+                json!({ "offline_seconds": (now_millis - since).max(0) / 1000 }),
+            );
+        }
     }
 
     fn cloud_failed(&self, error: &CloudError) -> Duration {
@@ -433,9 +527,19 @@ impl Runtime {
             tracing::debug!(%error, "cloud toujours injoignable");
         }
         let code = error.code().to_owned();
+        let (now_millis, _) = self.now();
+        if self.observed().offline_since.is_none() {
+            self.events.record(
+                "CLOUD_UNREACHABLE",
+                Severity::Warning,
+                None,
+                json!({ "code": code }),
+            );
+        }
         self.observe(|o| {
             o.online = false;
             o.last_cloud_error = Some(code);
+            o.offline_since.get_or_insert(now_millis);
         });
         Duration::from_secs(if error.is_transient() { 15 } else { 60 })
     }
@@ -463,8 +567,23 @@ impl Runtime {
         // Étapes locales, même hors ligne : activation différée, renderer revenu, reprise.
         self.advance_all().await;
         let pause = match online {
-            Ok(interval) => {
+            Ok((interval, pending_commands)) => {
                 self.flush_outbox().await;
+                self.flush_commands().await;
+                if pending_commands > 0
+                    && let Err(error) = self.process_commands(org, player).await
+                {
+                    tracing::debug!(%error, "commandes non récupérées");
+                }
+                let due = self
+                    .status_sent
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .is_none_or(|at| at.elapsed() >= STATUS_INTERVAL);
+                if due && let Err(error) = self.send_status().await {
+                    tracing::debug!(%error, "statut non envoyé");
+                }
+                self.flush_events().await;
                 interval
             }
             Err(error) => {
@@ -483,7 +602,7 @@ impl Runtime {
         org: &str,
         player: &str,
         outputs_reported: &mut Option<(Vec<OutputReport>, Instant)>,
-    ) -> Result<Duration, CloudError> {
+    ) -> Result<(Duration, u32), CloudError> {
         let (now_millis, _) = self.now();
         if !self.cloud.has_token(now_millis).await {
             self.cloud.authenticate(player, &self.identity).await?;
@@ -513,10 +632,11 @@ impl Runtime {
                 }
             }
         }
-        self.heartbeat().await?;
+        let pending_commands = self.heartbeat().await?;
         self.cloud_ok();
-        Ok(Duration::from_secs(
-            config.heartbeat_interval_s.clamp(5, 600),
+        Ok((
+            Duration::from_secs(config.heartbeat_interval_s.clamp(5, 600)),
+            pending_commands,
         ))
     }
 
@@ -603,7 +723,8 @@ impl Runtime {
         }
     }
 
-    async fn heartbeat(&self) -> Result<(), CloudError> {
+    /// Heartbeat ; retourne le nombre de commandes annoncées par le cloud.
+    async fn heartbeat(&self) -> Result<u32, CloudError> {
         let status = self.link.last_status();
         let displays = self
             .store
@@ -649,12 +770,83 @@ impl Runtime {
             let offset = server - (sent + received) / 2;
             let (_, now) = self.now();
             let _ = self.store.save_clock_offset(offset, &now);
-            if offset.abs() > CLOCK_DRIFT_WARNING_MILLIS {
+            let drifting = offset.abs() > CLOCK_DRIFT_WARNING_MILLIS;
+            if drifting {
                 tracing::warn!(offset_ms = offset, "dérive d’horloge importante");
+                if !self.observed().drift_reported {
+                    self.events.record(
+                        "CLOCK_DRIFT",
+                        Severity::Warning,
+                        None,
+                        json!({ "offset_ms": offset }),
+                    );
+                }
             }
-            self.observe(|o| o.clock_offset_ms = Some(offset));
+            self.observe(|o| {
+                o.clock_offset_ms = Some(offset);
+                o.drift_reported = drifting;
+            });
         }
+        Ok(ack.pending_commands)
+    }
+
+    /// Statut complet (OBS-003) : mesures indisponibles à `null`, jamais à zéro.
+    async fn send_status(&self) -> Result<(), CloudError> {
+        let (_, now) = self.now();
+        let disk = crate::platform::disk_space(&self.config.data_dir);
+        let memory = crate::supervision::memory();
+        let outputs: Vec<Value> = detect_outputs(self.config.virtual_outputs.as_deref())
+            .into_iter()
+            .map(|o| {
+                json!({
+                    "output_key": o.output_key, "connected": o.connected, "width": o.width,
+                    "height": o.height, "refresh_hz": o.refresh_hz,
+                })
+            })
+            .collect();
+        let status = json!({
+            "observed_at": now,
+            "renderer": self.health.state().as_str(),
+            "renderer_restarts": self.health.restarts_in_window(),
+            "storage_persistent": null,
+            "metrics": {
+                "cpu_percent": null,
+                "memory_used_bytes": memory.map(|m| m.0),
+                "memory_total_bytes": memory.map(|m| m.1),
+                "disk_free_bytes": disk.map(|d| d.available_bytes),
+                "disk_total_bytes": disk.map(|d| d.total_bytes),
+                "temperature_c": null,
+            },
+            "cache": null,
+            "outputs": outputs,
+        });
+        self.cloud.status(&status).await?;
+        *self.status_sent.lock().unwrap_or_else(|p| p.into_inner()) = Some(Instant::now());
         Ok(())
+    }
+
+    /// Événements en attente, par lots ; seuls les identifiants accusés sont retirés.
+    async fn flush_events(&self) {
+        for _ in 0..20 {
+            let batch = match self.store.pending_events(EVENT_BATCH) {
+                Ok(batch) if !batch.is_empty() => batch,
+                _ => return,
+            };
+            let dropped = self.store.dropped_events().unwrap_or(0);
+            match self.cloud.events(&batch, dropped).await {
+                Ok(ack) => {
+                    let _ = self.store.ack_events(&ack.accepted);
+                    let _ = self.store.consume_dropped(dropped);
+                    if ack.accepted.len() < batch.len() {
+                        return;
+                    }
+                }
+                Err(error) => {
+                    tracing::debug!(%error, "événements conservés pour plus tard");
+                    return;
+                }
+            }
+        }
     }
 
     fn write_status(&self) {

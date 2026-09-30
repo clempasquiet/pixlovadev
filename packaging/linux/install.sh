@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ "$(id -u)" -eq 0 ] || { echo "à exécuter en root" >&2; exit 1; }
-for file in pixlova-agent pixlova-launcher pixlova-renderer release.json player-shell/index.html trust/manifest-keys.json trust/release-keys.json; do
+for file in pixlova-agent pixlova-launcher pixlova-renderer release.json player-shell/index.html trust/manifest-keys.json trust/release-keys.json trust/command-keys.json; do
   [ -e "$here/$file" ] || { echo "paquet incomplet : $file absent" >&2; exit 1; }
 done
 version=$("$here/pixlova-agent" version | awk '{print $2}')

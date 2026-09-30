@@ -3,6 +3,7 @@ import type { Database } from '@pixlova/db';
 import type { ManifestSigner } from '@pixlova/scheduling/compiler';
 import type { ObjectStorage } from '@pixlova/storage';
 import type { VideoTools } from './media/video.js';
+import type { AlertingConfig } from './supervision/alerts.js';
 
 export interface Logger {
   info(fields: Record<string, unknown>, message: string): void;
@@ -23,6 +24,10 @@ export interface WorkerContext {
   trashRetentionDays: number;
   /** Clé Ed25519 du compilateur de manifests (ADR-011) ; absente, les compilations échouent. */
   manifestSigner?: ManifestSigner | null;
+  /** Seuils des alertes (ADR-014) ; valeurs par défaut `DEFAULT_ALERTING`. */
+  alerting?: AlertingConfig;
+  /** Conservation des événements de timeline, en jours [à valider]. */
+  timelineRetentionDays?: number;
   now: () => Date;
   logger: Logger;
 }

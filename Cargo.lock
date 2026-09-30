@@ -2235,10 +2235,13 @@ dependencies = [
 name = "pixlova-renderer"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
+ "cairo-rs",
  "pixlova-contracts",
  "serde_json",
  "sha2",
  "tao",
+ "webkit2gtk",
  "wry",
 ]
 

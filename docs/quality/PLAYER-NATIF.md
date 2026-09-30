@@ -46,6 +46,10 @@ Une case cochée sans résultat reproductible ne vaut pas validation.
 | 14 | Horloge invalide | Régler l’horloge en 2020, redémarrer | Diffusion validée maintenue, aucune nouvelle activation, dérive signalée |
 | 15 | Révocation | Révoquer le Player depuis le dashboard | Plus aucune synchronisation, état révoqué dans `diagnose` |
 | 16 | Endurance | 7 jours de diffusion avec vidéos et changements fréquents | Mémoire et descripteurs stables, journaux bornés à 7 fichiers |
+| 17 | Capture réelle (L07) | Depuis la fiche de l’écran, « Demander une capture » sur chaque sortie | Image de la sortie concernée, datée, reçue en moins d’une minute ; vide ou noire si la dalle est éteinte n’est **pas** détectable par la capture |
+| 18 | Commandes (L07) | Statut, vider le cache, redémarrer le renderer | ACK puis résultat affichés séparément ; redémarrage du renderer : reprise du contenu sans cloud |
+| 19 | Événements hors ligne (L07) | Couper le réseau 30 min, provoquer une erreur de lecture, rétablir | Événements datés de la coupure visibles dans la chronologie après reconnexion ; aucun perdu en deçà de 10 000 |
+| 20 | Alerte hors ligne (L07) | Débrancher le réseau 10 min, avec un membre abonné | Un seul incident, un email à l’ouverture, un à la résolution après 2 min de contact stable |
 
 ## Commandes utiles
 

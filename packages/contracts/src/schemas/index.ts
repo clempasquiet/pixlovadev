@@ -26,6 +26,11 @@ import { PlaylistDocument, ProgramDocument } from './programming.js';
 import { ReleasePayload } from './release.js';
 import {
   AssetUrlResponse,
+  CommandAckRequest,
+  PlayerCommandsResponse,
+  PlayerEventsAck,
+  ScreenshotUploadRequest,
+  ScreenshotUploadResponse,
   HeartbeatResponse,
   ManifestStatusRequest,
   OutputsReportRequest,
@@ -40,7 +45,7 @@ import {
   PlayerTokenRequest,
   PlayerTokenResponse,
 } from './player-api.js';
-import { HeartbeatPayload, WsMessage } from './ws.js';
+import { HeartbeatPayload, StatusPayload, WsMessage } from './ws.js';
 
 import { SCHEMA_BASE_URI } from './common.js';
 
@@ -87,5 +92,14 @@ export const ROOT_SCHEMAS = {
   'manifest-status-request.json': root('manifest-status-request.json', ManifestStatusRequest),
   'asset-url-response.json': root('asset-url-response.json', AssetUrlResponse),
   'release-payload.json': root('release-payload.json', ReleasePayload),
+  'player-status.json': root('player-status.json', StatusPayload),
+  'player-events-ack.json': root('player-events-ack.json', PlayerEventsAck),
+  'player-commands-response.json': root('player-commands-response.json', PlayerCommandsResponse),
+  'command-ack-request.json': root('command-ack-request.json', CommandAckRequest),
+  'screenshot-upload-request.json': root('screenshot-upload-request.json', ScreenshotUploadRequest),
+  'screenshot-upload-response.json': root(
+    'screenshot-upload-response.json',
+    ScreenshotUploadResponse,
+  ),
 } as const;
 export type RootSchemaName = keyof typeof ROOT_SCHEMAS;

@@ -60,6 +60,8 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_S3_BUCKET`, `PIXLOVA_S3_REGION`, `PIXLOVA_S3_ENDPOINT`, `PIXLOVA_S3_PUBLIC_ENDPOINT`, `PIXLOVA_S3_FORCE_PATH_STYLE`, `PIXLOVA_S3_ACCESS_KEY_ID`, `PIXLOVA_S3_SECRET_ACCESS_KEY` | Pilote S3 compatible (fournisseur choisi avec L09-I) |
 | `PIXLOVA_MEDIA_TRASH_RETENTION_DAYS`, `PIXLOVA_MEDIA_UPLOAD_URL_MINUTES`, `PIXLOVA_MEDIA_PREVIEW_URL_SECONDS` | Corbeille (30 j), URL d’envoi (15 min), URL d’aperçu (300 s) |
 | `PIXLOVA_PAIRING_CODE_MINUTES`, `PIXLOVA_PLAYER_TOKEN_MINUTES`, `PIXLOVA_HEARTBEAT_SECONDS`, `PIXLOVA_PRESENCE_TIMEOUT_SECONDS` | Durées Player (5 min, 15 min, 30 s, 90 s) |
+| `PIXLOVA_COMMAND_KEY_ID`, `PIXLOVA_COMMAND_SIGNING_KEY` | Clé Ed25519 des commandes distantes (graine de 32 octets en base64url), distincte de la clé des manifests ; sans elle, les commandes et captures répondent `503 COMMANDS_UNAVAILABLE` ([ADR-014](../../docs/architecture/adr/0014-supervision-commandes-alertes.md)) |
+| `PIXLOVA_COMMAND_TTL_SECONDS`, `PIXLOVA_SCREENSHOT_RETENTION_HOURS` | Validité par défaut d’une commande (600 s) et rétention des captures (24 h) **[à valider]** |
 | `PIXLOVA_TRUST_PROXY` | `true` derrière la passerelle de confiance (adresse IP client) |
 
 ## Tests

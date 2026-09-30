@@ -10,7 +10,11 @@ Workers de fond ([ADR-009](../../docs/architecture/adr/0009-bibliotheque-media-s
   - variantes immuables `original`, `playback` et `thumbnail` ;
 - **purge** (`media.purge`) des médias arrivés à échéance de corbeille ;
 - **compilation des manifests** (`compile_display`, [ADR-011](../../docs/architecture/adr/0011-programmation-compilation-manifests.md)) : snapshot cohérent, préflight, signature, puis enregistrement seulement si la révision compilée est encore la révision désirée ;
-- **balayages** : sessions d’upload expirées, quarantaine, purges dues, tâches anciennes, renouvellement des horizons de manifest.
+- **balayages** : sessions d’upload expirées, quarantaine, purges dues, tâches anciennes, renouvellement des horizons de manifest ;
+- **supervision** ([ADR-014](../../docs/architecture/adr/0014-supervision-commandes-alertes.md)), à chaque balayage :
+  - présence perdue tracée dans la chronologie ;
+  - évaluation des alertes sous verrou consultatif : incidents dédupliqués, résolution stable, maintenance, corrélation plateforme, notifications en outbox (converties en emails par l’API) ;
+  - purge des captures expirées et de la chronologie au-delà de sa rétention.
 
 Les écritures métier passent par le rôle applicatif sous `withTenant` (RLS). Le rôle système sert uniquement à réclamer les tâches et à balayer entre tenants.
 
@@ -32,7 +36,9 @@ Variables facultatives :
 
 - `PIXLOVA_WORKER_CONCURRENCY` : 2 par défaut ;
 - `PIXLOVA_WORKER_TMP_DIR` : répertoire temporaire, un sous-dossier par tâche ;
-- `PIXLOVA_MEDIA_TRASH_RETENTION_DAYS`.
+- `PIXLOVA_MEDIA_TRASH_RETENTION_DAYS` ;
+- seuils d’alerte **[à valider]** : `PIXLOVA_PRESENCE_TIMEOUT_SECONDS` (90), `PIXLOVA_ALERT_OFFLINE_MINUTES` (5), `PIXLOVA_ALERT_MANIFEST_MINUTES` (10), `PIXLOVA_ALERT_DISK_RATIO` (0,9), `PIXLOVA_ALERT_REMINDER_HOURS` (24) ;
+- `PIXLOVA_TIMELINE_RETENTION_DAYS` : 90 **[à valider]**.
 
 ## Tests
 

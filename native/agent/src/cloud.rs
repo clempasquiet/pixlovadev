@@ -125,6 +125,25 @@ pub struct HeartbeatDisplay {
 pub struct HeartbeatAck {
     pub server_time: String,
     pub stale_displays: Vec<String>,
+    /// Absent d’un serveur antérieur à L07 : aucune commande annoncée.
+    #[serde(default)]
+    pub pending_commands: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EventsAck {
+    pub accepted: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UploadTarget {
+    pub url: String,
+    pub headers: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ScreenshotSession {
+    pub upload: UploadTarget,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -457,6 +476,92 @@ impl Cloud {
                 .query(&[("manifest_id", manifest_id)]),
         )
         .await
+    }
+
+    /// Lot d’événements ; seuls les identifiants accusés peuvent être retirés (PROTO-019).
+    pub async fn events(&self, events: &[Value], dropped_count: u64) -> CloudResult<EventsAck> {
+        self.json(
+            self.http
+                .post(format!("{}/events", self.base))
+                .json(&json!({ "events": events, "dropped_count": dropped_count })),
+        )
+        .await
+    }
+
+    pub async fn status(&self, status: &Value) -> CloudResult<()> {
+        self.no_content(self.http.post(format!("{}/status", self.base)).json(status))
+            .await
+    }
+
+    /// Enveloppes de commandes, jamais interprétées avant vérification.
+    pub async fn commands(&self) -> CloudResult<Vec<String>> {
+        #[derive(Deserialize)]
+        struct Commands {
+            commands: Vec<String>,
+        }
+        let body: Commands = self
+            .json(self.http.get(format!("{}/commands", self.base)))
+            .await?;
+        Ok(body.commands)
+    }
+
+    pub async fn command_ack(&self, command_id: &str, acknowledged_millis: i64) -> CloudResult<()> {
+        self.json::<Value>(
+            self.http
+                .post(format!("{}/commands/{command_id}/ack", self.base))
+                .json(&json!({ "acknowledged_at": format_instant(acknowledged_millis) })),
+        )
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn command_result(&self, command_id: &str, result: &Value) -> CloudResult<()> {
+        self.json::<Value>(
+            self.http
+                .post(format!("{}/commands/{command_id}/result", self.base))
+                .json(result),
+        )
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn screenshot_session(&self, request: &Value) -> CloudResult<ScreenshotSession> {
+        self.json(
+            self.http
+                .post(format!("{}/screenshots/upload-session", self.base))
+                .json(request),
+        )
+        .await
+    }
+
+    /// Envoi direct vers le stockage : URL signée, sans jeton Player.
+    pub async fn upload(&self, target: &UploadTarget, bytes: Vec<u8>) -> CloudResult<()> {
+        let url = self
+            .absolute_url(&target.url)
+            .ok_or_else(|| CloudError::Protocol("URL d’envoi refusée".into()))?;
+        let mut request = self.http.put(url).body(bytes);
+        for (name, value) in &target.headers {
+            request = request.header(name, value);
+        }
+        let response = request.send().await.map_err(network)?;
+        if !response.status().is_success() {
+            return Err(CloudError::Api {
+                status: response.status().as_u16(),
+                code: "UPLOAD_FAILED".into(),
+                message: String::new(),
+                retryable: response.status().is_server_error(),
+            });
+        }
+        Ok(())
+    }
+
+    pub async fn screenshot_complete(&self, screenshot_id: &str) -> CloudResult<()> {
+        self.json::<Value>(self.http.post(format!(
+            "{}/screenshots/{screenshot_id}/complete",
+            self.base
+        )))
+        .await
+        .map(|_| ())
     }
 
     pub async fn manifest_status(

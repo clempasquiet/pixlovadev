@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "server_time",
-    "stale_displays"
+    "stale_displays",
+    "pending_commands"
   ],
   "properties": {
     "server_time": {
@@ -18,6 +19,11 @@
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
       },
       "maxItems": 16
+    },
+    "pending_commands": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
     }
   },
   "additionalProperties": false

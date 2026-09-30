@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { api, idempotencyKey } from '../api.js';
 import { useLoad } from '../data.js';
 import { DisplayProgramPanel } from '../programming/display-program.js';
+import { DisplaySupervision } from './supervision.js';
 import { useSession } from '../session.js';
 import { Empty, ErrorMessage, Field, Forbidden, Form, Loading } from '../ui.js';
 
@@ -450,6 +451,8 @@ export function DisplayDetailPage() {
       </div>
 
       <DisplayProgramPanel displayId={d.id} siteId={d.site_id} />
+
+      <DisplaySupervision displayId={d.id} />
 
       <div className="card">
         <h2>Player et sortie</h2>

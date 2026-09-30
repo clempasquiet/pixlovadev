@@ -59,5 +59,7 @@ Protection de la clé : non extractible avec WebCrypto Ed25519 (Chrome ≥ 137, 
 | 8 | Autoplay refusé | Message et bouton de reprise |
 | 9 | Plein écran refusé | Message expliquant l’action ou la politique kiosk requise |
 | 10 | Nouvelle version de l’application | Activée seulement au rechargement suivant, jamais pendant une lecture |
+| 11 | Commandes (L07) | Statut, vider le cache, recharger le contenu, redémarrer (rechargement de la page) : ACK puis résultat ; capture refusée (non prise en charge par le navigateur) |
+| 12 | Événements hors ligne (L07) | Onglet ouvert, réseau coupé puis rétabli : `CLOUD_UNREACHABLE` daté de la coupure dans la chronologie |
 
 Consigner chaque essai dans `docs/quality/preuves/` : navigateur, version, OS, date, résultat, limites.

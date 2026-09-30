@@ -215,6 +215,18 @@ impl State {
                     let _ = surface.webview.reload();
                 }
             }
+            MessageType::Screenshot => {
+                let display = envelope.payload["display_id"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned();
+                match self.surfaces.get(&display) {
+                    Some(surface) => capture(&surface.webview, self.agent.clone(), envelope),
+                    None => {
+                        self.agent.error(&envelope, "UNKNOWN_DISPLAY", &display);
+                    }
+                }
+            }
             _ => {
                 self.agent
                     .error(&envelope, "UNEXPECTED_TYPE", "type réservé au renderer");
@@ -497,6 +509,55 @@ pub fn serve_asset(
         Ok(file) => serve_file(&file, range),
         Err(_) => respond(StatusCode::NOT_FOUND, "text/plain", Vec::new()),
     }
+}
+
+/// Capture de la vue telle que rendue par WebKitGTK (SUP-004), encodée en PNG. La réponse
+/// part du rappel GTK, sur la boucle d’événements : aucune attente bloquante.
+#[cfg(target_os = "linux")]
+fn capture(webview: &WebView, agent: AgentWriter, envelope: Envelope) {
+    use base64::Engine;
+    use webkit2gtk::{SnapshotOptions, SnapshotRegion, WebViewExt};
+    use wry::WebViewExtUnix;
+    let display_id = envelope.payload["display_id"].clone();
+    webview.webview().snapshot(
+        SnapshotRegion::Visible,
+        SnapshotOptions::NONE,
+        None::<&webkit2gtk::gio::Cancellable>,
+        move |result| {
+            let png = result.map_err(|e| e.to_string()).and_then(|surface| {
+                let mut bytes = Vec::new();
+                surface
+                    .write_to_png(&mut bytes)
+                    .map(|()| bytes)
+                    .map_err(|e| e.to_string())
+            });
+            match png {
+                Ok(bytes) => {
+                    agent.reply(
+                        &envelope,
+                        MessageType::Ready,
+                        json!({
+                            "display_id": display_id,
+                            "mime_type": "image/png",
+                            "data_base64": base64::engine::general_purpose::STANDARD.encode(bytes),
+                        }),
+                    );
+                }
+                Err(detail) => {
+                    agent.error(&envelope, "SCREENSHOT_FAILED", &detail);
+                }
+            }
+        },
+    );
+}
+
+#[cfg(not(target_os = "linux"))]
+fn capture(_webview: &WebView, agent: AgentWriter, envelope: Envelope) {
+    agent.error(
+        &envelope,
+        "SCREENSHOT_UNSUPPORTED",
+        "capture non implémentée pour ce moteur",
+    );
 }
 
 /// Sortie demandée par son nom de connecteur, sinon dans l’ordre des moniteurs.

@@ -52,11 +52,11 @@ export function presence(
 
 const NONE = '00000000-0000-0000-0000-000000000000';
 
-function visibleSites(member: MemberContext, permission: Permission): string[] | 'all' {
+export function visibleSites(member: MemberContext, permission: Permission): string[] | 'all' {
   return siteFilter(member.grants, permission);
 }
 
-function siteCondition(
+export function siteCondition(
   column: typeof schema.displays.siteId | typeof schema.players.siteId,
   visible: string[] | 'all',
 ) {
@@ -158,7 +158,7 @@ function compatibility(
   return width <= max.width && height <= max.height ? 'ok' : 'exceeds_max_canvas';
 }
 
-async function activeAssignments(tx: Transaction, displayIds: string[]) {
+export async function activeAssignments(tx: Transaction, displayIds: string[]) {
   if (displayIds.length === 0)
     return new Map<
       string,

@@ -67,9 +67,18 @@ export const HeartbeatPayload = Type.Object(
 );
 export type HeartbeatPayload = Static<typeof HeartbeatPayload>;
 
-/** Mesures : `null` signifie « non disponible », jamais zéro (OBS-003). */
-const StatusPayload = Type.Object(
+/**
+ * Statut d’un Player (OBS-003), en WSS ou par `POST /player/v1/status`.
+ * Mesures : `null` signifie « non disponible », jamais zéro.
+ */
+export const StatusPayload = Type.Object(
   {
+    observed_at: Instant,
+    renderer: RendererState,
+    /** Redémarrages du renderer sur les 5 dernières minutes ; `null` si non mesuré. */
+    renderer_restarts: Nullable(Type.Integer({ minimum: 0, maximum: 1_000_000 })),
+    /** Stockage persistant accordé (Player Web) ; `null` si sans objet ou inconnu. */
+    storage_persistent: Nullable(Type.Boolean()),
     metrics: Type.Object(
       {
         cpu_percent: Nullable(Type.Number({ minimum: 0, maximum: 100 })),
@@ -97,8 +106,9 @@ const StatusPayload = Type.Object(
       { maxItems: 16 },
     ),
   },
-  Strict,
+  { ...Strict, title: 'PlayerStatus' },
 );
+export type StatusPayload = Static<typeof StatusPayload>;
 
 const ManifestRef = { display_id: Uuid, manifest_id: Uuid, version: VersionString };
 const Failure = { reason: Code, detail: Nullable(Detail) };

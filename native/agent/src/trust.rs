@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 pub const MANIFEST_KEYS_FILE: &str = "manifest-keys.json";
 pub const RELEASE_KEYS_FILE: &str = "release-keys.json";
+pub const COMMAND_KEYS_FILE: &str = "command-keys.json";
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -32,11 +33,12 @@ pub enum TrustError {
     Invalid { path: PathBuf, detail: String },
 }
 
-/// Clés de manifest et de release, distinctes (NAT-013).
+/// Clés de manifest, de release et de commande, distinctes (NAT-013, ADR-014).
 #[derive(Debug, Clone, Default)]
 pub struct TrustAnchors {
     pub manifests: TrustStore,
     pub releases: TrustStore,
+    pub commands: TrustStore,
 }
 
 impl TrustAnchors {
@@ -44,15 +46,19 @@ impl TrustAnchors {
         let anchors = Self {
             manifests: load_file(&dir.join(MANIFEST_KEYS_FILE))?,
             releases: load_file(&dir.join(RELEASE_KEYS_FILE))?,
+            commands: load_file(&dir.join(COMMAND_KEYS_FILE))?,
         };
-        if anchors
-            .manifests
-            .keys()
-            .any(|kid| anchors.releases.contains_key(kid))
-        {
+        let sets = [&anchors.manifests, &anchors.releases, &anchors.commands];
+        let shared = sets.iter().enumerate().any(|(i, a)| {
+            sets[i + 1..].iter().any(|b| {
+                a.iter()
+                    .any(|(kid, key)| b.contains_key(kid) || b.values().any(|other| other == key))
+            })
+        });
+        if shared {
             return Err(TrustError::Invalid {
                 path: dir.to_path_buf(),
-                detail: "une même clé ne peut signer manifests et releases".into(),
+                detail: "une même clé ne peut signer deux types de documents".into(),
             });
         }
         Ok(anchors)
@@ -119,6 +125,33 @@ mod tests {
         let anchors = TrustAnchors::load(dir.path()).unwrap();
         assert!(anchors.manifests.contains_key("manifest-a"));
         assert!(anchors.releases.is_empty());
+        assert!(anchors.commands.is_empty());
+        std::fs::write(
+            dir.path().join(COMMAND_KEYS_FILE),
+            format!(
+                r#"{{"keys":[{{"kid":"command-a","public_key":"{}"}}]}}"#,
+                public(1)
+            ),
+        )
+        .unwrap();
+        assert!(
+            TrustAnchors::load(dir.path()).is_err(),
+            "clé de manifest réutilisée pour les commandes"
+        );
+        std::fs::write(
+            dir.path().join(COMMAND_KEYS_FILE),
+            format!(
+                r#"{{"keys":[{{"kid":"command-a","public_key":"{}"}}]}}"#,
+                public(2)
+            ),
+        )
+        .unwrap();
+        assert!(
+            TrustAnchors::load(dir.path())
+                .unwrap()
+                .commands
+                .contains_key("command-a")
+        );
     }
 
     #[test]
