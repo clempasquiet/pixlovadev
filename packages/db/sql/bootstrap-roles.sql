@@ -12,8 +12,13 @@ BEGIN
     CREATE ROLE pixlova_app NOLOGIN NOBYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pixlova_system') THEN
-    -- Opérations explicitement inter-tenants (authentification Player, outbox, webhooks, admin privée).
+    -- Opérations explicitement inter-tenants (authentification Player, outbox, webhooks).
     CREATE ROLE pixlova_system NOLOGIN BYPASSRLS;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pixlova_platform') THEN
+    -- Administration plateforme privée (ADR-016) : lecture de support bornée par colonnes,
+    -- tables des opérateurs ; aucun autre rôle n’accède à ces dernières.
+    CREATE ROLE pixlova_platform NOLOGIN BYPASSRLS;
   END IF;
 END
 $$;

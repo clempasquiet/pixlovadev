@@ -26,6 +26,9 @@ export interface TestDatabase {
   appPool: pg.Pool;
   system: Database;
   systemPool: pg.Pool;
+  /** Rôle de l’administration plateforme (ADR-016). */
+  platform: Database;
+  platformPool: pg.Pool;
   close(): Promise<void>;
 }
 
@@ -48,7 +51,7 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     await admin.query('SELECT pg_advisory_lock(727601)');
     try {
       await admin.query(await readFile(bootstrapSql, 'utf8'));
-      for (const role of ['pixlova_owner', 'pixlova_app', 'pixlova_system']) {
+      for (const role of ['pixlova_owner', 'pixlova_app', 'pixlova_system', 'pixlova_platform']) {
         await admin.query(`ALTER ROLE ${role} LOGIN PASSWORD '${TEST_PASSWORD}'`);
       }
     } finally {
@@ -67,14 +70,21 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     max: 4,
   });
 
+  const platformPool = new pg.Pool({
+    connectionString: urlFor(adminUrl, 'pixlova_platform', name),
+    max: 4,
+  });
+
   return {
     owner,
     app: createDatabase(appPool),
     appPool,
     system: createDatabase(systemPool),
     systemPool,
+    platform: createDatabase(platformPool),
+    platformPool,
     async close() {
-      await Promise.all([owner.end(), appPool.end(), systemPool.end()]);
+      await Promise.all([owner.end(), appPool.end(), systemPool.end(), platformPool.end()]);
       const cleanup = new pg.Client({ connectionString: adminUrl });
       await cleanup.connect();
       await cleanup.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
