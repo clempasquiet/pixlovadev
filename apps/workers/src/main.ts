@@ -3,10 +3,10 @@
  * pour les écritures métier, rôle système pour la file et les balayages. La clé de
  * signature des manifests est obligatoire : sans elle, aucune diffusion ne serait possible.
  */
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
+import { mediaLimitsFromEnv } from '@pixlova/contracts';
 import { createDatabase } from '@pixlova/db';
 import { manifestSignerFromSeed } from '@pixlova/scheduling/compiler';
 import { createStorageFromEnv } from '@pixlova/storage';
@@ -63,7 +63,7 @@ const worker = createWorker(
     appDb: createDatabase(appPool),
     systemDb: createDatabase(systemPool),
     storage: createStorageFromEnv(),
-    limits: DEFAULT_MEDIA_LIMITS,
+    limits: mediaLimitsFromEnv(process.env),
     tools: DEFAULT_VIDEO_TOOLS,
     tmpRoot,
     trashRetentionDays: Number(process.env.PIXLOVA_MEDIA_TRASH_RETENTION_DAYS ?? 30),
@@ -78,8 +78,21 @@ const worker = createWorker(
 worker.start();
 logger.info({ workerId: worker.workerId }, 'worker démarré');
 
+// Témoin de vie pour le health check du conteneur (ADR-015) : horodatage réécrit tant que
+// le processus tourne et joint la base. Le conteneur vérifie sa fraîcheur.
+const healthFile = process.env.PIXLOVA_WORKER_HEALTH_FILE;
+const healthTimer = healthFile
+  ? setInterval(() => {
+      systemPool
+        .query('select 1')
+        .then(() => writeFile(healthFile, new Date().toISOString()))
+        .catch((error: unknown) => logger.warn({ err: String(error) }, 'témoin de vie non écrit'));
+    }, 15_000)
+  : undefined;
+
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'arrêt du worker');
+  clearInterval(healthTimer);
   await worker.stop();
   await Promise.all([appPool.end(), systemPool.end()]);
   process.exit(0);

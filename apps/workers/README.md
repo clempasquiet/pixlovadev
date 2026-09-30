@@ -36,7 +36,9 @@ Variables facultatives :
 
 - `PIXLOVA_WORKER_CONCURRENCY` : 2 par défaut ;
 - `PIXLOVA_WORKER_TMP_DIR` : répertoire temporaire, un sous-dossier par tâche ;
+- `PIXLOVA_WORKER_HEALTH_FILE` : fichier horodaté toutes les 15 s tant que la base répond (health check du conteneur, facultatif) ;
 - `PIXLOVA_MEDIA_TRASH_RETENTION_DAYS` ;
+- `PIXLOVA_MEDIA_IMAGE_MAX_BYTES`, `PIXLOVA_MEDIA_VIDEO_MAX_BYTES` : limites abaissées, identiques à celles de l’API ;
 - seuils d’alerte **[à valider]** : `PIXLOVA_PRESENCE_TIMEOUT_SECONDS` (90), `PIXLOVA_ALERT_OFFLINE_MINUTES` (5), `PIXLOVA_ALERT_MANIFEST_MINUTES` (10), `PIXLOVA_ALERT_DISK_RATIO` (0,9), `PIXLOVA_ALERT_REMINDER_HOURS` (24) ;
 - `PIXLOVA_TIMELINE_RETENTION_DAYS` : 90 **[à valider]**.
 

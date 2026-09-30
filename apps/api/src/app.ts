@@ -30,6 +30,8 @@ export interface AppOptions {
   metrics?: Metrics;
   /** Mesures de l’état du parc, lues à chaque collecte (listener interne). */
   gauges?: () => Promise<Gauge[]>;
+  /** Dépendances indispensables (base, Redis) : rejette si l’une est injoignable. */
+  ready?: () => Promise<void>;
 }
 
 function createBase(options: AppOptions): FastifyInstance {
@@ -118,6 +120,18 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
 export function buildInternalApp(options: AppOptions = {}): FastifyInstance {
   const app = createBase(options);
   app.get('/internal/v1/health', async () => ({ status: 'ok' }));
+  // Sonde de disponibilité (health check des conteneurs) : 503 sans détail si une
+  // dépendance manque ; l’erreur reste dans les logs du processus.
+  const { ready } = options;
+  app.get('/internal/v1/ready', async (request, reply) => {
+    try {
+      await ready?.();
+      return { status: 'ready' };
+    } catch (error) {
+      request.log.warn({ err: error }, 'dépendance indisponible');
+      return reply.code(503).send({ status: 'unavailable' });
+    }
+  });
   const { metrics, gauges } = options;
   if (metrics) {
     app.get('/internal/v1/metrics', async (_request, reply) => {

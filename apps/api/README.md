@@ -53,8 +53,10 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_COOKIE_SECURE` | `false` uniquement en développement HTTP |
 | `PIXLOVA_SESSION_IDLE_HOURS`, `PIXLOVA_SESSION_ABSOLUTE_DAYS`, `PIXLOVA_RECENT_AUTH_MINUTES` | Durées de session |
 | `PIXLOVA_REQUIRE_MFA_FOR_ADMINS` | MFA exigée des administrateurs pour les actions sensibles (défaut `true`) |
-| `PIXLOVA_MAILER=console` | Emails affichés dans la console (développement ; refusé en production) |
-| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES`, `PIXLOVA_DEV_FEATURES` | Quotas et fonctionnalités de développement avant L08, par ex. `PIXLOVA_DEV_FEATURES=templates` (refusés en production) |
+| `PIXLOVA_MAILER` | `smtp` (avec `PIXLOVA_SMTP_URL`, par ex. `smtp://mailpit:1025`, et `PIXLOVA_MAIL_FROM`) ou `console` (développement, refusé en production) ; obligatoire en production ([ADR-015](../../docs/architecture/adr/0015-infrastructure-recette.md)) |
+| `PIXLOVA_DEPLOYMENT` | `development`, `recette` ou `production` (défaut selon `NODE_ENV`) ; `recette` garde les contrôles de production mais autorise les quotas `PIXLOVA_DEV_*` |
+| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES`, `PIXLOVA_DEV_FEATURES` | Quotas et fonctionnalités avant L08, par ex. `PIXLOVA_DEV_FEATURES=templates` (refusés en production, acceptés en recette) |
+| `PIXLOVA_MEDIA_IMAGE_MAX_BYTES`, `PIXLOVA_MEDIA_VIDEO_MAX_BYTES` | Abaissent la taille maximale d’envoi (50 Mio / 2 Gio) quand le transport la borne, par ex. 95 000 000 derrière un tunnel Cloudflare ; mêmes valeurs pour le worker |
 | `PIXLOVA_STORAGE_DRIVER` | `s3` (production) ou `local` (développement, refusé en production) |
 | `PIXLOVA_STORAGE_LOCAL_ROOT`, `PIXLOVA_STORAGE_LOCAL_SECRET`, `PIXLOVA_STORAGE_PUBLIC_URL` | Pilote local : répertoire, secret HMAC des URLs signées, origine publique facultative |
 | `PIXLOVA_S3_BUCKET`, `PIXLOVA_S3_REGION`, `PIXLOVA_S3_ENDPOINT`, `PIXLOVA_S3_PUBLIC_ENDPOINT`, `PIXLOVA_S3_FORCE_PATH_STYLE`, `PIXLOVA_S3_ACCESS_KEY_ID`, `PIXLOVA_S3_SECRET_ACCESS_KEY` | Pilote S3 compatible (fournisseur choisi avec L09-I) |

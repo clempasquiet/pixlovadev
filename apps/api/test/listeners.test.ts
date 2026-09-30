@@ -35,6 +35,24 @@ describe('séparation des listeners (API-001)', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });
   });
+
+  it('la sonde de disponibilité reflète les dépendances, sans détail', async () => {
+    let failure: Error | null = null;
+    const app = track(
+      buildInternalApp({
+        ready: async () => {
+          if (failure) throw failure;
+        },
+      }),
+    );
+    expect((await app.inject({ method: 'GET', url: '/internal/v1/ready' })).statusCode).toBe(200);
+    failure = new Error('connect ECONNREFUSED 10.0.0.5:5432');
+    const response = await app.inject({ method: 'GET', url: '/internal/v1/ready' });
+    expect(response.statusCode).toBe(503);
+    expect(response.body).not.toContain('ECONNREFUSED');
+    const pub = track(buildPublicApp());
+    expect((await pub.inject({ method: 'GET', url: '/internal/v1/ready' })).statusCode).toBe(404);
+  });
 });
 
 describe('enveloppe d’erreur (API-006)', () => {

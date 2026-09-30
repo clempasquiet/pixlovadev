@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull, lte, sql } from 'drizzle-orm';
+import { createTransport, type Transporter } from 'nodemailer';
 import { schema, type Database, type Transaction } from '@pixlova/db';
 import type { DataCipher } from './crypto.js';
 
@@ -186,6 +187,30 @@ export class MemoryMailer implements Mailer {
       .reverse()
       .find((email) => email.to === to && pattern.test(email.text))
       ?.text.match(pattern)?.[0];
+  }
+}
+
+/**
+ * Transport SMTP (ADR-015) : `smtp://hôte:port` ou `smtps://utilisateur:motdepasse@hôte:465`.
+ * En recette, il pointe vers une boîte de capture (Mailpit) : rien ne sort du serveur.
+ */
+export class SmtpMailer implements Mailer {
+  private readonly transport: Transporter;
+
+  constructor(
+    url: string,
+    private readonly from: string,
+  ) {
+    this.transport = createTransport(url);
+  }
+
+  async send(email: RenderedEmail): Promise<void> {
+    await this.transport.sendMail({
+      from: this.from,
+      to: email.to,
+      subject: email.subject,
+      text: email.text,
+    });
   }
 }
 
