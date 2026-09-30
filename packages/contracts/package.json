@@ -1,0 +1,32 @@
+{
+  "name": "@pixlova/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contrats versionnés pixlova : schémas JSON, signature des enveloppes et règles d’acceptation partagées cloud/Players.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "generate": "PIXLOVA_UPDATE_CONTRACTS=1 vitest run test/generated.test.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "ajv": "8.20.0",
+    "canonicalize": "5.1.0",
+    "typebox": "1.3.34"
+  }
+}

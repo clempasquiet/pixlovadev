@@ -1,0 +1,76 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  typescript:
+    name: TypeScript (lint, build, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # Base éphémère de test uniquement (aucune donnée réelle) ; digest à épingler avec L09-I.
+        image: postgres:16
+        env:
+          POSTGRES_USER: pixlova_ci
+          POSTGRES_PASSWORD: pixlova_ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pixlova_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PIXLOVA_TEST_DATABASE_URL: postgres://pixlova_ci:pixlova_ci@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Activer pnpm (version épinglée par packageManager)
+        run: corepack enable
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      - name: Installer les dépendances depuis le lockfile
+        run: pnpm install --frozen-lockfile
+      - run: pnpm run format:check
+      - run: pnpm run lint
+      - run: pnpm run build
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - name: Vérifier que les migrations correspondent au schéma Drizzle
+        run: |
+          pnpm --filter @pixlova/db exec drizzle-kit check
+          pnpm --filter @pixlova/db exec drizzle-kit generate
+          test -z "$(git status --porcelain packages/db/migrations)"
+      - name: Installer Chromium pour le banc de rendu (version liée à playwright-core)
+        run: pnpm --filter @pixlova/render-lab exec playwright-core install --with-deps chromium
+      - name: Banc de rendu dans Chromium headless (géométrie, pas de qualification matérielle)
+        run: pnpm --filter @pixlova/render-lab run test:browser
+
+  rust:
+    name: Rust (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Installer la chaîne épinglée par rust-toolchain.toml
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Bibliothèques système du renderer (WebKitGTK, GTK)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked

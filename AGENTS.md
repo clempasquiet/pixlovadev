@@ -9,7 +9,7 @@
 
 ## État du dépôt
 
-Le dépôt commence par la documentation, le backlog, des modèles GitHub et une CI documentaire. Ne pas annoncer un build, un test applicatif ou une fonctionnalité comme disponible tant que son implémentation et sa vérification n’existent pas.
+Le dépôt contient la documentation, le backlog, les ADR et un workspace applicatif en construction (L00). Ne pas annoncer un build, un test applicatif ou une fonctionnalité comme disponible tant que son implémentation et sa vérification n’existent pas.
 
 ## Invariants non négociables
 
@@ -39,11 +39,21 @@ Le dépôt commence par la documentation, le backlog, des modèles GitHub et une
 ```sh
 node scripts/check-repository.mjs
 node scripts/sync-spec.mjs --check
+
+corepack enable                 # une fois ; pnpm épinglé par package.json
+pnpm install --frozen-lockfile
+pnpm run check                  # docs, format, lint, build, typecheck, tests TypeScript
+                                # tests de base : PIXLOVA_TEST_DATABASE_URL (voir packages/db)
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
+
+Versions et choix d’outillage : [ADR-001](docs/architecture/adr/0001-outillage-workspace-versions.md).
 
 Après changement de spécification : `node scripts/sync-spec.mjs`, puis les deux vérifications. Ne pas éditer directement `docs/spec/chapters/`, `docs/spec/INDEX.md` ou `docs/spec/requirements.json` : ils sont générés depuis le maître.
 
-Les commandes de build et de tests propres à l’application seront documentées dans le même PR que leur ajout. Exécuter les tests pertinents pour le changement et rapporter leur résultat réel. Ajouter notamment tests d’isolation, concurrence, reprise et contrats aux lots qui introduisent ces mécanismes.
+Toute nouvelle commande de build ou de test est documentée dans le même PR que son ajout. Exécuter les tests pertinents pour le changement et rapporter leur résultat réel. Ajouter notamment tests d’isolation, concurrence, reprise et contrats aux lots qui introduisent ces mécanismes.
 
 ## Fin d’un travail
 

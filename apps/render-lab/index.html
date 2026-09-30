@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pixlova — banc de rendu</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        color: #e8eef2;
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+      }
+      #surface {
+        position: fixed;
+        inset: 0;
+      }
+      #panel {
+        position: fixed;
+        inset: 16px auto auto 16px;
+        max-width: min(720px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+        background: #101820ee;
+        padding: 16px;
+        border-radius: 8px;
+        z-index: 10;
+      }
+      #panel[hidden] {
+        display: none;
+      }
+      pre {
+        white-space: pre-wrap;
+        font-size: 12px;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        margin: 4px 4px 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="surface"></div>
+    <div id="panel">
+      <h1>Banc de rendu pixlova</h1>
+      <p>
+        Qualification REN-004 d’un runtime de rendu sur un profil matériel. Les résultats ne valent
+        que pour la machine, l’OS, le pilote et le runtime mesurés.
+      </p>
+      <label
+        >Vidéo H.264 de test (fichier local) :
+        <input id="video" type="file" accept="video/*" /></label
+      ><br />
+      <label
+        >Durée par scénario (s) :
+        <input id="duration" type="number" min="3" max="600" value="20" /></label
+      ><br />
+      <button id="run">Lancer tous les scénarios</button>
+      <button id="fullscreen">Plein écran</button>
+      <button id="download" disabled>Télécharger les résultats JSON</button>
+      <pre id="output"></pre>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

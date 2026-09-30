@@ -1,0 +1,87 @@
+[
+  {
+    "name": "valid-object",
+    "input": "{\"a\":[1,2,{\"b\":null}]}",
+    "valid": true
+  },
+  {
+    "name": "duplicate-key",
+    "input": "{\"a\":1,\"a\":1}",
+    "valid": false
+  },
+  {
+    "name": "duplicate-nested-key",
+    "input": "{\"a\":{\"b\":1,\"b\":2}}",
+    "valid": false
+  },
+  {
+    "name": "duplicate-after-escape",
+    "input": "{\"a\":1,\"\\u0061\":2}",
+    "valid": false
+  },
+  {
+    "name": "proto-key-is-data",
+    "input": "{\"__proto__\":{\"x\":1}}",
+    "valid": true
+  },
+  {
+    "name": "max-safe-integer",
+    "input": "9007199254740991",
+    "valid": true
+  },
+  {
+    "name": "beyond-safe-integer",
+    "input": "9007199254740992",
+    "valid": false
+  },
+  {
+    "name": "large-float",
+    "input": "1e300",
+    "valid": false
+  },
+  {
+    "name": "lone-surrogate",
+    "input": "\"\\udc00\"",
+    "valid": false
+  },
+  {
+    "name": "surrogate-pair",
+    "input": "\"\\ud83d\\ude00\"",
+    "valid": true
+  },
+  {
+    "name": "leading-zero",
+    "input": "01",
+    "valid": false
+  },
+  {
+    "name": "trailing-comma",
+    "input": "[1,]",
+    "valid": false
+  },
+  {
+    "name": "nan",
+    "input": "NaN",
+    "valid": false
+  },
+  {
+    "name": "trailing-content",
+    "input": "{} {}",
+    "valid": false
+  },
+  {
+    "name": "raw-control-char",
+    "input": "\"a\u0001\"",
+    "valid": false
+  },
+  {
+    "name": "depth-64",
+    "input": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+    "valid": true
+  },
+  {
+    "name": "depth-65",
+    "input": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+    "valid": false
+  }
+]

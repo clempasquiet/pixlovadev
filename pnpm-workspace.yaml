@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Refuser une version de Node hors de `engines` et enregistrer des versions exactes.
+engineStrict: true
+savePrefix: ''
+
+# Scripts d’installation : refusés par défaut. esbuild (outil de drizzle-kit) fonctionne
+# avec le binaire de sa dépendance optionnelle de plateforme, sans postinstall.
+allowBuilds:
+  esbuild: false

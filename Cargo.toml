@@ -1,0 +1,18 @@
+[workspace]
+resolver = "3"
+members = ["native/agent", "native/contracts", "native/renderer"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

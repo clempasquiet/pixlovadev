@@ -1,0 +1,229 @@
+{
+  "protected": {
+    "type": "SIGNAGE_MANIFEST_V1",
+    "alg": "Ed25519",
+    "kid": "test-manifest-a"
+  },
+  "payload": {
+    "schema_version": 1,
+    "manifest_id": "44444444-4444-4444-8444-444444444444",
+    "organization_id": "55555555-5555-4555-8555-555555555555",
+    "display_id": "33333333-3333-4333-8333-333333333333",
+    "player_id": "66666666-6666-4666-8666-666666666666",
+    "version": "182",
+    "assignment_generation": "2",
+    "config_revision": "57",
+    "generated_at": "2026-09-29T18:00:00Z",
+    "valid_from": "2026-09-29T18:00:00Z",
+    "activate_before": "2026-10-06T18:00:00Z",
+    "schedule_until": "2026-10-06T18:00:00Z",
+    "display": {
+      "width": 2688,
+      "height": 672,
+      "orientation": 0,
+      "fit": "contain",
+      "timezone": "Europe/Paris"
+    },
+    "required_capabilities": {
+      "render_schema": 1,
+      "image_types": [
+        "image/png"
+      ],
+      "video_profiles": [
+        "mp4-h264-aac"
+      ]
+    },
+    "assets": [
+      {
+        "id": "77777777-7777-4777-8777-777777777777",
+        "variant": "display-image",
+        "mime_type": "image/png",
+        "size_bytes": 125000,
+        "sha256": "5920b55985709778fe36c6ee613d1c430d75d34aca25e6abb637027623f25500"
+      },
+      {
+        "id": "77777777-7777-4777-8777-000000000002",
+        "variant": "mp4-h264-aac-1080p",
+        "mime_type": "video/mp4",
+        "size_bytes": 48000000,
+        "sha256": "460957c48d9ca5ae3b9757ddf940b66b1623b29aa8588cd312b82f105efcaaa4"
+      }
+    ],
+    "contents": [
+      {
+        "id": "image-accueil",
+        "type": "media",
+        "media_kind": "image",
+        "asset_id": "77777777-7777-4777-8777-777777777777",
+        "duration_ms": 15000,
+        "fit": "contain",
+        "muted": true
+      },
+      {
+        "id": "video-promo",
+        "type": "media",
+        "media_kind": "video",
+        "asset_id": "77777777-7777-4777-8777-000000000002",
+        "duration_ms": 30000,
+        "fit": "cover",
+        "muted": true
+      },
+      {
+        "id": "boucle-promo",
+        "type": "playlist",
+        "playlist_version_id": "88888888-8888-4888-8888-000000000001",
+        "transition": "fade",
+        "items": [
+          {
+            "content_ref": "video-promo",
+            "duration_ms": 30000
+          },
+          {
+            "content_ref": "image-accueil",
+            "duration_ms": 10000
+          }
+        ]
+      },
+      {
+        "id": "bandeau-led",
+        "type": "composition",
+        "composition_version_id": "99999999-9999-4999-8999-000000000001",
+        "duration_ms": 20000,
+        "document": {
+          "schema_version": 1,
+          "canvas": {
+            "width": 2688,
+            "height": 672,
+            "background": "#101820"
+          },
+          "elements": [
+            {
+              "id": "titre",
+              "type": "text",
+              "x": 48,
+              "y": 40,
+              "width": 1600,
+              "height": 180,
+              "rotation": 0,
+              "z_index": 2,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "props": {
+                "text": "Bienvenue — Crêperie « Chez Zoé » 🥞 Ouvert 7j/7",
+                "font_family": "Inter",
+                "font_size_px": 96,
+                "font_weight": 600,
+                "color": "#FFFFFF",
+                "alignment": "left",
+                "line_height": 1.2,
+                "letter_spacing_px": -0.5
+              }
+            },
+            {
+              "id": "horloge",
+              "type": "clock",
+              "x": 2200,
+              "y": 40,
+              "width": 440,
+              "height": 120,
+              "rotation": 0,
+              "z_index": 2,
+              "opacity": 0.85,
+              "visible": true,
+              "locked": true,
+              "props": {
+                "format": "time_24h",
+                "timezone": null,
+                "locale": "fr-FR",
+                "font_family": "Inter",
+                "font_size_px": 88,
+                "color": "#FFFFFFCC",
+                "alignment": "right"
+              }
+            },
+            {
+              "id": "qr-menu",
+              "type": "qr",
+              "x": 2400,
+              "y": 380,
+              "width": 240,
+              "height": 240,
+              "rotation": 0,
+              "z_index": 3,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "props": {
+                "data": "https://pixlova.com/exemple",
+                "foreground": "#000000",
+                "background": "#FFFFFF",
+                "error_correction": "M"
+              }
+            },
+            {
+              "id": "zone-promo",
+              "type": "playlist_zone",
+              "x": 48,
+              "y": 260,
+              "width": 1200,
+              "height": 380,
+              "rotation": 12.5,
+              "z_index": 1,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "props": {
+                "content_ref": "boucle-promo"
+              }
+            }
+          ],
+          "settings": {
+            "duration_ms": 20000,
+            "audio_policy": "muted"
+          }
+        }
+      }
+    ],
+    "timeline": [
+      {
+        "starts_at": "2026-09-29T18:00:00Z",
+        "ends_at": "2026-09-30T06:00:00Z",
+        "content_ref": "absent",
+        "source": {
+          "type": "schedule",
+          "id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000001",
+          "priority": 10,
+          "revision": "57"
+        }
+      },
+      {
+        "starts_at": "2026-09-30T06:00:00Z",
+        "ends_at": "2026-09-30T08:00:00Z",
+        "content_ref": "bandeau-led",
+        "source": {
+          "type": "campaign",
+          "id": "bbbbbbbb-bbbb-4bbb-8bbb-000000000001",
+          "priority": 50,
+          "revision": "12"
+        }
+      },
+      {
+        "starts_at": "2026-09-30T08:00:00Z",
+        "ends_at": "2026-10-06T18:00:00Z",
+        "content_ref": "boucle-promo",
+        "source": {
+          "type": "schedule",
+          "id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000001",
+          "priority": 10,
+          "revision": "57"
+        }
+      }
+    ],
+    "fallback": {
+      "content_ref": "image-accueil",
+      "after_schedule": "play_fallback"
+    }
+  },
+  "signature": "lzRKIbgqv8iYJPGRoxWVIXJ0OdFjKPrLMaenY2zkWt1OdfOd69nINFYZ2J37imxEIKXVSn9ZODIqi4wwc8exBA"
+}

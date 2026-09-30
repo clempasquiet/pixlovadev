@@ -1,0 +1,34 @@
+{
+  "warning": "CLÉS DE TEST UNIQUEMENT — graines publiques, jamais dans un trust store réel.",
+  "keys": [
+    {
+      "kid": "test-manifest-a",
+      "seed_hex": "d26fd7d5f0f517cd5810da682d02b2c03d3d4d8beb26dd102c4c3f23510aafda",
+      "public_key_b64u": "Cj1SxjdANaPZoOqFIvB7E_NY927-MP67148pG2s-cH0"
+    },
+    {
+      "kid": "test-manifest-b",
+      "seed_hex": "1cd74d58d15f8d75200009212bff24337e643b9098f84026cdc2f4695ad3ca39",
+      "public_key_b64u": "duTOMcNboU4Jk4X7iQkdO1HAoXHfpTP4NwanqiQ7bw4"
+    },
+    {
+      "kid": "test-untrusted-c",
+      "seed_hex": "7049012ad27b083bfb08c3b4036a37daf9dd2e4c92786d2072d3c467bb51be5f",
+      "public_key_b64u": "Em3ngrhmt9ikSrOIolWWVWQX1ASOyikNHjVrt1Mgi5w"
+    },
+    {
+      "kid": "test-command-a",
+      "seed_hex": "6a7b67d097d258328c36c2e43784d6d12e5efb8f60db0a3de2d2ac8edbe99e4d",
+      "public_key_b64u": "Xs-UGp5NZjGzVGXUSFBO2luBeBw8rPlXyCDHo1zPVas"
+    }
+  ],
+  "trust": {
+    "manifest": [
+      "test-manifest-a",
+      "test-manifest-b"
+    ],
+    "command": [
+      "test-command-a"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/organization.json",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "slug",
+    "country",
+    "timezone",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "timezone": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$",
+      "maxLength": 64
+    },
+    "status": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "active"
+        },
+        {
+          "type": "string",
+          "const": "suspended"
+        },
+        {
+          "type": "string",
+          "const": "deletion_pending"
+        },
+        {
+          "type": "string",
+          "const": "deleted"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "title": "Organization"
+}

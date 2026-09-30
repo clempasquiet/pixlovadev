@@ -83,6 +83,9 @@ function visit(id) {
   active.delete(id); visited.add(id);
 }
 for (const task of tasks) visit(task.id);
-for (const path of files.filter(p => p.endsWith('.json'))) JSON.parse(await readFile(path, 'utf8'));
+// Les fixtures de contrats contiennent volontairement des documents invalides
+// (JSON tronqué, clés dupliquées) ; elles sont vérifiées par les tests de contrats.
+const intentionallyInvalid = resolve(root, 'packages/contracts/fixtures');
+for (const path of files.filter(p => p.endsWith('.json') && !p.startsWith(intentionallyInvalid))) JSON.parse(await readFile(path, 'utf8'));
 console.log(`OK : ${markdown.length} documents Markdown, ${links} liens locaux, ${tasks.length} lots sans cycle, chapitres synchronisés et JSON valides.`);
 console.log('Ces contrôles ne valident pas une application, un Player ou un déploiement.');

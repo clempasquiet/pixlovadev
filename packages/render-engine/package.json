@@ -1,0 +1,27 @@
+{
+  "name": "@pixlova/render-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Moteur de rendu partagé pixlova (preview, Player Web, renderer natif) : mise en page déterministe, sélection temporelle et rendu DOM.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./dom": {
+      "types": "./dist/dom/index.d.ts",
+      "default": "./dist/dom/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pixlova/contracts": "workspace:*",
+    "uqr": "0.1.3"
+  }
+}
