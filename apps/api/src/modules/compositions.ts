@@ -6,6 +6,7 @@ import {
   COMPOSITION_DOCUMENT_VERSION,
   describeErrors,
   documentMediaIds,
+  documentPlaylistIds,
   lintCompositionDocument,
   validator,
   type CompositionDocument,
@@ -19,6 +20,7 @@ import { authorize, requestMeta, requireMember, type MemberContext } from '../ht
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
 import { idempotencyScope, idempotent } from '../lib/idempotency.js';
+import { contentInfos, cycleIssues, recompile, referenceIssues } from './content-graph.js';
 import { Strict, Uuid } from './schemas.js';
 
 type CompositionRow = typeof schema.compositions.$inferSelect;
@@ -147,6 +149,28 @@ async function mediaIssues(
       );
     }
   }
+  // Zones playlist (ADR-011) : playlist publiée, visible, compatible, sans cycle.
+  const zones = document.elements.filter(
+    (e): e is Extract<CompositionDocument['elements'][number], { type: 'playlist_zone' }> =>
+      e.type === 'playlist_zone' && e.props.playlist_id !== null,
+  );
+  if (zones.length > 0) {
+    const refs = documentPlaylistIds(document).map((id) => ({ type: 'playlist' as const, id }));
+    const infos = await contentInfos(tx, member, refs);
+    const graph = [
+      ...referenceIssues(refs, infos, composition.siteId),
+      ...(await cycleIssues(tx, { type: 'composition', id: composition.id }, refs)),
+    ];
+    for (const issue of graph) {
+      const zone = zones.find((z) => issue.ref === `playlist:${z.props.playlist_id}`);
+      issues.push({
+        severity: issue.severity,
+        code: issue.code,
+        element_id: zone?.id ?? zones[0]!.id,
+        message: issue.message,
+      });
+    }
+  }
   return issues;
 }
 
@@ -188,16 +212,21 @@ async function publishVersion(
       publishedBy: member.auth.user.id,
     })
     .returning();
-  const mediaIds = documentMediaIds(document);
-  if (mediaIds.length > 0) {
+  const dependencies = [
+    ...documentMediaIds(document).map((mediaId) => ({ mediaId })),
+    ...documentPlaylistIds(document).map((playlistId) => ({ playlistId })),
+  ];
+  if (dependencies.length > 0) {
     await tx.insert(schema.contentDependencies).values(
-      mediaIds.map((mediaId) => ({
+      dependencies.map((target) => ({
         organizationId: member.organizationId,
         compositionVersionId: created!.id,
-        mediaId,
+        ...target,
       })),
     );
   }
+  // Toute diffusion utilisant la composition reprend sa dernière version publiée.
+  await recompile(tx, member, 'all', 'composition.published');
   return {
     created: created!,
     now,
@@ -624,11 +653,13 @@ export function compositionRoutes(app: FastifyInstance, services: Services): voi
       await withTenant(services.db, member.organizationId, async (tx) => {
         const row = await loadComposition(tx, member, id, true);
         authorize(member, 'content.manage', { siteId: row.siteId });
-        // Les versions publiées sont conservées ; les références par playlists arrivent avec L05.
+        // Les versions publiées sont conservées ; les diffusions qui l’utilisaient sont
+        // recompilées et cèdent la place au niveau inférieur ou au repli (ADR-011).
         await tx
           .update(schema.compositions)
           .set({ deletedAt: services.now(), updatedBy: member.auth.user.id })
           .where(eq(schema.compositions.id, id));
+        if (row.publishedVersionId) await recompile(tx, member, 'all', 'composition.deleted');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',

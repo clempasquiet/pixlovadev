@@ -6,4 +6,5 @@ export * from './access.js';
 export * from './player-auth.js';
 export * from './media.js';
 export * from './content.js';
+export * from './delivery.js';
 export { appRole, currentOrganization } from './common.js';

@@ -1,0 +1,32 @@
+{
+  "name": "@pixlova/scheduling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Moteur de programmation pixlova (PLN-003 à PLN-013) : règles locales compilées en intervalles UTC, ciblage, arbitrage des priorités, explication ; compilateur de manifests signés (`./compiler`).",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./compiler": {
+      "types": "./dist/compiler/index.d.ts",
+      "default": "./dist/compiler/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@pixlova/contracts": "workspace:*",
+    "@pixlova/db": "workspace:*",
+    "drizzle-orm": "0.45.3"
+  },
+  "devDependencies": {
+    "@pixlova/render-engine": "workspace:*"
+  }
+}

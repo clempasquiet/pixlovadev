@@ -1,0 +1,96 @@
+{
+  "description": "Planning de fond, campagne puis override imbriqués : la plus haute priorité gagne et la campagne reprend après l’override (nouvelle entrée).",
+  "display_timezone": "Europe/Paris",
+  "window": { "from": "2026-06-15T00:00:00Z", "until": "2026-06-16T00:00:00Z" },
+  "sources": [
+    {
+      "kind": "schedule",
+      "program_id": "a0000000-0000-4000-8000-000000000001",
+      "version": 1,
+      "timezone": null,
+      "rules": [
+        {
+          "id": "a1000000-0000-4000-8000-000000000001",
+          "content": { "type": "media", "id": "loop" },
+          "priority": 10,
+          "weekdays": [1, 2, 3, 4, 5, 6, 7],
+          "start_time": "00:00",
+          "end_time": "24:00",
+          "start_date": null,
+          "end_date": null
+        }
+      ],
+      "exceptions": []
+    },
+    {
+      "kind": "campaign",
+      "program_id": "c0000000-0000-4000-8000-000000000001",
+      "version": 3,
+      "priority": 50,
+      "starts_at": "2026-06-15T08:00:00Z",
+      "ends_at": "2026-06-15T10:00:00Z",
+      "content": { "type": "composition", "id": "promo" }
+    },
+    {
+      "kind": "override",
+      "program_id": "d0000000-0000-4000-8000-000000000001",
+      "version": 1,
+      "priority": 90,
+      "starts_at": "2026-06-15T09:00:00Z",
+      "ends_at": "2026-06-15T09:30:00Z",
+      "content": { "type": "media", "id": "urgent" }
+    }
+  ],
+  "expected": [
+    {
+      "starts_at": "2026-06-15T00:00:00Z",
+      "ends_at": "2026-06-15T08:00:00Z",
+      "content": "media:loop",
+      "kind": "schedule",
+      "rule_id": "a1000000-0000-4000-8000-000000000001",
+      "priority": 10
+    },
+    {
+      "starts_at": "2026-06-15T08:00:00Z",
+      "ends_at": "2026-06-15T09:00:00Z",
+      "content": "composition:promo",
+      "kind": "campaign",
+      "rule_id": "c0000000-0000-4000-8000-000000000001",
+      "priority": 50
+    },
+    {
+      "starts_at": "2026-06-15T09:00:00Z",
+      "ends_at": "2026-06-15T09:30:00Z",
+      "content": "media:urgent",
+      "kind": "override",
+      "rule_id": "d0000000-0000-4000-8000-000000000001",
+      "priority": 90
+    },
+    {
+      "starts_at": "2026-06-15T09:30:00Z",
+      "ends_at": "2026-06-15T10:00:00Z",
+      "content": "composition:promo",
+      "kind": "campaign",
+      "rule_id": "c0000000-0000-4000-8000-000000000001",
+      "priority": 50
+    },
+    {
+      "starts_at": "2026-06-15T10:00:00Z",
+      "ends_at": "2026-06-16T00:00:00Z",
+      "content": "media:loop",
+      "kind": "schedule",
+      "rule_id": "a1000000-0000-4000-8000-000000000001",
+      "priority": 10
+    }
+  ],
+  "explanations": [
+    {
+      "at": "2026-06-15T09:15:00Z",
+      "winner": "d0000000-0000-4000-8000-000000000001",
+      "masked": [
+        { "rule_id": "c0000000-0000-4000-8000-000000000001", "reason": "lower_priority" },
+        { "rule_id": "a1000000-0000-4000-8000-000000000001", "reason": "lower_priority" }
+      ]
+    }
+  ]
+}

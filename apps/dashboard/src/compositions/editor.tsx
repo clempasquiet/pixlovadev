@@ -66,6 +66,7 @@ const TYPE_LABEL: Record<DocumentElement['type'], string> = {
   video: 'Vidéo',
   qr: 'QR Code',
   clock: 'Horloge',
+  playlist_zone: 'Zone playlist',
 };
 
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
@@ -529,6 +530,9 @@ export function CompositionEditorPage() {
           </button>
           <button type="button" onClick={() => add('clock')}>
             + Horloge
+          </button>
+          <button type="button" onClick={() => add('playlist_zone')}>
+            + Zone playlist
           </button>
           <span className="toolbar-sep" />
           <button

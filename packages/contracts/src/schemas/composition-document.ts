@@ -99,6 +99,9 @@ const ClockProps = Type.Object(
   Strict,
 );
 
+/** Zone jouant une playlist publiée (ADR-011) ; `null` tant qu’aucune n’est choisie. */
+const PlaylistZoneProps = Type.Object({ playlist_id: Type.Union([Uuid, Type.Null()]) }, Strict);
+
 function element<K extends string, P extends Type.TSchema>(kind: K, props: P) {
   return Type.Object(
     {
@@ -130,6 +133,7 @@ export const DocumentElement = Type.Union([
   element('shape', ShapeProps),
   element('qr', QrProps),
   element('clock', ClockProps),
+  element('playlist_zone', PlaylistZoneProps),
 ]);
 export type DocumentElement = Static<typeof DocumentElement>;
 

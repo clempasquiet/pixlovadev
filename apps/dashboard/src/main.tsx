@@ -7,6 +7,13 @@ import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
 import { LibraryPage } from './pages/library.js';
 import { CompositionEditorPage } from './compositions/editor.js';
 import { CompositionsPage, TemplatesPage } from './compositions/pages.js';
+import { PlaylistEditorPage, PlaylistsPage } from './programming/playlists.js';
+import {
+  CampaignEditorPage,
+  CampaignsPage,
+  ScheduleEditorPage,
+  SchedulesPage,
+} from './programming/programs.js';
 import {
   AcceptInvitationPage,
   LoginPage,
@@ -47,6 +54,12 @@ const router = createBrowserRouter([
           { path: 'compositions', element: <CompositionsPage /> },
           { path: 'compositions/:id', element: <CompositionEditorPage /> },
           { path: 'templates', element: <TemplatesPage /> },
+          { path: 'playlists', element: <PlaylistsPage /> },
+          { path: 'playlists/:id', element: <PlaylistEditorPage /> },
+          { path: 'schedules', element: <SchedulesPage /> },
+          { path: 'schedules/:id', element: <ScheduleEditorPage /> },
+          { path: 'campaigns', element: <CampaignsPage /> },
+          { path: 'campaigns/:id', element: <CampaignEditorPage /> },
           { path: 'displays', element: <DisplaysPage /> },
           { path: 'displays/:id', element: <DisplayDetailPage /> },
           { path: 'players', element: <PlayersPage /> },

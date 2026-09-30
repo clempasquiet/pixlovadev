@@ -109,6 +109,11 @@ export function lintCompositionDocument(
           error('FONT_NOT_QUALIFIED', element, `Police non disponible pour ${label(element)}.`);
         }
         break;
+      case 'playlist_zone':
+        if (element.props.playlist_id === null) {
+          error('PLAYLIST_REQUIRED', element, `Choisissez une playlist pour ${label(element)}.`);
+        }
+        break;
       default:
         break;
     }
@@ -142,6 +147,13 @@ export function lintCompositionDocument(
 
 export type MediaResolution = { asset_id: string; kind: 'image' | 'video' } | null;
 
+/**
+ * Zone playlist résolue par la compilation (ADR-011) : identifiant du contenu playlist du
+ * manifest, `omit` si la playlist n’a aucun élément éligible (la zone disparaît), `null`
+ * si elle est introuvable.
+ */
+export type PlaylistResolution = { content_ref: string } | 'omit' | null;
+
 export class UnresolvedMediaError extends Error {
   constructor(readonly elementIds: string[]) {
     super(`Médias non résolus : ${elementIds.join(', ')}`);
@@ -157,10 +169,13 @@ export class UnresolvedMediaError extends Error {
 export function resolveCompositionDocument(
   document: CompositionDocument,
   resolveMedia: (mediaId: string) => MediaResolution,
-  options: { missing: 'placeholder' | 'error' } = { missing: 'error' },
+  options: {
+    missing: 'placeholder' | 'error';
+    resolvePlaylist?: (playlistId: string) => PlaylistResolution;
+  } = { missing: 'error' },
 ): Composition {
   const unresolved: string[] = [];
-  const elements = document.elements.map((element): CompositionElement => {
+  const elements = document.elements.flatMap((element): CompositionElement[] => {
     const base = {
       id: element.id,
       x: element.x,
@@ -173,44 +188,61 @@ export function resolveCompositionDocument(
       visible: element.visible,
       locked: element.locked,
     };
+    const placeholder = (): CompositionElement => ({
+      ...base,
+      type: 'shape',
+      props: {
+        shape: 'rectangle',
+        fill: '#8A9BA859',
+        stroke: '#5B6B78',
+        stroke_width_px: Math.max(1, Math.round(Math.min(element.width, element.height) / 100)),
+      },
+    });
+    if (element.type === 'playlist_zone') {
+      const resolved =
+        element.props.playlist_id && options.resolvePlaylist
+          ? options.resolvePlaylist(element.props.playlist_id)
+          : null;
+      if (resolved === 'omit') return [];
+      if (!resolved) {
+        unresolved.push(element.id);
+        return [placeholder()];
+      }
+      return [{ ...base, type: 'playlist_zone', props: { content_ref: resolved.content_ref } }];
+    }
     if (element.type === 'image' || element.type === 'video') {
       const resolved = element.props.media_id ? resolveMedia(element.props.media_id) : null;
       if (!resolved || resolved.kind !== element.type) {
         unresolved.push(element.id);
-        return {
-          ...base,
-          type: 'shape',
-          props: {
-            shape: 'rectangle',
-            fill: '#8A9BA859',
-            stroke: '#5B6B78',
-            stroke_width_px: Math.max(1, Math.round(Math.min(element.width, element.height) / 100)),
-          },
-        };
+        return [placeholder()];
       }
       if (element.type === 'image') {
-        return {
-          ...base,
-          type: 'image',
-          props: { asset_id: resolved.asset_id, fit: element.props.fit },
-        };
+        return [
+          {
+            ...base,
+            type: 'image',
+            props: { asset_id: resolved.asset_id, fit: element.props.fit },
+          },
+        ];
       }
       const { fit, muted, volume, loop, start_ms, end_ms } = element.props;
-      return {
-        ...base,
-        type: 'video',
-        props: {
-          asset_id: resolved.asset_id,
-          fit,
-          muted,
-          volume,
-          loop,
-          ...(start_ms !== undefined ? { start_ms } : {}),
-          ...(end_ms !== undefined ? { end_ms } : {}),
+      return [
+        {
+          ...base,
+          type: 'video',
+          props: {
+            asset_id: resolved.asset_id,
+            fit,
+            muted,
+            volume,
+            loop,
+            ...(start_ms !== undefined ? { start_ms } : {}),
+            ...(end_ms !== undefined ? { end_ms } : {}),
+          },
         },
-      };
+      ];
     }
-    return { ...base, type: element.type, props: element.props } as CompositionElement;
+    return [{ ...base, type: element.type, props: element.props } as CompositionElement];
   });
   if (unresolved.length > 0 && options.missing === 'error')
     throw new UnresolvedMediaError(unresolved);
@@ -228,6 +260,17 @@ export function documentMediaIds(document: CompositionDocument): string[] {
   for (const element of document.elements) {
     if ((element.type === 'image' || element.type === 'video') && element.props.media_id) {
       ids.add(element.props.media_id);
+    }
+  }
+  return [...ids];
+}
+
+/** Playlists référencées par des zones (dépendances, cycles). */
+export function documentPlaylistIds(document: CompositionDocument): string[] {
+  const ids = new Set<string>();
+  for (const element of document.elements) {
+    if (element.type === 'playlist_zone' && element.props.playlist_id) {
+      ids.add(element.props.playlist_id);
     }
   }
   return [...ids];

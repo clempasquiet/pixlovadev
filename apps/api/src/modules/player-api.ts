@@ -1,8 +1,9 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   HeartbeatPayload,
+  ManifestStatusRequest,
   OutputsReportRequest,
   PAIRING_CODE_ALPHABET,
   PLAYER_AUTH_AUDIENCE,
@@ -16,8 +17,10 @@ import {
   type OutputReport,
   type PlayerAuthChallenge,
 } from '@pixlova/contracts';
+import Type from 'typebox';
 import { schema, withTenant, type Transaction } from '@pixlova/db';
 import { ApiError } from '../errors.js';
+import { Strict, Uuid } from './schemas.js';
 import { rateLimit } from '../http/context.js';
 import type { Services } from '../http/services.js';
 import { randomToken, safeEqual, tokenHash } from '../lib/crypto.js';
@@ -334,6 +337,21 @@ export function playerApiRoutes(app: FastifyInstance, services: Services): void 
           ),
         ),
     );
+    const versions = await withTenant(services.db, player.organizationId, (tx) =>
+      authorizedManifests(tx, player).then((rows) =>
+        rows.length === 0
+          ? []
+          : tx
+              .select({
+                displayId: schema.manifests.displayId,
+                version: sql<string>`max(${schema.manifests.version})::text`,
+              })
+              .from(schema.manifests)
+              .where(inArray(schema.manifests.id, rows))
+              .groupBy(schema.manifests.displayId),
+      ),
+    );
+    const desired = new Map(versions.map((v) => [v.displayId, v.version]));
     return {
       player_id: player.playerId,
       organization_id: player.organizationId,
@@ -343,6 +361,7 @@ export function playerApiRoutes(app: FastifyInstance, services: Services): void 
         display_id: row.displayId,
         assignment_generation: String(row.generation),
         output_key: row.outputKey,
+        manifest_version: desired.get(row.displayId) ?? null,
         display: {
           name: row.name,
           width: row.width,
@@ -403,4 +422,246 @@ export function playerApiRoutes(app: FastifyInstance, services: Services): void 
     });
     return { server_time: formatInstant(now), stale_displays: stale };
   });
+
+  /** Dernier manifest désiré d’une affectation active de ce Player (ADR-011). */
+  app.get(
+    '/manifest',
+    { schema: { querystring: Type.Object({ display_id: Uuid }, Strict) } },
+    async (request, reply) => {
+      const player = await authenticatePlayer(request, services);
+      const { display_id: displayId } = request.query as { display_id: string };
+      const manifest = await withTenant(services.db, player.organizationId, async (tx) => {
+        const ids = await authorizedManifests(tx, player, displayId);
+        if (ids.length === 0) return null;
+        const [latest] = await tx
+          .select()
+          .from(schema.manifests)
+          .where(inArray(schema.manifests.id, ids))
+          .orderBy(desc(schema.manifests.version))
+          .limit(1);
+        if (latest) await markReceived(tx, latest.id, player.playerId, services.now());
+        return latest ?? null;
+      });
+      if (!manifest) {
+        throw new ApiError(404, 'MANIFEST_NOT_FOUND', 'Aucun manifest pour cette affectation.');
+      }
+      return sendManifest(request, reply, manifest);
+    },
+  );
+
+  app.get(
+    '/manifests/:id',
+    { schema: { params: Type.Object({ id: Uuid }, Strict) } },
+    async (request, reply) => {
+      const player = await authenticatePlayer(request, services);
+      const { id } = request.params as { id: string };
+      const manifest = await withTenant(services.db, player.organizationId, async (tx) => {
+        const ids = await authorizedManifests(tx, player);
+        if (!ids.includes(id)) return null;
+        const [row] = await tx.select().from(schema.manifests).where(eq(schema.manifests.id, id));
+        if (row) await markReceived(tx, row.id, player.playerId, services.now());
+        return row ?? null;
+      });
+      if (!manifest) throw new ApiError(404, 'MANIFEST_NOT_FOUND', 'Manifest introuvable.');
+      return sendManifest(request, reply, manifest);
+    },
+  );
+
+  /**
+   * URL temporaire d’un asset (PROTO-004) : l’asset doit figurer dans un manifest de
+   * l’affectation active et de la génération courante. L’URL n’est pas journalisée ; une
+   * fuite reste utilisable jusqu’à son expiration courte.
+   */
+  app.get(
+    '/assets/:id/url',
+    {
+      schema: {
+        params: Type.Object({ id: Uuid }, Strict),
+        querystring: Type.Object({ manifest_id: Uuid }, Strict),
+      },
+    },
+    async (request) => {
+      const player = await authenticatePlayer(request, services);
+      const { id } = request.params as { id: string };
+      const { manifest_id: manifestId } = request.query as { manifest_id: string };
+      const asset = await withTenant(services.db, player.organizationId, async (tx) => {
+        const ids = await authorizedManifests(tx, player);
+        if (!ids.includes(manifestId)) return null;
+        const [row] = await tx
+          .select({ asset: schema.mediaAssets })
+          .from(schema.manifestAssets)
+          .innerJoin(
+            schema.mediaAssets,
+            eq(schema.mediaAssets.id, schema.manifestAssets.mediaAssetId),
+          )
+          .where(
+            and(
+              eq(schema.manifestAssets.manifestId, manifestId),
+              eq(schema.manifestAssets.mediaAssetId, id),
+            ),
+          );
+        return row?.asset ?? null;
+      });
+      if (!asset)
+        throw new ApiError(404, 'ASSET_NOT_FOUND', 'Asset non autorisé pour ce manifest.');
+      let signed;
+      try {
+        signed = await services.storage.presignGet(asset.storageKey, {
+          expiresInSeconds: services.media.previewUrlSeconds,
+        });
+      } catch {
+        throw new ApiError(503, 'STORAGE_UNAVAILABLE', 'Stockage indisponible.', true);
+      }
+      return {
+        asset_id: asset.id,
+        url: signed.url,
+        expires_at: formatInstant(signed.expiresAt),
+        size_bytes: asset.sizeBytes,
+        sha256: asset.checksumSha256,
+        range_supported: true,
+      };
+    },
+  );
+
+  /**
+   * États déclarés par le Player (FON-002) : transitions monotones et idempotentes.
+   * « Appliqué » n’est enregistré qu’à la déclaration du Player, jamais déduit.
+   */
+  app.post(
+    '/manifests/:id/status',
+    {
+      schema: { params: Type.Object({ id: Uuid }, Strict), body: ManifestStatusRequest },
+    },
+    async (request) => {
+      const player = await authenticatePlayer(request, services);
+      const { id } = request.params as { id: string };
+      const body = request.body as ManifestStatusRequest;
+      const now = services.now();
+      return withTenant(services.db, player.organizationId, async (tx) => {
+        const ids = await authorizedManifests(tx, player);
+        const [delivery] = ids.includes(id)
+          ? await tx
+              .select()
+              .from(schema.manifestDeliveries)
+              .where(
+                and(
+                  eq(schema.manifestDeliveries.manifestId, id),
+                  eq(schema.manifestDeliveries.playerId, player.playerId),
+                ),
+              )
+              .for('update')
+          : [];
+        if (!delivery) throw new ApiError(404, 'MANIFEST_NOT_FOUND', 'Manifest introuvable.');
+        const next = nextDeliveryState(delivery.state, body.state);
+        if (next === delivery.state) return { state: delivery.state };
+        await tx
+          .update(schema.manifestDeliveries)
+          .set({
+            state: next,
+            updatedAt: now,
+            ...(next === 'ready' ? { readyAt: now } : {}),
+            ...(next === 'applied' ? { appliedAt: now, errorCode: null, detail: null } : {}),
+            ...(next === 'failed'
+              ? {
+                  failedAt: now,
+                  errorCode: body.error_code ?? 'PREPARATION_FAILED',
+                  detail: body.detail,
+                }
+              : {}),
+          })
+          .where(eq(schema.manifestDeliveries.id, delivery.id));
+        return { state: next };
+      });
+    },
+  );
+}
+
+const STATE_RANK: Record<string, number> = {
+  desired: 0,
+  received: 1,
+  downloading: 2,
+  ready: 3,
+  applied: 4,
+};
+
+/**
+ * Transition d’une livraison. Un état appliqué est final ; un recul est ignoré (message
+ * rejoué ou désordonné) ; un échec peut être suivi d’une nouvelle préparation. Un manifest
+ * remplacé côté cloud peut encore être déclaré appliqué : c’est ce qui joue réellement.
+ */
+type DeliveryState = (typeof schema.manifestDeliveries.$inferSelect)['state'];
+
+export function nextDeliveryState(
+  current: DeliveryState,
+  reported: ManifestStatusRequest['state'],
+): DeliveryState {
+  if (current === 'applied') return current;
+  if (reported === 'applied' || reported === 'failed') return reported;
+  if (current === 'failed' || current === 'superseded') return reported;
+  return (STATE_RANK[reported] ?? 0) > (STATE_RANK[current] ?? 0) ? reported : current;
+}
+
+/**
+ * Manifests autorisés pour ce Player (PROTO-004, PROTO-013) : Display affecté à l’une de ses
+ * sorties, affectation active et même génération. Une ancienne affectation ne redevient
+ * jamais légitime.
+ */
+async function authorizedManifests(
+  tx: Transaction,
+  player: PlayerContext,
+  displayId?: string,
+): Promise<string[]> {
+  const rows = await tx
+    .select({ id: schema.manifests.id })
+    .from(schema.manifests)
+    .innerJoin(
+      schema.displayAssignments,
+      and(
+        eq(schema.displayAssignments.displayId, schema.manifests.displayId),
+        isNull(schema.displayAssignments.endedAt),
+        eq(schema.displayAssignments.generation, schema.manifests.assignmentGeneration),
+      ),
+    )
+    .innerJoin(
+      schema.playerOutputs,
+      eq(schema.playerOutputs.id, schema.displayAssignments.playerOutputId),
+    )
+    .where(
+      and(
+        eq(schema.playerOutputs.playerId, player.playerId),
+        eq(schema.manifests.playerId, player.playerId),
+        ...(displayId ? [eq(schema.manifests.displayId, displayId)] : []),
+      ),
+    );
+  return rows.map((row) => row.id);
+}
+
+async function markReceived(
+  tx: Transaction,
+  manifestId: string,
+  playerId: string,
+  now: Date,
+): Promise<void> {
+  await tx
+    .update(schema.manifestDeliveries)
+    .set({ state: 'received', receivedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(schema.manifestDeliveries.manifestId, manifestId),
+        eq(schema.manifestDeliveries.playerId, playerId),
+        eq(schema.manifestDeliveries.state, 'desired'),
+      ),
+    );
+}
+
+/** Octets signés tels qu’enregistrés ; ETag = empreinte du payload (304 si inchangé). */
+function sendManifest(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  manifest: typeof schema.manifests.$inferSelect,
+) {
+  const etag = `"${manifest.payloadHash}"`;
+  reply.header('etag', etag).header('cache-control', 'private, no-cache');
+  if (request.headers['if-none-match'] === etag) return reply.status(304).send();
+  return reply.header('content-type', 'application/json; charset=utf-8').send(manifest.envelope);
 }

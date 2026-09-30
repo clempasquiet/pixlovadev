@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../api.js';
 import { ErrorMessage, Loading } from '../ui.js';
 import type { MediaInfo } from './media.js';
@@ -6,6 +6,8 @@ import type { MediaInfo } from './media.js';
 /** Choix d’un média prêt de la bibliothèque (MED-007 : seuls les médias prêts sont proposés). */
 export function MediaPicker(props: {
   type: 'image' | 'video';
+  /** Contenu inséré sous le titre (onglets d’un sélecteur plus large). */
+  header?: ReactNode;
   onPick(media: MediaInfo): void;
   onClose(): void;
 }) {
@@ -41,6 +43,7 @@ export function MediaPicker(props: {
             Fermer
           </button>
         </div>
+        {props.header}
         <input
           type="search"
           aria-label="Rechercher dans la bibliothèque"

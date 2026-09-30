@@ -7,6 +7,9 @@ import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
 import { compositionRoutes } from './modules/compositions.js';
+import { displayProgramRoutes } from './modules/display-program.js';
+import { playlistRoutes } from './modules/playlists.js';
+import { programRoutes } from './modules/programs.js';
 import { fleetRoutes } from './modules/fleet.js';
 import { mediaRoutes } from './modules/media.js';
 import { memberRoutes } from './modules/members.js';
@@ -58,6 +61,9 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
   fleetRoutes(app, services);
   mediaRoutes(app, services);
   compositionRoutes(app, services);
+  playlistRoutes(app, services);
+  programRoutes(app, services);
+  displayProgramRoutes(app, services);
   auditRoutes(app, services);
 }
 

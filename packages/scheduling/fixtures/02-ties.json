@@ -1,0 +1,99 @@
+{
+  "description": "Égalités de priorité : le début d’occurrence le plus récent gagne, puis l’identifiant de règle en ordre lexical croissant.",
+  "display_timezone": "UTC",
+  "window": { "from": "2026-06-15T00:00:00Z", "until": "2026-06-15T06:00:00Z" },
+  "sources": [
+    {
+      "kind": "schedule",
+      "program_id": "a0000000-0000-4000-8000-000000000001",
+      "version": 1,
+      "timezone": null,
+      "rules": [
+        {
+          "id": "10000000-0000-4000-8000-00000000000a",
+          "content": { "type": "media", "id": "a" },
+          "priority": 10,
+          "weekdays": [1],
+          "start_time": "00:00",
+          "end_time": "06:00",
+          "start_date": null,
+          "end_date": null
+        },
+        {
+          "id": "10000000-0000-4000-8000-00000000000b",
+          "content": { "type": "media", "id": "b" },
+          "priority": 10,
+          "weekdays": [1],
+          "start_time": "02:00",
+          "end_time": "04:00",
+          "start_date": null,
+          "end_date": null
+        }
+      ],
+      "exceptions": []
+    },
+    {
+      "kind": "schedule",
+      "program_id": "a0000000-0000-4000-8000-000000000002",
+      "version": 1,
+      "timezone": null,
+      "rules": [
+        {
+          "id": "00000000-0000-4000-8000-00000000000d",
+          "content": { "type": "media", "id": "d" },
+          "priority": 10,
+          "weekdays": [1],
+          "start_time": "02:00",
+          "end_time": "03:00",
+          "start_date": null,
+          "end_date": null
+        }
+      ],
+      "exceptions": []
+    }
+  ],
+  "expected": [
+    {
+      "starts_at": "2026-06-15T00:00:00Z",
+      "ends_at": "2026-06-15T02:00:00Z",
+      "content": "media:a",
+      "kind": "schedule",
+      "rule_id": "10000000-0000-4000-8000-00000000000a",
+      "priority": 10
+    },
+    {
+      "starts_at": "2026-06-15T02:00:00Z",
+      "ends_at": "2026-06-15T03:00:00Z",
+      "content": "media:d",
+      "kind": "schedule",
+      "rule_id": "00000000-0000-4000-8000-00000000000d",
+      "priority": 10
+    },
+    {
+      "starts_at": "2026-06-15T03:00:00Z",
+      "ends_at": "2026-06-15T04:00:00Z",
+      "content": "media:b",
+      "kind": "schedule",
+      "rule_id": "10000000-0000-4000-8000-00000000000b",
+      "priority": 10
+    },
+    {
+      "starts_at": "2026-06-15T04:00:00Z",
+      "ends_at": "2026-06-15T06:00:00Z",
+      "content": "media:a",
+      "kind": "schedule",
+      "rule_id": "10000000-0000-4000-8000-00000000000a",
+      "priority": 10
+    }
+  ],
+  "explanations": [
+    {
+      "at": "2026-06-15T02:30:00Z",
+      "winner": "00000000-0000-4000-8000-00000000000d",
+      "masked": [
+        { "rule_id": "10000000-0000-4000-8000-00000000000b", "reason": "identifier_order" },
+        { "rule_id": "10000000-0000-4000-8000-00000000000a", "reason": "older_start" }
+      ]
+    }
+  ]
+}

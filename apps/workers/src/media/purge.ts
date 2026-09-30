@@ -1,5 +1,6 @@
 import { adjustUsage, schema, withTenant, type ClaimedJob } from '@pixlova/db';
 import { and, eq, inArray } from 'drizzle-orm';
+import { isMediaPinnedByManifests } from '@pixlova/scheduling/compiler';
 import type { WorkerContext } from '../context.js';
 import type { JobHandler } from '../runner.js';
 import { MEDIA_INGEST } from './ingest.js';
@@ -36,13 +37,19 @@ async function purge(ctx: WorkerContext, job: ClaimedJob): Promise<void> {
         ),
       );
     if (active) throw new Error('Préparation en cours : purge différée.');
-    // Référencé par une version publiée (ADR-010) : le binaire est conservé (MED-006).
+    // Référencé par une version publiée (ADR-010, ADR-011), un repli de Display ou un
+    // manifest utilisable : le binaire est conservé (MED-006, NAT-009).
     const [referenced] = await tx
-      .select({ id: schema.contentDependencies.compositionVersionId })
+      .select({ id: schema.contentDependencies.id })
       .from(schema.contentDependencies)
       .where(eq(schema.contentDependencies.mediaId, mediaId))
       .limit(1);
-    if (referenced) {
+    const [fallback] = await tx
+      .select({ id: schema.displays.id })
+      .from(schema.displays)
+      .where(eq(schema.displays.fallbackMediaId, mediaId))
+      .limit(1);
+    if (referenced || fallback || (await isMediaPinnedByManifests(tx, mediaId))) {
       await tx
         .update(schema.media)
         .set({

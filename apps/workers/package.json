@@ -2,7 +2,7 @@
   "name": "@pixlova/workers",
   "version": "0.0.0",
   "private": true,
-  "description": "Workers pixlova : file de tâches PostgreSQL, préparation des médias (sharp, FFmpeg) et balayages.",
+  "description": "Workers pixlova : file de tâches PostgreSQL, préparation des médias (sharp, FFmpeg), compilation des manifests et balayages.",
   "type": "module",
   "exports": {
     ".": {
@@ -20,12 +20,14 @@
   "dependencies": {
     "@pixlova/contracts": "workspace:*",
     "@pixlova/db": "workspace:*",
+    "@pixlova/scheduling": "workspace:*",
     "@pixlova/storage": "workspace:*",
     "drizzle-orm": "0.45.3",
     "pg": "8.23.0",
     "sharp": "0.35.5"
   },
   "devDependencies": {
+    "@noble/curves": "2.4.0",
     "@types/pg": "8.23.1"
   }
 }

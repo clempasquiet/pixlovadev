@@ -36,6 +36,7 @@
           "display_id",
           "assignment_generation",
           "output_key",
+          "manifest_version",
           "display"
         ],
         "properties": {
@@ -51,6 +52,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "manifest_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,18})$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "display": {
             "type": "object",

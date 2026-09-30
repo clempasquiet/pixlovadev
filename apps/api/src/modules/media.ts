@@ -36,7 +36,9 @@ import {
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
 import { idempotencyScope, idempotent } from '../lib/idempotency.js';
+import { isMediaPinnedByManifests } from '@pixlova/scheduling/compiler';
 import { compositionUsages } from './compositions.js';
+import { recompile } from './content-graph.js';
 import { Strict, Uuid } from './schemas.js';
 
 /** Noms des tâches du worker média (apps/workers). */
@@ -105,13 +107,110 @@ function storageError(error: unknown): never {
   throw error;
 }
 
+export interface MediaUsage {
+  type:
+    | 'composition_version'
+    | 'composition_draft'
+    | 'playlist_version'
+    | 'playlist_draft'
+    | 'program_version'
+    | 'program_draft'
+    | 'display_fallback'
+    | 'manifest';
+  id: string;
+  name: string;
+  version: number | null;
+  blocking: boolean;
+}
+
 /**
- * Références d’un média (MED-008, MED-009, ADR-010) : versions publiées de compositions
- * (bloquantes : suppression forcée requise) et brouillons (signalés, non bloquants).
- * Les playlists (L05) s’ajouteront ici.
+ * Références d’un média (MED-008, MED-009, ADR-010, ADR-011) : versions publiées de
+ * compositions, playlists et programmes, replis de Displays et manifests utilisables
+ * (bloquants : suppression forcée requise, purge refusée) ; brouillons (signalés).
  */
-export async function mediaUsages(tx: Transaction, mediaId: string) {
-  return compositionUsages(tx, mediaId);
+export async function mediaUsages(tx: Transaction, mediaId: string): Promise<MediaUsage[]> {
+  const usages: MediaUsage[] = [...(await compositionUsages(tx, mediaId))];
+  const playlists = await tx
+    .select({
+      id: schema.playlists.id,
+      name: schema.playlists.name,
+      version: schema.playlistVersions.version,
+    })
+    .from(schema.contentDependencies)
+    .innerJoin(
+      schema.playlistVersions,
+      eq(schema.playlistVersions.id, schema.contentDependencies.playlistVersionId),
+    )
+    .innerJoin(schema.playlists, eq(schema.playlists.id, schema.playlistVersions.playlistId))
+    .where(eq(schema.contentDependencies.mediaId, mediaId))
+    .orderBy(schema.playlists.name, schema.playlistVersions.version);
+  usages.push(
+    ...playlists.map((row) => ({ type: 'playlist_version' as const, ...row, blocking: true })),
+  );
+  const programs = await tx
+    .select({
+      id: schema.programs.id,
+      name: schema.programs.name,
+      version: schema.programVersions.version,
+    })
+    .from(schema.contentDependencies)
+    .innerJoin(
+      schema.programVersions,
+      eq(schema.programVersions.id, schema.contentDependencies.programVersionId),
+    )
+    .innerJoin(schema.programs, eq(schema.programs.id, schema.programVersions.programId))
+    .where(eq(schema.contentDependencies.mediaId, mediaId))
+    .orderBy(schema.programs.name, schema.programVersions.version);
+  usages.push(
+    ...programs.map((row) => ({ type: 'program_version' as const, ...row, blocking: true })),
+  );
+  const mentions = sql`jsonb_path_exists(draft_document, 'lax $.**.id ? (@ == $id)', jsonb_build_object('id', ${mediaId}::text))`;
+  const playlistDrafts = await tx
+    .select({ id: schema.playlists.id, name: schema.playlists.name })
+    .from(schema.playlists)
+    .where(and(isNull(schema.playlists.deletedAt), mentions));
+  usages.push(
+    ...playlistDrafts.map((row) => ({
+      type: 'playlist_draft' as const,
+      ...row,
+      version: null,
+      blocking: false,
+    })),
+  );
+  const programDrafts = await tx
+    .select({ id: schema.programs.id, name: schema.programs.name })
+    .from(schema.programs)
+    .where(and(isNull(schema.programs.deletedAt), mentions));
+  usages.push(
+    ...programDrafts.map((row) => ({
+      type: 'program_draft' as const,
+      ...row,
+      version: null,
+      blocking: false,
+    })),
+  );
+  const fallbacks = await tx
+    .select({ id: schema.displays.id, name: schema.displays.name })
+    .from(schema.displays)
+    .where(and(eq(schema.displays.fallbackMediaId, mediaId), isNull(schema.displays.deletedAt)));
+  usages.push(
+    ...fallbacks.map((row) => ({
+      type: 'display_fallback' as const,
+      ...row,
+      version: null,
+      blocking: true,
+    })),
+  );
+  if (await isMediaPinnedByManifests(tx, mediaId)) {
+    usages.push({
+      type: 'manifest',
+      id: mediaId,
+      name: 'Manifest en cours de diffusion',
+      version: null,
+      blocking: true,
+    });
+  }
+  return usages;
 }
 
 function publicMedia(
@@ -862,6 +961,8 @@ export function mediaRoutes(app: FastifyInstance, services: Services): void {
             updatedAt: now,
           })
           .where(eq(schema.media.id, id));
+        // Un média publié mis en corbeille n’est plus diffusable : recompilation (ADR-011).
+        if (usages.length > 0) await recompile(tx, member, 'all', 'media.deleted');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',
@@ -904,6 +1005,9 @@ export function mediaRoutes(app: FastifyInstance, services: Services): void {
           .set({ deletedAt: null, deletedBy: null, purgeAfter: null, updatedAt: services.now() })
           .where(eq(schema.media.id, id))
           .returning();
+        if ((await mediaUsages(tx, id)).some((usage) => usage.blocking)) {
+          await recompile(tx, member, 'all', 'media.restored');
+        }
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',

@@ -1,16 +1,18 @@
 /**
- * Point d’entrée du worker média (ADR-009). Deux connexions : rôle applicatif sous RLS
- * pour les écritures métier, rôle système pour la file et les balayages.
+ * Point d’entrée du worker (ADR-009, ADR-011). Deux connexions : rôle applicatif sous RLS
+ * pour les écritures métier, rôle système pour la file et les balayages. La clé de
+ * signature des manifests est obligatoire : sans elle, aucune diffusion ne serait possible.
  */
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import { createDatabase } from '@pixlova/db';
+import { manifestSignerFromSeed } from '@pixlova/scheduling/compiler';
 import { createStorageFromEnv } from '@pixlova/storage';
 import pg from 'pg';
 import { consoleLogger } from './context.js';
-import { createMediaWorker, hardenImageDecoder } from './index.js';
+import { createWorker, hardenImageDecoder } from './index.js';
 import { DEFAULT_VIDEO_TOOLS } from './media/video.js';
 
 function required(name: string): string {
@@ -26,7 +28,12 @@ const tmpRoot = process.env.PIXLOVA_WORKER_TMP_DIR ?? join(tmpdir(), 'pixlova-wo
 await mkdir(tmpRoot, { recursive: true, mode: 0o700 });
 hardenImageDecoder();
 
-const worker = createMediaWorker(
+const manifestSigner = manifestSignerFromSeed(
+  required('PIXLOVA_MANIFEST_KEY_ID'),
+  required('PIXLOVA_MANIFEST_SIGNING_KEY'),
+);
+
+const worker = createWorker(
   {
     appDb: createDatabase(appPool),
     systemDb: createDatabase(systemPool),
@@ -35,6 +42,7 @@ const worker = createMediaWorker(
     tools: DEFAULT_VIDEO_TOOLS,
     tmpRoot,
     trashRetentionDays: Number(process.env.PIXLOVA_MEDIA_TRASH_RETENTION_DAYS ?? 30),
+    manifestSigner,
     now: () => new Date(),
     logger,
   },

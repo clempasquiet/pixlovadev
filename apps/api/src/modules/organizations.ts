@@ -8,6 +8,7 @@ import { ApiError } from '../errors.js';
 import { authorize, requestMeta, requireMember, requireUser } from '../http/context.js';
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
+import { recompile } from './content-graph.js';
 import { Strict, Uuid } from './schemas.js';
 
 const Name = Type.String({ minLength: 1, maxLength: 120 });
@@ -178,6 +179,7 @@ export function organizationRoutes(app: FastifyInstance, services: Services): vo
           })
           .where(eq(schema.organizations.id, member.organizationId))
           .returning();
+        if (body.timezone) await recompile(tx, member, 'all', 'organization.timezone');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',
@@ -309,6 +311,7 @@ export function organizationRoutes(app: FastifyInstance, services: Services): vo
           .where(and(eq(schema.sites.id, id), isNull(schema.sites.deletedAt)))
           .returning();
         if (!updated) return null;
+        if (body.timezone !== undefined) await recompile(tx, member, 'all', 'site.timezone');
         await audit(tx, {
           organizationId: member.organizationId,
           actorType: 'user',

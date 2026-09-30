@@ -10,6 +10,7 @@ export * from './command.js';
 export * from './ws.js';
 export * from './events.js';
 export * from './player-api.js';
+export * from './programming.js';
 
 import { PlayerCapabilities } from './capabilities.js';
 import { CommandPayload, CommandResult, SignedCommand } from './command.js';
@@ -20,8 +21,11 @@ import { ErrorEnvelope } from './errors.js';
 import { PlayerEventBatch } from './events.js';
 import { ManifestPayload, SignedManifest } from './manifest.js';
 import { Organization } from './tenant.js';
+import { PlaylistDocument, ProgramDocument } from './programming.js';
 import {
+  AssetUrlResponse,
   HeartbeatResponse,
+  ManifestStatusRequest,
   OutputsReportRequest,
   PlayerAuthChallenge,
   PlayerChallengeRequest,
@@ -76,5 +80,9 @@ export const ROOT_SCHEMAS = {
   'player-config.json': root('player-config.json', PlayerConfig),
   'player-outputs-report.json': root('player-outputs-report.json', OutputsReportRequest),
   'heartbeat-response.json': root('heartbeat-response.json', HeartbeatResponse),
+  'playlist-document.json': root('playlist-document.json', PlaylistDocument),
+  'program-document.json': root('program-document.json', ProgramDocument),
+  'manifest-status-request.json': root('manifest-status-request.json', ManifestStatusRequest),
+  'asset-url-response.json': root('asset-url-response.json', AssetUrlResponse),
 } as const;
 export type RootSchemaName = keyof typeof ROOT_SCHEMAS;

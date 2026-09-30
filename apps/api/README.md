@@ -5,7 +5,7 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 - **public** : `/health`, `/api/v1` (dashboard, session par cookie), `/player/v1` ; `/storage/v1` seulement avec le pilote de stockage local (développement) ;
 - **interne** : `/internal/v1`, réseau privé uniquement.
 
-## Routes `/api/v1` disponibles (L01 à L04)
+## Routes `/api/v1` disponibles (L01 à L05)
 
 | Domaine | Routes |
 |---|---|
@@ -23,11 +23,17 @@ API Fastify à deux listeners ([ADR-002](../../docs/architecture/adr/0002-backen
 | Dossiers et tags | `GET/POST /media-folders`, `PATCH/DELETE /media-folders/:id`, `GET /tags` |
 | Compositions (L04, [ADR-010](../../docs/architecture/adr/0010-compositions-editeur-templates.md)) | `GET/POST /compositions` (Idempotency-Key), `GET/DELETE /compositions/:id`, `PUT /compositions/:id/draft` (révision), `POST /compositions/:id/publish`, `GET /compositions/:id/versions`, `GET /compositions/:id/versions/:version`, `POST /compositions/:id/restore-version`, `POST /compositions/:id/duplicate` |
 | Templates | `GET /templates`, `POST /templates/:key/instantiate` (Idempotency-Key, droit `templates`) |
+| Playlists (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compilation-manifests.md)) | `GET/POST /playlists` (Idempotency-Key), `GET/DELETE /playlists/:id`, `PUT /playlists/:id/draft` (révision), `POST /playlists/:id/publish` (idempotente), `GET /playlists/:id/versions`, `POST /playlists/:id/duplicate` |
+| Plannings et campagnes | `GET/POST /schedules`, `GET/DELETE /schedules/:id`, `PUT /schedules/:id/draft`, `POST /schedules/:id/publish`, `/schedules/:id/deactivate`, `GET /schedules/:id/versions` ; mêmes routes sous `/campaigns`, arrêt par `POST /campaigns/:id/cancel` ; `POST /targets/preview` |
+| Diffusion immédiate | `POST /overrides` (Idempotency-Key ; priorité 100 : droit `override.emergency`), `GET /overrides?active=true`, `POST /overrides/:id/cancel` |
+| Programme d’un Display | `PUT /displays/:id/fallback`, `GET /displays/:id/effective-program?from=&until=` (31 jours au plus), `GET /displays/:id/delivery`, `GET /displays/:id/compilations/:compilationId` |
 | Audit | `GET /audit?limit=&cursor=` |
 
 ## Routes `/player/v1` (L02, [ADR-008](../../docs/architecture/adr/0008-appairage-players-displays.md))
 
 `POST /register`, `/pair`, `/token/challenge`, `/token/refresh` (sans jeton) ; `GET /config`, `POST /outputs`, `/heartbeat` (en-tête `Authorization: Bearer`).
+
+Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compilation-manifests.md)) : `GET /manifest?display_id=` (ETag, `304`), `GET /manifests/:id`, `GET /assets/:id/url?manifest_id=` (URL signée courte, jamais journalisée), `POST /manifests/:id/status` (préparé, appliqué, échec : déclarés par le Player). Seule l’affectation active, à sa génération courante, y donne accès.
 
 - Les routes d’une organisation exigent l’en-tête `x-organization-id`.
 - Les requêtes modifiantes exigent un en-tête `Origin` autorisé.
