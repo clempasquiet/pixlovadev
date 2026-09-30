@@ -36,6 +36,26 @@ async function purge(ctx: WorkerContext, job: ClaimedJob): Promise<void> {
         ),
       );
     if (active) throw new Error('Préparation en cours : purge différée.');
+    // Référencé par une version publiée (ADR-010) : le binaire est conservé (MED-006).
+    const [referenced] = await tx
+      .select({ id: schema.contentDependencies.compositionVersionId })
+      .from(schema.contentDependencies)
+      .where(eq(schema.contentDependencies.mediaId, mediaId))
+      .limit(1);
+    if (referenced) {
+      await tx
+        .update(schema.media)
+        .set({
+          purgeAfter: new Date(ctx.now().getTime() + ctx.trashRetentionDays * 86_400_000),
+          updatedAt: ctx.now(),
+        })
+        .where(eq(schema.media.id, mediaId));
+      ctx.logger.warn(
+        { mediaId, organizationId },
+        'purge différée : média référencé par une version publiée',
+      );
+      return 'referenced' as const;
+    }
     if (!media.purgeStartedAt) {
       await tx
         .update(schema.media)
@@ -52,7 +72,7 @@ async function purge(ctx: WorkerContext, job: ClaimedJob): Promise<void> {
       .where(eq(schema.uploadSessions.mediaId, mediaId));
     return [...new Set([...assets, ...sessions].map((row) => row.key))];
   });
-  if (keys === null) return;
+  if (keys === null || keys === 'referenced') return;
 
   for (const key of keys) await ctx.storage.delete(key);
 

@@ -1,4 +1,5 @@
 export {
+  loadCompositionFonts,
   mountStage,
   renderComposition,
   renderContent,

@@ -2,6 +2,7 @@ export {
   fitRect,
   stageTransform,
   renderOrder,
+  elementBounds,
   type Fit,
   type Rect,
   type Orientation,

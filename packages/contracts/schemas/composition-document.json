@@ -1,0 +1,954 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/composition-document.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "canvas",
+    "elements",
+    "settings"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "canvas": {
+      "type": "object",
+      "required": [
+        "width",
+        "height",
+        "background"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "image"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "media_id",
+                  "fit"
+                ],
+                "properties": {
+                  "media_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fit": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "contain"
+                      },
+                      {
+                        "type": "string",
+                        "const": "cover"
+                      },
+                      {
+                        "type": "string",
+                        "const": "stretch"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "video"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "media_id",
+                  "fit",
+                  "muted",
+                  "volume",
+                  "loop"
+                ],
+                "properties": {
+                  "media_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fit": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "contain"
+                      },
+                      {
+                        "type": "string",
+                        "const": "cover"
+                      },
+                      {
+                        "type": "string",
+                        "const": "stretch"
+                      }
+                    ]
+                  },
+                  "muted": {
+                    "type": "boolean"
+                  },
+                  "volume": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "loop": {
+                    "type": "boolean"
+                  },
+                  "start_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 86400000
+                  },
+                  "end_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 86400000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "text"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "font_family",
+                  "font_size_px",
+                  "font_weight",
+                  "color",
+                  "alignment"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "font_family": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "Inter"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Roboto"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Open Sans"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Montserrat"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Playfair Display"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Roboto Mono"
+                      }
+                    ]
+                  },
+                  "font_size_px": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4000
+                  },
+                  "font_weight": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900,
+                    "multipleOf": 100
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                  },
+                  "alignment": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "left"
+                      },
+                      {
+                        "type": "string",
+                        "const": "center"
+                      },
+                      {
+                        "type": "string",
+                        "const": "right"
+                      }
+                    ]
+                  },
+                  "vertical_alignment": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "top"
+                      },
+                      {
+                        "type": "string",
+                        "const": "middle"
+                      },
+                      {
+                        "type": "string",
+                        "const": "bottom"
+                      }
+                    ]
+                  },
+                  "line_height": {
+                    "type": "number",
+                    "minimum": 0.5,
+                    "maximum": 4
+                  },
+                  "letter_spacing_px": {
+                    "type": "number",
+                    "minimum": -100,
+                    "maximum": 1000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "shape"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "shape",
+                  "fill",
+                  "stroke",
+                  "stroke_width_px"
+                ],
+                "properties": {
+                  "shape": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "rectangle"
+                      },
+                      {
+                        "type": "string",
+                        "const": "ellipse"
+                      }
+                    ]
+                  },
+                  "fill": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stroke": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stroke_width_px": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "corner_radius_px": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16383
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "qr"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "data",
+                  "foreground",
+                  "background",
+                  "error_correction"
+                ],
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "foreground": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                  },
+                  "background": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                  },
+                  "error_correction": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "L"
+                      },
+                      {
+                        "type": "string",
+                        "const": "M"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Q"
+                      },
+                      {
+                        "type": "string",
+                        "const": "H"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "x",
+              "y",
+              "width",
+              "height",
+              "rotation",
+              "z_index",
+              "opacity",
+              "visible",
+              "locked",
+              "props"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "const": "clock"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "placeholder": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32767
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32767
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "z_index": {
+                "type": "integer",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "props": {
+                "type": "object",
+                "required": [
+                  "format",
+                  "timezone",
+                  "locale",
+                  "font_family",
+                  "font_size_px",
+                  "color",
+                  "alignment"
+                ],
+                "properties": {
+                  "format": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "time_24h"
+                      },
+                      {
+                        "type": "string",
+                        "const": "time_24h_seconds"
+                      },
+                      {
+                        "type": "string",
+                        "const": "time_12h"
+                      },
+                      {
+                        "type": "string",
+                        "const": "date_short"
+                      },
+                      {
+                        "type": "string",
+                        "const": "date_long"
+                      },
+                      {
+                        "type": "string",
+                        "const": "date_time_24h"
+                      }
+                    ]
+                  },
+                  "timezone": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "locale": {
+                    "type": "string",
+                    "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"
+                  },
+                  "font_family": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "Inter"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Roboto"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Open Sans"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Montserrat"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Playfair Display"
+                      },
+                      {
+                        "type": "string",
+                        "const": "Roboto Mono"
+                      }
+                    ]
+                  },
+                  "font_size_px": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4000
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+                  },
+                  "alignment": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "left"
+                      },
+                      {
+                        "type": "string",
+                        "const": "center"
+                      },
+                      {
+                        "type": "string",
+                        "const": "right"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 200
+    },
+    "settings": {
+      "type": "object",
+      "required": [
+        "audio_policy"
+      ],
+      "properties": {
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "audio_policy": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "muted"
+            },
+            {
+              "type": "string",
+              "const": "single_source"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "title": "CompositionDocument"
+}

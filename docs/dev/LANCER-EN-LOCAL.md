@@ -87,6 +87,12 @@ Dans **Bibliothèque**, glissez-déposez des images (JPEG, PNG, WebP) ou des vid
 
 Sans worker lancé, les médias restent « En préparation » : c’est l’état attendu. Ils sont traités dès que le worker démarre. Le stockage gratuit est de 2 Go ; `PIXLOVA_DEV_STORAGE_BYTES` le modifie en développement.
 
+## Essayer le créateur de compositions
+
+Dans **Compositions**, créez une composition (paysage, portrait, bandeaux LED ou format libre), puis ajoutez textes, formes, images, vidéos, QR Code et horloge. Déplacez et redimensionnez les éléments sur le canvas ou saisissez leurs valeurs en pixels ; **Prévisualiser** montre le rendu des Players sur un écran existant ou un format libre. **Publier** crée une version immuable, refusée tant qu’une anomalie bloquante subsiste (média manquant, en préparation, supprimé…).
+
+Les **Modèles** sont réservés aux offres payantes : `PIXLOVA_DEV_FEATURES=templates` (fichier `.env` d’exemple) les active en développement.
+
 ## Arrêter et repartir de zéro
 
 ```sh

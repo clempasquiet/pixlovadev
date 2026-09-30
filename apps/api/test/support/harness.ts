@@ -20,6 +20,7 @@ export interface Harness {
   setMaxUsers(value: number): void;
   setDisplaySlots(value: number): void;
   setStorageBytes(value: number): void;
+  setFeatures(value: string[]): void;
   storage: LocalObjectStorage;
   flushEmails(): Promise<void>;
   close(): Promise<void>;
@@ -44,6 +45,7 @@ export async function createHarness(security: Partial<SecurityConfig> = {}): Pro
     setMaxUsers: test.setMaxUsers,
     setDisplaySlots: test.setDisplaySlots,
     setStorageBytes: test.setStorageBytes,
+    setFeatures: test.setFeatures,
     storage: test.storage,
     flushEmails: test.flushEmails,
     async close() {

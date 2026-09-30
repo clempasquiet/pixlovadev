@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitRect, renderOrder, stageTransform } from '../src/index.js';
+import { elementBounds, fitRect, renderOrder, stageTransform } from '../src/index.js';
 
 describe('fitRect (REN-002)', () => {
   it('contain centre une image 16:9 dans un bandeau LED 2688×672', () => {
@@ -74,5 +74,29 @@ describe('renderOrder', () => {
       { id: 'd', z_index: 0, visible: false },
     ];
     expect(renderOrder(elements).map((e) => e.id)).toEqual(['b', 'a', 'c']);
+  });
+});
+
+describe('emprise après rotation', () => {
+  it('sans rotation : la boîte de l’élément', () => {
+    expect(elementBounds({ x: 10, y: 20, width: 300, height: 100, rotation: 0 })).toEqual({
+      x: 10,
+      y: 20,
+      width: 300,
+      height: 100,
+    });
+  });
+  it('à 90° : largeur et hauteur échangées autour du centre', () => {
+    const box = elementBounds({ x: 0, y: 0, width: 300, height: 100, rotation: 90 });
+    expect(box.width).toBeCloseTo(100);
+    expect(box.height).toBeCloseTo(300);
+    expect(box.x).toBeCloseTo(100);
+    expect(box.y).toBeCloseTo(-100);
+  });
+  it('à -8° : boîte englobante agrandie, même centre', () => {
+    const box = elementBounds({ x: 740, y: 60, width: 280, height: 280, rotation: -8 });
+    expect(box.x + box.width / 2).toBeCloseTo(880);
+    const angle = (8 * Math.PI) / 180;
+    expect(box.width).toBeCloseTo(280 * (Math.cos(angle) + Math.sin(angle)));
   });
 });

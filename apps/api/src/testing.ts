@@ -22,6 +22,7 @@ export interface TestServices {
   setMaxUsers(value: number): void;
   setDisplaySlots(value: number): void;
   setStorageBytes(value: number): void;
+  setFeatures(value: string[]): void;
   /** Stockage local à URLs signées, dans un répertoire temporaire propre au test. */
   storage: LocalObjectStorage;
   storageRoot: string;
@@ -41,6 +42,7 @@ export function createTestServices(
   let maxUsers = 1;
   let displaySlots = 1;
   let storageBytes = 2_000_000_000;
+  let features: string[] = [];
   const mailer = new MemoryMailer();
   const storageRoot = mkdtempSync(join(tmpdir(), 'pixlova-api-storage-'));
   const storage = new LocalObjectStorage({
@@ -57,6 +59,7 @@ export function createTestServices(
       maxUsers: async () => maxUsers,
       displaySlots: async () => displaySlots,
       storageBytes: async () => storageBytes,
+      features: async () => features,
     },
     security: { ...defaultSecurityConfig({}), requireMfaForAdmins: false, ...security },
     storage,
@@ -75,6 +78,9 @@ export function createTestServices(
     },
     setStorageBytes(value) {
       storageBytes = value;
+    },
+    setFeatures(value) {
+      features = value;
     },
     storage,
     storageRoot,

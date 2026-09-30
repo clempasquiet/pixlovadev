@@ -103,3 +103,21 @@ export function renderOrder<T extends Pick<CompositionElement, 'z_index' | 'visi
     .sort((a, b) => a.element.z_index - b.element.z_index || a.index - b.index)
     .map(({ element }) => element);
 }
+
+/**
+ * Emprise d’un élément dans le canvas après rotation autour de son centre (REN-002) :
+ * boîte englobante axée, en pixels non arrondis. Sert aux comparaisons entre moteurs et
+ * aux poignées de sélection du créateur.
+ */
+export function elementBounds(
+  element: Pick<CompositionElement, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
+): Rect {
+  const radians = (element.rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(radians));
+  const sin = Math.abs(Math.sin(radians));
+  const width = element.width * cos + element.height * sin;
+  const height = element.width * sin + element.height * cos;
+  const centerX = element.x + element.width / 2;
+  const centerY = element.y + element.height / 2;
+  return { x: centerX - width / 2, y: centerY - height / 2, width, height };
+}

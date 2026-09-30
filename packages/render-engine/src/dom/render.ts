@@ -4,7 +4,12 @@
  * Aucun script ni HTML issu du document n’est interprété : seules des propriétés
  * typées sont appliquées (SEC-012, SEC-013).
  */
-import type { Composition, CompositionElement, ManifestContent } from '@pixlova/contracts';
+import {
+  fontStack,
+  type Composition,
+  type CompositionElement,
+  type ManifestContent,
+} from '@pixlova/contracts';
 import { encode } from 'uqr';
 import { fitRect, renderOrder, stageTransform, type Fit, type Orientation } from '../layout.js';
 import { playlistPosition } from '../timeline.js';
@@ -213,7 +218,8 @@ function textStyle(
   },
 ): void {
   Object.assign(target.style, {
-    fontFamily: `"${props.font_family}", sans-serif`,
+    // Police empaquetée (REN-002) ; le repli générique ne sert qu’à un document non qualifié.
+    fontFamily: fontStack(props.font_family),
     fontSize: px(props.font_size_px),
     color: props.color,
     textAlign: props.alignment,
@@ -461,4 +467,34 @@ export function renderContent(
     case 'playlist':
       return renderPlaylist(content, width, height, context);
   }
+}
+
+/**
+ * Charge les polices utilisées par une composition avant son affichage (préparation,
+ * NAT-008 étape 6) : un texte n’est jamais présenté avec une police de repli transitoire.
+ * Retourne l’état de chaque couple famille/graisse.
+ */
+export async function loadCompositionFonts(
+  document_: Composition,
+): Promise<{ family: string; weight: number; loaded: boolean }[]> {
+  const wanted = new Map<string, { family: string; weight: number }>();
+  for (const element of document_.elements) {
+    if (element.type !== 'text' && element.type !== 'clock') continue;
+    const weight = element.type === 'text' ? element.props.font_weight : 400;
+    wanted.set(`${element.props.font_family}:${weight}`, {
+      family: element.props.font_family,
+      weight,
+    });
+  }
+  return Promise.all(
+    [...wanted.values()].map(async ({ family, weight }) => {
+      const spec = `${weight} 32px ${fontStack(family)}`;
+      try {
+        await document.fonts.load(spec);
+      } catch {
+        // état rapporté ci-dessous
+      }
+      return { family, weight, loaded: document.fonts.check(spec) };
+    }),
+  );
 }
