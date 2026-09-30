@@ -84,14 +84,14 @@ describe.skipIf(skipDatabaseTests)('dashboard : supervision, commandes et captur
     await page.reload();
 
     // Signaux distincts et datés.
-    const presence = page.getByLabel('Présence');
+    const presence = page.getByLabel('Signal : Présence');
     await presence.getByText('En ligne').waitFor();
     await page
-      .getByLabel('Santé du Player')
+      .getByLabel('Signal : Santé du Player')
       .getByText('Disque libre : 40.0 Go sur 64.0 Go')
       .waitFor();
-    await page.getByLabel('Rendu').getByText('Lecture').waitFor();
-    await page.getByLabel('Sortie', { exact: true }).getByText('HDMI-A-1 : détectée').waitFor();
+    await page.getByLabel('Signal : Rendu').getByText('Lecture').waitFor();
+    await page.getByLabel('Signal : connecteur').getByText('HDMI-A-1 : détectée').waitFor();
 
     // Commande : transmise, reçue, puis réussie — trois étapes visibles séparément.
     await page.getByRole('button', { name: 'Demander le statut' }).click();

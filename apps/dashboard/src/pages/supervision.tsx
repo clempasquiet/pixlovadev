@@ -295,13 +295,13 @@ function Signals({ s }: { s: Supervision }) {
   const m = s.health?.metrics;
   return (
     <div className="signals">
-      <div className="card" aria-label="Présence">
+      <div className="card" aria-label="Signal : Présence">
         <h3>Présence</h3>
         <p>{PRESENCE[s.presence.state] ?? s.presence.state}</p>
         <p className="muted">Dernier contact : {at(s.presence.last_seen_at)}</p>
         <p className="hint">Hors ligne après {s.presence.timeout_seconds} s sans contact.</p>
       </div>
-      <div className="card" aria-label="Santé du Player">
+      <div className="card" aria-label="Signal : Santé du Player">
         <h3>Santé du Player</h3>
         {s.health ? (
           <>
@@ -320,7 +320,7 @@ function Signals({ s }: { s: Supervision }) {
           <p className="muted">Aucun statut reçu.</p>
         )}
       </div>
-      <div className="card" aria-label="Rendu">
+      <div className="card" aria-label="Signal : Rendu">
         <h3>Rendu</h3>
         <p>
           {PLAYBACK[s.rendering.playback] ?? s.rendering.playback}{' '}
@@ -336,7 +336,7 @@ function Signals({ s }: { s: Supervision }) {
           Déclaré le {at(s.rendering.reported_at)}. Ne prouve pas que la dalle est allumée.
         </p>
       </div>
-      <div className="card" aria-label="Sortie">
+      <div className="card" aria-label="Signal : connecteur">
         <h3>Sortie</h3>
         {s.output ? (
           <>
