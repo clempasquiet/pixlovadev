@@ -1,9 +1,9 @@
 # Environnement de DÉVELOPPEMENT local uniquement : mots de passe fixes et connus,
-# ports liés à 127.0.0.1. L’infrastructure de recette et de production relève de L09-I.
+# ports liés à 127.0.0.1. Recette sur serveur : infra/recette (ADR-015).
 name: pixlova-dev
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_USER: pixlova_admin
       POSTGRES_PASSWORD: pixlova_admin_dev
@@ -19,7 +19,7 @@ services:
       interval: 5s
       retries: 10
   redis:
-    image: redis:7
+    image: redis:7.4.9
     ports:
       - 127.0.0.1:6379:6379
 volumes:

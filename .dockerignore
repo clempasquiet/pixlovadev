@@ -1,0 +1,21 @@
+# Contexte de build des images (infra/docker/Dockerfile) : sources TypeScript seulement.
+# Aucun secret, aucune donnée locale, aucune sortie de build n’entre dans une image.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/test-results
+.git
+.github
+.pnpm-store
+target
+native
+packaging
+work
+tmp
+docs
+infra/recette/.env
+infra/recette/trust
+infra/recette/backups

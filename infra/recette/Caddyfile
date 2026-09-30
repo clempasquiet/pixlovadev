@@ -1,0 +1,85 @@
+# Passerelle de recette (ADR-015) : une seule origine HTTP derrière le tunnel Cloudflare,
+# qui termine le TLS. Aucune route /internal n’est relayée : le listener interne de l’API
+# reste sur 127.0.0.1 dans son conteneur.
+{
+	admin off
+	auto_https off
+	persist_config off
+	servers {
+		# Seul cloudflared (réseau Docker privé) parle à la passerelle : son en-tête
+		# X-Forwarded-For porte l’adresse du client.
+		trusted_proxies static private_ranges
+		client_ip_headers Cf-Connecting-Ip X-Forwarded-For
+	}
+}
+
+:8080 {
+	log {
+		output stdout
+		format json
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+
+	handle /gateway-health {
+		respond "ok" 200
+	}
+
+	# Aucune route interne à travers la passerelle, même si l’API en exposait par erreur.
+	handle /internal* {
+		respond 404
+	}
+
+	# API tenant et API Player.
+	handle /api/* {
+		request_body {
+			max_size 2MB
+		}
+		reverse_proxy api:3000
+	}
+	handle /player/* {
+		request_body {
+			max_size 2MB
+		}
+		reverse_proxy api:3000
+	}
+
+	# Stockage objet privé : uniquement des requêtes présignées sur le bucket, en style
+	# chemin. L’en-tête Host public est conservé car il fait partie de la signature.
+	@bucket {
+		path /{$PIXLOVA_S3_BUCKET}/*
+		method GET HEAD PUT
+	}
+	handle @bucket {
+		request_body {
+			max_size {$PIXLOVA_GATEWAY_UPLOAD_MAX:100MB}
+		}
+		reverse_proxy s3:7070 {
+			flush_interval -1
+		}
+	}
+
+	# Player Web : application statique ; le service worker n’est jamais mis en cache HTTP.
+	redir /play /play/ 308
+	handle_path /play/* {
+		root * /srv/play
+		@sw path /sw.js /config.json /trust/*
+		header @sw Cache-Control "no-cache"
+		file_server
+	}
+
+	# Dashboard (application monopage).
+	handle {
+		root * /srv/dashboard
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

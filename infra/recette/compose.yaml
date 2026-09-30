@@ -1,0 +1,271 @@
+# Recette pixlova sur un serveur Docker unique derrière un tunnel Cloudflare (ADR-015).
+# Topologie mono-serveur SANS haute disponibilité : un incident de la machine interrompt le
+# cloud (les Players natifs continuent sur leur état local). Procédure : docs/operations/RECETTE.md
+#
+#   node infra/recette/scripts/init-recette.mjs --url https://recette.example.com
+#   docker compose -f infra/recette/compose.yaml up -d --build
+name: pixlova-recette
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '5'
+
+x-hardening: &hardening
+  logging: *logging
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+
+x-db-env: &db-env
+  DATABASE_URL: postgres://pixlova_app:${PIXLOVA_DB_APP_PASSWORD:?}@postgres:5432/pixlova
+  DATABASE_SYSTEM_URL: postgres://pixlova_system:${PIXLOVA_DB_SYSTEM_PASSWORD:?}@postgres:5432/pixlova
+
+x-s3-env: &s3-env
+  PIXLOVA_STORAGE_DRIVER: s3
+  PIXLOVA_S3_BUCKET: ${PIXLOVA_S3_BUCKET:?}
+  PIXLOVA_S3_REGION: us-east-1
+  PIXLOVA_S3_ENDPOINT: http://s3:7070
+  PIXLOVA_S3_PUBLIC_ENDPOINT: ${PIXLOVA_PUBLIC_URL:?}
+  PIXLOVA_S3_FORCE_PATH_STYLE: 'true'
+  PIXLOVA_S3_ACCESS_KEY_ID: ${PIXLOVA_S3_ACCESS_KEY_ID:?}
+  PIXLOVA_S3_SECRET_ACCESS_KEY: ${PIXLOVA_S3_SECRET_ACCESS_KEY:?}
+
+x-media-env: &media-env
+  PIXLOVA_MEDIA_IMAGE_MAX_BYTES: ${PIXLOVA_MEDIA_IMAGE_MAX_BYTES:-}
+  PIXLOVA_MEDIA_VIDEO_MAX_BYTES: ${PIXLOVA_MEDIA_VIDEO_MAX_BYTES:-}
+
+x-app-build: &app-build
+  context: ../..
+  dockerfile: infra/docker/Dockerfile
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:16.15@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
+    environment:
+      POSTGRES_USER: pixlova_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: postgres
+      PIXLOVA_DB_OWNER_PASSWORD: ${PIXLOVA_DB_OWNER_PASSWORD:?}
+      PIXLOVA_DB_APP_PASSWORD: ${PIXLOVA_DB_APP_PASSWORD:?}
+      PIXLOVA_DB_SYSTEM_PASSWORD: ${PIXLOVA_DB_SYSTEM_PASSWORD:?}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../packages/db/sql/bootstrap-roles.sql:/docker-entrypoint-initdb.d/10-bootstrap-roles.sql:ro
+      - ./postgres/20-recette.sh:/docker-entrypoint-initdb.d/20-recette.sh:ro
+    networks: [data]
+    shm_size: 256mb
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U pixlova_admin -d pixlova]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    <<: *hardening
+    image: redis:7.4.9@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
+    # Limitation de débit uniquement : aucune persistance nécessaire.
+    command:
+      [sh, -c, 'exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?}
+    networks: [data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Propriétaire des volumes des services non root (une fois, puis s’arrête).
+  volumes-init:
+    image: versity/versitygw:v1.8.0@sha256:30292fc2eeacc67a36993b01f7a7a5e3361a19cced0e80c1d71cfa2a4b0a2499
+    user: '0:0'
+    entrypoint: [sh, -c, 'chown 10001:10001 /s3-data /mailpit-data']
+    volumes:
+      - s3-data:/s3-data
+      - mailpit-data:/mailpit-data
+    network_mode: none
+    logging: *logging
+
+  # Stockage objet privé, compatible S3, sur le disque du serveur. Jamais publié directement :
+  # seules les requêtes présignées sur le bucket passent par la passerelle.
+  s3:
+    <<: *hardening
+    image: versity/versitygw:v1.8.0@sha256:30292fc2eeacc67a36993b01f7a7a5e3361a19cced0e80c1d71cfa2a4b0a2499
+    user: '10001:10001'
+    cap_drop: [ALL]
+    depends_on:
+      volumes-init: { condition: service_completed_successfully }
+    environment:
+      ROOT_ACCESS_KEY_ID: ${PIXLOVA_S3_ACCESS_KEY_ID:?}
+      ROOT_SECRET_ACCESS_KEY: ${PIXLOVA_S3_SECRET_ACCESS_KEY:?}
+      VGW_REGION: us-east-1
+      VGW_PORT: ':7070'
+      VGW_HEALTH: /health
+      VGW_QUIET: 'true'
+      VGW_BACKEND: posix
+      VGW_BACKEND_ARG: /data
+    volumes:
+      - s3-data:/data
+    networks: [data, front]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:7070/health]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  # Boîte de capture : aucun email ne sort du serveur en recette.
+  mailpit:
+    <<: *hardening
+    image: axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+    user: '10001:10001'
+    cap_drop: [ALL]
+    depends_on:
+      volumes-init: { condition: service_completed_successfully }
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: '2000'
+      MP_UI_AUTH: ${MAILPIT_UI_USER:?}:${MAILPIT_UI_PASSWORD:?}
+    volumes:
+      - mailpit-data:/data
+    ports:
+      - ${MAILPIT_BIND:-127.0.0.1}:${MAILPIT_PORT:-8025}:8025
+    networks: [data, mail-ui]
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  # Étape de déploiement : migrations (rôle propriétaire) puis bucket privé.
+  migrate:
+    image: pixlova-api:${PIXLOVA_IMAGE_TAG:-local}
+    build: { <<: *app-build, target: api }
+    command:
+      [sh, -c, 'node packages/db/dist/migrate.js && node packages/storage/dist/ensure-bucket.js']
+    environment:
+      <<: *s3-env
+      DATABASE_OWNER_URL: postgres://pixlova_owner:${PIXLOVA_DB_OWNER_PASSWORD:?}@postgres:5432/pixlova
+    depends_on:
+      postgres: { condition: service_healthy }
+      s3: { condition: service_healthy }
+    networks: [data]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    restart: 'no'
+
+  api:
+    <<: *hardening
+    image: pixlova-api:${PIXLOVA_IMAGE_TAG:-local}
+    build: { <<: *app-build, target: api }
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
+    environment:
+      <<: [*db-env, *s3-env, *media-env]
+      PIXLOVA_DEPLOYMENT: recette
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      PIXLOVA_DATA_KEYS: ${PIXLOVA_DATA_KEYS:?}
+      PIXLOVA_APP_BASE_URL: ${PIXLOVA_PUBLIC_URL:?}
+      PIXLOVA_ALLOWED_ORIGINS: ${PIXLOVA_PUBLIC_URL:?}
+      PIXLOVA_COOKIE_SECURE: ${PIXLOVA_COOKIE_SECURE:-true}
+      PIXLOVA_TRUST_PROXY: 'true'
+      PIXLOVA_MAILER: smtp
+      PIXLOVA_SMTP_URL: smtp://mailpit:1025
+      PIXLOVA_MAIL_FROM: pixlova recette <noreply@recette.invalid>
+      PIXLOVA_COMMAND_KEY_ID: ${PIXLOVA_COMMAND_KEY_ID:?}
+      PIXLOVA_COMMAND_SIGNING_KEY: ${PIXLOVA_COMMAND_SIGNING_KEY:?}
+      PIXLOVA_DEV_MAX_USERS: ${PIXLOVA_DEV_MAX_USERS:-}
+      PIXLOVA_DEV_DISPLAY_SLOTS: ${PIXLOVA_DEV_DISPLAY_SLOTS:-}
+      PIXLOVA_DEV_STORAGE_BYTES: ${PIXLOVA_DEV_STORAGE_BYTES:-}
+      PIXLOVA_DEV_FEATURES: ${PIXLOVA_DEV_FEATURES:-}
+    networks: [data, front]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    stop_grace_period: 30s
+
+  worker:
+    <<: *hardening
+    image: pixlova-worker:${PIXLOVA_IMAGE_TAG:-local}
+    build: { <<: *app-build, target: worker }
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment:
+      <<: [*db-env, *s3-env, *media-env]
+      PIXLOVA_MANIFEST_KEY_ID: ${PIXLOVA_MANIFEST_KEY_ID:?}
+      PIXLOVA_MANIFEST_SIGNING_KEY: ${PIXLOVA_MANIFEST_SIGNING_KEY:?}
+      PIXLOVA_WORKER_CONCURRENCY: ${PIXLOVA_WORKER_CONCURRENCY:-2}
+    volumes:
+      - worker-tmp:/var/tmp/pixlova-worker
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    # Arrêt propre : la tâche en cours est interrompue et retourne à la file, reprise ensuite.
+    stop_grace_period: 60s
+
+  # Seul point d’entrée HTTP : dashboard, Player Web, /api, /player et bucket présigné.
+  gateway:
+    <<: *hardening
+    image: pixlova-gateway:${PIXLOVA_IMAGE_TAG:-local}
+    build: { <<: *app-build, target: gateway }
+    depends_on:
+      api: { condition: service_healthy }
+      s3: { condition: service_healthy }
+    environment:
+      PIXLOVA_S3_BUCKET: ${PIXLOVA_S3_BUCKET:?}
+      PIXLOVA_GATEWAY_UPLOAD_MAX: 100MB
+    volumes:
+      - ./trust:/srv/play/trust:ro
+    ports:
+      - ${PIXLOVA_GATEWAY_BIND:-127.0.0.1}:${PIXLOVA_GATEWAY_PORT:-8080}:8080
+    networks: [front, edge]
+    read_only: true
+    cap_drop: [ALL]
+
+  # Connecteurs sortants vers Cloudflare : aucun port entrant ouvert sur le serveur. Deux
+  # répliques protègent d’une coupure de connexion, pas de la perte du serveur (PRA-032).
+  cloudflared:
+    <<: *hardening
+    deploy:
+      replicas: ${CLOUDFLARED_REPLICAS:-2}
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    profiles: [tunnel]
+    command: [tunnel, --no-autoupdate, --metrics, 127.0.0.1:20241, run]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      gateway: { condition: service_healthy }
+    networks: [edge]
+    read_only: true
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, cloudflared, tunnel, --metrics, 127.0.0.1:20241, ready]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+networks:
+  # Aucun accès Internet. `data` : base, cache, stockage, email, API, worker, migrations.
+  data:
+    internal: true
+  # `front` : la passerelle ne joint que l’API publique et le stockage, jamais la base.
+  front:
+    internal: true
+  # Sortie Internet du connecteur et publication locale de la passerelle.
+  edge: {}
+  # Publication locale de l’interface Mailpit.
+  mail-ui: {}
+
+volumes:
+  postgres-data:
+  s3-data:
+  mailpit-data:
+  worker-tmp:
