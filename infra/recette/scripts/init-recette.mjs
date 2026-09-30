@@ -6,6 +6,8 @@
  *   node infra/recette/scripts/init-recette.mjs --url https://recette.example.com
  *   node infra/recette/scripts/init-recette.mjs --trust-only   # régénère trust/ depuis .env
  *   … --url http://localhost:8080 --no-tunnel                   # essai local, sans Cloudflare
+ *   node infra/recette/scripts/init-recette.mjs --upgrade      # ajoute les variables apparues
+ *                                                               # depuis (valeurs existantes intactes)
  *
  * Un `.env` existant n’est jamais écrasé : changer une clé de données ou un mot de passe
  * de base rendrait les données existantes illisibles ou inaccessibles.
@@ -43,6 +45,28 @@ function parseEnv(text) {
   return env;
 }
 
+/** Variables ajoutées par des versions ultérieures : générées si absentes (`--upgrade`). */
+const ADDITIONS = {
+  PIXLOVA_DB_PLATFORM_PASSWORD: () => secret(),
+};
+
+if (args.includes('--upgrade')) {
+  const current = readFileSync(envPath, 'utf8');
+  const known = parseEnv(current);
+  const missing = Object.entries(ADDITIONS).filter(([name]) => !(name in known));
+  if (missing.length > 0) {
+    const block = [
+      '',
+      `# Ajouté par init-recette.mjs --upgrade (${new Date().toISOString().slice(0, 10)})`,
+      ...missing.map(([name, make]) => `${name}=${make()}`),
+      '',
+    ].join('\n');
+    writeFileSync(envPath, current.replace(/\n*$/, '\n') + block, { mode: 0o600 });
+  }
+  console.log(missing.length ? `Ajouté : ${missing.map(([n]) => n).join(', ')}` : 'Rien à ajouter.');
+  process.exit(0);
+}
+
 if (!args.includes('--trust-only')) {
   if (existsSync(envPath)) {
     console.error(`${envPath} existe déjà : rien n’est écrasé (utiliser --trust-only).`);
@@ -73,6 +97,7 @@ if (!args.includes('--trust-only')) {
     `PIXLOVA_DB_OWNER_PASSWORD=${secret()}`,
     `PIXLOVA_DB_APP_PASSWORD=${secret()}`,
     `PIXLOVA_DB_SYSTEM_PASSWORD=${secret()}`,
+    `PIXLOVA_DB_PLATFORM_PASSWORD=${secret()}`,
     `REDIS_PASSWORD=${secret()}`,
     '',
     '# Chiffrement des données sensibles (kid:clé base64, 32 octets).',

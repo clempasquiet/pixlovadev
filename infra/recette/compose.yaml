@@ -47,9 +47,6 @@ services:
       POSTGRES_USER: pixlova_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: postgres
-      PIXLOVA_DB_OWNER_PASSWORD: ${PIXLOVA_DB_OWNER_PASSWORD:?}
-      PIXLOVA_DB_APP_PASSWORD: ${PIXLOVA_DB_APP_PASSWORD:?}
-      PIXLOVA_DB_SYSTEM_PASSWORD: ${PIXLOVA_DB_SYSTEM_PASSWORD:?}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ../../packages/db/sql/bootstrap-roles.sql:/docker-entrypoint-initdb.d/10-bootstrap-roles.sql:ro
@@ -62,6 +59,36 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+
+  # Rôles et mots de passe, rejoués à chaque démarrage (idempotent), avant les migrations.
+  db-roles:
+    image: postgres:16.15@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
+    command:
+      [
+        sh,
+        -c,
+        'psql -f /roles/bootstrap-roles.sql && psql -f /roles/roles.sql',
+      ]
+    environment:
+      PGHOST: postgres
+      PGUSER: pixlova_admin
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: postgres
+      PIXLOVA_DB_OWNER_PASSWORD: ${PIXLOVA_DB_OWNER_PASSWORD:?}
+      PIXLOVA_DB_APP_PASSWORD: ${PIXLOVA_DB_APP_PASSWORD:?}
+      PIXLOVA_DB_SYSTEM_PASSWORD: ${PIXLOVA_DB_SYSTEM_PASSWORD:?}
+      PIXLOVA_DB_PLATFORM_PASSWORD: ${PIXLOVA_DB_PLATFORM_PASSWORD:?relancer init-recette.mjs --upgrade}
+    volumes:
+      - ../../packages/db/sql/bootstrap-roles.sql:/roles/bootstrap-roles.sql:ro
+      - ./postgres/roles.sql:/roles/roles.sql:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    restart: 'no'
 
   redis:
     <<: *hardening
@@ -150,7 +177,7 @@ services:
       <<: *s3-env
       DATABASE_OWNER_URL: postgres://pixlova_owner:${PIXLOVA_DB_OWNER_PASSWORD:?}@postgres:5432/pixlova
     depends_on:
-      postgres: { condition: service_healthy }
+      db-roles: { condition: service_completed_successfully }
       s3: { condition: service_healthy }
     networks: [data]
     read_only: true
@@ -230,6 +257,34 @@ services:
     read_only: true
     cap_drop: [ALL]
 
+  # Administration plateforme (ADR-016, ADM-001) : conteneur distinct, rôle PostgreSQL
+  # pixlova_platform, port publié sur la boucle locale du serveur uniquement. Jamais relayée
+  # par la passerelle ni par un hostname public du tunnel.
+  admin:
+    <<: *hardening
+    image: pixlova-admin:${PIXLOVA_IMAGE_TAG:-local}
+    build: { <<: *app-build, target: admin }
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment:
+      PIXLOVA_DEPLOYMENT: recette
+      DATABASE_PLATFORM_URL: postgres://pixlova_platform:${PIXLOVA_DB_PLATFORM_PASSWORD:?}@postgres:5432/pixlova
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      PIXLOVA_DATA_KEYS: ${PIXLOVA_DATA_KEYS:?}
+      PIXLOVA_ADMIN_ALLOWED_ORIGINS: ${PIXLOVA_ADMIN_ORIGINS:-http://127.0.0.1:8081,http://localhost:8081}
+      PIXLOVA_DEV_MAX_USERS: ${PIXLOVA_DEV_MAX_USERS:-}
+      PIXLOVA_DEV_DISPLAY_SLOTS: ${PIXLOVA_DEV_DISPLAY_SLOTS:-}
+      PIXLOVA_DEV_STORAGE_BYTES: ${PIXLOVA_DEV_STORAGE_BYTES:-}
+      PIXLOVA_DEV_FEATURES: ${PIXLOVA_DEV_FEATURES:-}
+    ports:
+      - ${PIXLOVA_ADMIN_BIND:-127.0.0.1}:${PIXLOVA_ADMIN_PORT:-8081}:8081
+    networks: [data, mgmt]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    stop_grace_period: 15s
+
   # Connecteurs sortants vers Cloudflare : aucun port entrant ouvert sur le serveur. Deux
   # répliques protègent d’une coupure de connexion, pas de la perte du serveur (PRA-032).
   cloudflared:
@@ -263,6 +318,8 @@ networks:
   edge: {}
   # Publication locale de l’interface Mailpit.
   mail-ui: {}
+  # Management : publication de l’administration sur la boucle locale du serveur.
+  mgmt: {}
 
 volumes:
   postgres-data:
