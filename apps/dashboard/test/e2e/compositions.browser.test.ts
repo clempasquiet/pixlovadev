@@ -99,9 +99,11 @@ describe.skipIf(skipDatabaseTests)('créateur de compositions et modèles (L04)'
       // Rendu par le moteur partagé : texte dans la police empaquetée.
       const text = page.locator('[data-element-type="text"]').first();
       await expect.poll(() => text.textContent()).toBe('Soldes d’hiver');
-      expect(await text.evaluate((node) => getComputedStyle(node).fontFamily)).toContain(
-        'Montserrat Variable',
-      );
+      // Le canvas se reconstruit quand l’aperçu de l’image arrive : relire jusqu’à obtenir le
+      // nœud stable (un nœud détaché a un style calculé vide).
+      await expect
+        .poll(() => text.evaluate((node) => getComputedStyle(node).fontFamily))
+        .toContain('Montserrat Variable');
       await expect
         .poll(() => page.evaluate(() => document.fonts.check('800 40px "Montserrat Variable"')))
         .toBe(true);
