@@ -342,6 +342,46 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
 
+  apps/web-player:
+    dependencies:
+      '@noble/curves':
+        specifier: 2.4.0
+        version: 2.4.0
+      '@noble/hashes':
+        specifier: 2.4.0
+        version: 2.4.0
+      '@pixlova/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@pixlova/player-core':
+        specifier: workspace:*
+        version: link:../../packages/player-core
+      '@pixlova/render-engine':
+        specifier: workspace:*
+        version: link:../../packages/render-engine
+    devDependencies:
+      '@pixlova/api':
+        specifier: workspace:*
+        version: link:../api
+      '@pixlova/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@pixlova/scheduling':
+        specifier: workspace:*
+        version: link:../../packages/scheduling
+      '@pixlova/workers':
+        specifier: workspace:*
+        version: link:../workers
+      playwright-core:
+        specifier: 1.56.1
+        version: 1.56.1
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@24.19.0)
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
+
   apps/workers:
     dependencies:
       '@pixlova/contracts':

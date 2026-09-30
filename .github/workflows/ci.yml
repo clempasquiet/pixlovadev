@@ -72,6 +72,8 @@ jobs:
         run: pnpm --filter @pixlova/dashboard run test:browser
       - name: Page de lecture du Player dans Chromium (pont IPC simulé)
         run: pnpm --filter @pixlova/player-shell run test:browser
+      - name: Player Web de bout en bout (Chromium, API, worker et PostgreSQL réels)
+        run: pnpm --filter @pixlova/web-player run test:browser
 
   rust:
     name: Rust (fmt, clippy, tests)

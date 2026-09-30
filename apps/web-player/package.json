@@ -1,0 +1,30 @@
+{
+  "name": "@pixlova/web-player",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Player Web pixlova : appairage par profil navigateur, manifests vérifiés, cache d’assets contrôlé et lecture partagée avec le Player natif, dans les limites d’un navigateur.",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run test/storage-policy.test.ts test/capabilities.test.ts",
+    "test:browser": "vitest run test/web-player.browser.test.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "@pixlova/contracts": "workspace:*",
+    "@pixlova/player-core": "workspace:*",
+    "@pixlova/render-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixlova/api": "workspace:*",
+    "@pixlova/db": "workspace:*",
+    "@pixlova/scheduling": "workspace:*",
+    "@pixlova/workers": "workspace:*",
+    "playwright-core": "1.56.1",
+    "sharp": "0.35.5",
+    "vite": "8.3.1"
+  }
+}

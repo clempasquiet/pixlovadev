@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'"
+    />
+    <title>pixlova Player</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        color: #e8eef2;
+        font-family: 'Inter Variable', system-ui, sans-serif;
+      }
+      body.playing {
+        cursor: none;
+      }
+      #surface {
+        position: fixed;
+        inset: 0;
+      }
+      #notice {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2vh;
+        background: #101820;
+        text-align: center;
+      }
+      #notice[hidden],
+      #start[hidden],
+      #panel[hidden],
+      #alert[hidden] {
+        display: none;
+      }
+      #notice .title {
+        font-size: 4vh;
+        opacity: 0.8;
+      }
+      #notice .code {
+        font-size: 14vh;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        font-variant-numeric: tabular-nums;
+      }
+      #notice .hint {
+        font-size: 2.6vh;
+        opacity: 0.7;
+        max-width: 70vw;
+      }
+      #start {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: #101820f2;
+        padding: 24px;
+        text-align: center;
+      }
+      #start button {
+        font: inherit;
+        font-size: 20px;
+        padding: 14px 28px;
+        border: 0;
+        border-radius: 8px;
+        background: #2f80ed;
+        color: #fff;
+        cursor: pointer;
+      }
+      #start p,
+      #panel {
+        max-width: 720px;
+        font-size: 15px;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
+      #panel {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 30;
+        background: #101820ee;
+        padding: 16px;
+        border-radius: 8px;
+      }
+      #panel dl {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 4px 16px;
+        margin: 0;
+      }
+      #panel dt {
+        opacity: 0.7;
+      }
+      #panel dd {
+        margin: 0;
+      }
+      #alert {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 30;
+        max-width: 560px;
+        background: #7a1f1fee;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="surface"></div>
+    <div id="notice" hidden></div>
+    <div id="start" hidden>
+      <h1>pixlova Player</h1>
+      <button id="start-button" type="button">Démarrer la diffusion</button>
+      <p>
+        Ce bouton passe en plein écran et autorise le son. En mode kiosque, le navigateur peut
+        l’autoriser par sa configuration (par exemple Chrome
+        <code>--kiosk --autoplay-policy=no-user-gesture-required</code>).
+      </p>
+      <p>
+        Un Player Web dépend de son navigateur : l’effacement des données du site, un changement de
+        profil ou l’éviction du stockage imposent un nouvel appairage ou un nouveau téléchargement.
+        Pour une diffusion autonome garantie, utilisez le Player natif.
+      </p>
+    </div>
+    <aside id="panel" hidden aria-label="État du Player"></aside>
+    <div id="alert" role="alert" hidden></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

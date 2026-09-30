@@ -23,14 +23,25 @@ Les résultats ci-dessous ne valent que pour le navigateur, sa version, l’OS e
 
 | Navigateur / OS | Codecs (H.264/AAC) | Autoplay muet | Son | Plein écran | Stockage persistant | Quota typique | Reprise hors ligne après rechargement | État |
 |---|---|---|---|---|---|---|---|---|
-| Chromium 141 headless / Linux (CI) | Selon build* | Oui | Non testé | Non applicable | Non testé | Mesuré en test | Oui (test automatisé) | Vérifié en CI |
+| Chromium 141.0.7390.37 headless (Playwright) / Linux (CI) | Non (aucun décodeur H.264 dans ce build) : vidéos refusées à la compilation | Oui (images) | Non testé | Non applicable (headless) | Refusé (`persisted() = false`) | ≈ 912 Mo annoncés | Oui : rechargement hors ligne servi par le service worker, contenu repris (test automatisé) | Vérifié en CI, sans matériel |
 | Chrome stable / Windows 11 | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À qualifier |
 | Chrome stable / ChromeOS (kiosk) | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À qualifier |
 | Edge stable / Windows 11 | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À qualifier |
 | Firefox stable / Linux | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À qualifier |
 | Safari / macOS | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À mesurer | À qualifier |
 
-\* Le Chromium de test de Playwright ne contient pas toujours de décodeur H.264 propriétaire : le Player déclare alors ne pas le supporter, et le compilateur refuse les vidéos (`UNSUPPORTED_VIDEO_PROFILE`).
+Le Chromium de test de Playwright ne contient pas de décodeur H.264 propriétaire : le Player le déclare, et le compilateur refuse alors les vidéos (`UNSUPPORTED_VIDEO_PROFILE`). Chrome, Edge et Safari grand public incluent normalement ce décodeur ; à vérifier sur chaque plateforme.
+
+Essais automatisés (`pnpm --filter @pixlova/web-player run test:browser`, API, worker et PostgreSQL réels) :
+
+- appairage et activation complète ;
+- asset altéré refusé, puis reprise ;
+- manifest altéré refusé ;
+- fermeture et réouverture sans nouvel appairage ;
+- rechargement hors ligne après amorçage ;
+- quota plein (`STORAGE_QUOTA_EXCEEDED`, contenu courant conservé) ;
+- données du site effacées : nouvelle installation ;
+- clé non extractible.
 
 Protection de la clé : non extractible avec WebCrypto Ed25519 (Chrome ≥ 137, Firefox ≥ 129, Safari ≥ 17) ; sinon graine conservée par la page. La valeur observée est affichée dans l’état du Player.
 

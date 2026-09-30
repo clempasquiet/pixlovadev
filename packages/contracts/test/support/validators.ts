@@ -40,7 +40,10 @@ export function buildPlayerValidators(): string {
     ajv.addSchema(schema);
     refs[identifier(name)] = schema.$id;
   }
-  const generate = (standalone as unknown as { default?: typeof standalone }).default ?? standalone;
+  // Module CommonJS : la fonction est l’export par défaut ou le module lui-même.
+  type Generate = (instance: Ajv2020, refs: Record<string, string>) => string;
+  const module = standalone as unknown as Generate & { default?: Generate };
+  const generate = module.default ?? module;
   const code = generate(ajv, refs).replace(
     /require\("ajv\/dist\/runtime\/ucs2length"\)\.default/g,
     'ucs2length',
