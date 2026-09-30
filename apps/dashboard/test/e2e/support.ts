@@ -12,6 +12,7 @@ import { createTestServices, type TestServices } from '@pixlova/api/testing';
 import { encodeBase64url, signPlayerChallenge } from '@pixlova/contracts';
 import { DEFAULT_MEDIA_LIMITS } from '@pixlova/contracts';
 import { createTestDatabase, type TestDatabase } from '@pixlova/db/testing';
+import { manifestSignerFromSeed, type ManifestSigner } from '@pixlova/scheduling/compiler';
 import {
   createMediaWorker,
   DEFAULT_VIDEO_TOOLS,
@@ -31,8 +32,10 @@ export interface Stack {
   server: PreviewServer;
   browser: Browser;
   base: string;
-  /** Worker média réel (ADR-009), sur la même base et le même stockage que l’API. */
+  /** Worker réel (ADR-009, ADR-011) : médias et compilation des manifests. */
   worker: Worker;
+  /** Clé de signature des manifests du worker, pour vérifier comme un Player. */
+  signer: ManifestSigner;
   close(): Promise<void>;
 }
 
@@ -57,6 +60,10 @@ export async function startStack(): Promise<Stack> {
   const browser = await chromium.launch();
   await mkdir(output, { recursive: true });
   const workerTmp = await mkdtemp(join(tmpdir(), 'pixlova-e2e-worker-'));
+  const signer = manifestSignerFromSeed(
+    'manifest-key-e2e',
+    encodeBase64url(ed25519.utils.randomSecretKey()),
+  );
   const worker = createMediaWorker(
     {
       appDb: database.app,
@@ -66,6 +73,7 @@ export async function startStack(): Promise<Stack> {
       tools: DEFAULT_VIDEO_TOOLS,
       tmpRoot: workerTmp,
       trashRetentionDays: 30,
+      manifestSigner: signer,
       now: () => new Date(),
       logger: silentLogger,
     },
@@ -81,6 +89,7 @@ export async function startStack(): Promise<Stack> {
     browser,
     base,
     worker,
+    signer,
     async close() {
       await worker.stop();
       await rm(workerTmp, { recursive: true, force: true });
@@ -211,9 +220,29 @@ export class NetworkPlayer {
   }
 
   config() {
-    return this.call<{ assignments: { display_id: string; assignment_generation: string }[] }>(
-      'GET',
-      '/config',
-    );
+    return this.call<{
+      assignments: {
+        display_id: string;
+        assignment_generation: string;
+        manifest_version: string | null;
+      }[];
+    }>('GET', '/config');
+  }
+
+  /** Octets signés du dernier manifest désiré, tels que distribués. */
+  async manifest(displayId: string): Promise<string | null> {
+    const response = await fetch(`${this.apiUrl}/player/v1/manifest?display_id=${displayId}`, {
+      headers: { authorization: `Bearer ${this.token}` },
+    });
+    return response.status === 200 ? response.text() : null;
+  }
+
+  async report(manifestId: string, state: 'downloading' | 'ready' | 'applied'): Promise<void> {
+    await this.call('POST', `/manifests/${manifestId}/status`, {
+      state,
+      observed_at: new Date().toISOString().replace(/\.[0-9]{3}Z$/, 'Z'),
+      error_code: null,
+      detail: null,
+    });
   }
 }

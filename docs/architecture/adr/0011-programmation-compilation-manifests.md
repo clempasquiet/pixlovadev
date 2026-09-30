@@ -103,6 +103,7 @@ Le compilateur doit être déterministe, idempotent, résistant aux reprises de 
   - une image ou une composition sans durée est refusée à la publication ;
   - une vidéo jouée plus longtemps que sa durée boucle, plus courtement elle est coupée ;
   - média ou composition programmé directement : durée de la vidéo, sinon `settings.duration_ms`, sinon **10 s [à valider]** (valeur indicative : le contenu boucle).
+- **Ajustement** : un média programmé directement ou placé dans une playlist est affiché en `contain` (aucun recadrage) ; le recadrage se règle dans une composition.
 - **Variantes :**
   - image : variante `playback` si son type MIME est annoncé par le Player, sinon `original` si annoncé, sinon refus au préflight ;
   - vidéo : variante `playback` (profil `mp4-h264-aac`, ADR-009).

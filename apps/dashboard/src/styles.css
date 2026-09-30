@@ -805,3 +805,13 @@ button.icon {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Programmation (L05) */
+.plain-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+.plain-list li {
+  padding: 0.25rem 0;
+}

@@ -85,12 +85,14 @@ export function AppLayout() {
             <NavLink to="/library">Bibliothèque</NavLink>
             <NavLink to="/compositions">Compositions</NavLink>
             <NavLink to="/templates">Modèles</NavLink>
+            <NavLink to="/playlists">Playlists</NavLink>
+            <NavLink to="/schedules">Plannings</NavLink>
+            <NavLink to="/campaigns">Campagnes</NavLink>
             <NavLink to="/displays">Écrans</NavLink>
             <NavLink to="/players">Players</NavLink>
             <NavLink to="/sites">Sites</NavLink>
             <NavLink to="/members">Membres</NavLink>
             <NavLink to="/audit">Journal d’audit</NavLink>
-            <p className="sidebar-note">Playlists et Programmation arrivent avec le lot suivant.</p>
           </nav>
         )}
         <main className="content">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, idempotencyKey } from '../api.js';
 import { useLoad } from '../data.js';
+import { DisplayProgramPanel } from '../programming/display-program.js';
 import { useSession } from '../session.js';
 import { Empty, ErrorMessage, Field, Forbidden, Form, Loading } from '../ui.js';
 
@@ -426,9 +427,6 @@ export function DisplayDetailPage() {
             : 'inactif (aucune licence utilisée)'}
         </p>
         <p className="muted">{COMPATIBILITY[d.compatibility]}</p>
-        <p className="muted">
-          Sans contenu programmé, le Player affiche un écran d’attente explicite.
-        </p>
         {can('player.configure') && (
           <button
             type="button"
@@ -450,6 +448,8 @@ export function DisplayDetailPage() {
           </button>
         )}
       </div>
+
+      <DisplayProgramPanel displayId={d.id} siteId={d.site_id} />
 
       <div className="card">
         <h2>Player et sortie</h2>
@@ -516,7 +516,7 @@ export function DisplayDetailPage() {
         {d.history.length === 0 ? (
           <Empty>Aucune affectation.</Empty>
         ) : (
-          <table>
+          <table aria-label="Historique des affectations">
             <thead>
               <tr>
                 <th>Génération</th>

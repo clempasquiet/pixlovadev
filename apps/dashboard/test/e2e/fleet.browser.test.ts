@@ -69,7 +69,9 @@ describe.skipIf(skipDatabaseTests)(
       page.once('dialog', (dialog) => void dialog.accept());
       await page.getByRole('button', { name: 'Remplacer le Player' }).click();
       await page.getByText('Mini-PC remplacement · sortie HDMI-A-1').waitFor();
-      const rows = page.locator('table tbody tr');
+      const rows = page
+        .getByRole('table', { name: 'Historique des affectations' })
+        .locator('tbody tr');
       await expect.poll(() => rows.count()).toBe(2);
       await page.screenshot({ path: resolve(output, '11-player-remplace.png'), fullPage: true });
 

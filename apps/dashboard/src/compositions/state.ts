@@ -97,7 +97,8 @@ function topZ(doc: CompositionDocument): number {
   return doc.elements.reduce((max, element) => Math.max(max, element.z_index), 0);
 }
 
-export type NewElementKind = 'text' | 'rectangle' | 'ellipse' | 'image' | 'video' | 'qr' | 'clock';
+export type NewElementKind =
+  'text' | 'rectangle' | 'ellipse' | 'image' | 'video' | 'qr' | 'clock' | 'playlist_zone';
 
 /** Nouvel élément centré, dimensionné relativement au canvas (formats LED compris). */
 export function createElement(
@@ -173,6 +174,14 @@ export function createElement(
           background: '#FFFFFF',
           error_correction: 'M',
         },
+      };
+    case 'playlist_zone':
+      return {
+        ...base,
+        ...box(width * 0.5, height * 0.5),
+        id: nextElementId(doc, 'zone'),
+        type: 'playlist_zone',
+        props: { playlist_id: null },
       };
     case 'clock':
       return {

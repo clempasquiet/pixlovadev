@@ -9,6 +9,7 @@ export interface MediaInfo {
   status: 'uploading' | 'processing' | 'ready' | 'error';
   width: number | null;
   height: number | null;
+  duration_ms?: number | null;
   thumbnail_url: string | null;
   deleted_at: string | null;
   /** URL temporaire de la variante de diffusion (aperçu fidèle) ; absente si non prête. */

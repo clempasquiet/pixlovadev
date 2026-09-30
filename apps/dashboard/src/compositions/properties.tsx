@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { api } from '../api.js';
 import {
   QUALIFIED_FONT_NAMES,
   QUALIFIED_FONTS,
@@ -428,6 +429,15 @@ export function ElementProperties(props: {
         </>
       );
       break;
+    case 'playlist_zone':
+      specific = (
+        <PlaylistSelect
+          value={element.props.playlist_id}
+          disabled={locked}
+          onChange={(playlist_id) => props.onProps({ playlist_id })}
+        />
+      );
+      break;
     case 'clock':
       specific = (
         <>
@@ -544,5 +554,46 @@ export function ElementProperties(props: {
         {specific}
       </fieldset>
     </>
+  );
+}
+
+/** Playlist d’une zone : seules les playlists publiées sont proposées (ADR-011). */
+function PlaylistSelect(props: {
+  value: string | null;
+  disabled: boolean;
+  onChange(id: string | null): void;
+}) {
+  const [items, setItems] = useState<{ id: string; name: string }[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api<{ items: { id: string; name: string }[] }>('GET', '/playlists?published=true')
+      .then((page) => {
+        if (!cancelled) setItems(page.items);
+      })
+      .catch(() => setItems([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return (
+    <div className="prop">
+      <label htmlFor="prop-playlist">Playlist</label>
+      <select
+        id="prop-playlist"
+        value={props.value ?? ''}
+        disabled={props.disabled || items === null}
+        onChange={(e) => props.onChange(e.target.value || null)}
+      >
+        <option value="">Aucune playlist choisie</option>
+        {items?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+      <span className="hint">
+        La zone joue la dernière version publiée ; elle est vide dans l’aperçu.
+      </span>
+    </div>
   );
 }

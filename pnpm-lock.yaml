@@ -260,6 +260,9 @@ importers:
       '@pixlova/render-engine':
         specifier: workspace:*
         version: link:../../packages/render-engine
+      '@pixlova/scheduling':
+        specifier: workspace:*
+        version: link:../../packages/scheduling
       react:
         specifier: 19.3.0
         version: 19.3.0

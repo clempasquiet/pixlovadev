@@ -59,13 +59,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Les fichiers envoyés sont rangés dans `work/storage` à la racine du dépôt, un dossier ignoré par Git.
 
+Remplacer enfin `PIXLOVA_MANIFEST_SIGNING_KEY`. C’est la graine de la clé qui signe les manifests des écrans ; le worker refuse de démarrer sans elle :
+
+```sh
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
 ## 4. Démarrer
 
 Dans trois terminaux :
 
 ```sh
 pnpm --filter @pixlova/api run start:dev      # API sur http://127.0.0.1:3000
-pnpm --filter @pixlova/workers run start:dev  # worker média (lit apps/api/.env)
+pnpm --filter @pixlova/workers run start:dev  # worker médias et manifests (lit apps/api/.env)
 pnpm --filter @pixlova/dashboard run dev      # dashboard sur http://localhost:5173
 ```
 
@@ -79,7 +85,7 @@ En attendant les Players natif et Web (lot L06), un simulateur utilise le vrai p
 pnpm --filter @pixlova/api run simulate-player
 ```
 
-Il affiche un code `XXXX-XXXX` à saisir dans **Players → Appairer un Player**. Créez ensuite un Display dans **Écrans**, puis affectez-lui une sortie du Player simulé : le terminal affiche l’affectation reçue. Lancez un second simulateur pour essayer le remplacement d’un Player. Arrêtez le simulateur (Ctrl+C) : après 90 secondes, le Player apparaît hors ligne avec l’heure du dernier contact.
+Il affiche un code `XXXX-XXXX` à saisir dans **Players → Appairer un Player**. Il récupère aussi les manifests publiés (voir « Essayer la programmation »). Créez ensuite un Display dans **Écrans**, puis affectez-lui une sortie du Player simulé : le terminal affiche l’affectation reçue. Lancez un second simulateur pour essayer le remplacement d’un Player. Arrêtez le simulateur (Ctrl+C) : après 90 secondes, le Player apparaît hors ligne avec l’heure du dernier contact.
 
 ## Essayer la bibliothèque média
 
@@ -92,6 +98,17 @@ Sans worker lancé, les médias restent « En préparation » : c’est l’éta
 Dans **Compositions**, créez une composition (paysage, portrait, bandeaux LED ou format libre), puis ajoutez textes, formes, images, vidéos, QR Code et horloge. Déplacez et redimensionnez les éléments sur le canvas ou saisissez leurs valeurs en pixels ; **Prévisualiser** montre le rendu des Players sur un écran existant ou un format libre. **Publier** crée une version immuable, refusée tant qu’une anomalie bloquante subsiste (média manquant, en préparation, supprimé…).
 
 Les **Modèles** sont réservés aux offres payantes : `PIXLOVA_DEV_FEATURES=templates` (fichier `.env` d’exemple) les active en développement.
+
+## Essayer la programmation
+
+1. Dans **Playlists**, créez une playlist, ajoutez des images, vidéos ou compositions publiées, réglez durées et validités, puis **Publiez**.
+2. Dans **Plannings**, ajoutez des créneaux (jours, heures, dates), choisissez les cibles, puis **Publiez** : le nombre d’écrans visés s’affiche. Les **Campagnes** ajoutent une période bornée et une priorité plus haute.
+3. Sur la fiche d’un écran :
+   - **Programme** explique ce qui joue et pourquoi (source, priorité, règles masquées), dans le fuseau de l’écran, pour un jour, une semaine ou un mois, y compris dans le futur ;
+   - **Diffuser maintenant** interrompt la programmation pour une durée bornée ;
+   - **Diffusion** distingue les versions désirée, préparée et appliquée.
+
+Chaque publication fait compiler par le worker un manifest signé par écran affecté. Le simulateur télécharge chaque nouveau manifest à son heartbeat (30 s au plus). Il contrôle son schéma et sa cohérence, puis le déclare préparé et appliqué. Ces états sont **simulés** : il ne télécharge aucun asset et n’affiche rien. Les Players réels arrivent avec le lot L06.
 
 ## Arrêter et repartir de zéro
 

@@ -2,7 +2,9 @@
 /**
  * Player simulé pour le développement local (en attendant les Players réels, L06) :
  * enregistrement, affichage du code, attente de l’appairage, jeton signé par une clé
- * Ed25519 locale, puis heartbeat toutes les 30 s et affichage des affectations.
+ * Ed25519 locale, puis heartbeat toutes les 30 s et affichage des affectations. Chaque
+ * nouveau manifest désiré est téléchargé, contrôlé (schéma et cohérence), puis déclaré
+ * préparé et appliqué : ces états sont simulés, aucun rendu ni téléchargement d’asset.
  *
  *   node scripts/simulate-player.mjs [URL_API]    (défaut http://127.0.0.1:3000)
  *
@@ -10,7 +12,12 @@
  */
 import { randomUUID } from 'node:crypto';
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { encodeBase64url, signPlayerChallenge } from '@pixlova/contracts';
+import {
+  checkManifestSemantics,
+  encodeBase64url,
+  signPlayerChallenge,
+  validator,
+} from '@pixlova/contracts';
 
 const api = (process.argv[2] ?? 'http://127.0.0.1:3000').replace(/\/$/, '');
 const secretKey = ed25519.utils.randomSecretKey();
@@ -76,16 +83,46 @@ async function authenticate() {
   return new Date(result.expires_at).getTime();
 }
 
+const validatePayload = validator('manifest-payload.json');
+/** Dernière version appliquée (simulée) par Display. */
+const applied = new Map();
+
+async function syncManifest(assignment) {
+  if (!assignment.manifest_version || applied.get(assignment.display_id) === assignment.manifest_version) return;
+  const response = await fetch(`${api}/player/v1/manifest?display_id=${assignment.display_id}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (response.status !== 200) return;
+  const envelope = JSON.parse(await response.text());
+  const payload = envelope.payload;
+  if (!validatePayload(payload)) throw new Error('manifest hors schéma');
+  checkManifestSemantics(payload);
+  const report = (state) =>
+    call('POST', `/manifests/${payload.manifest_id}/status`, {
+      state,
+      observed_at: new Date().toISOString().replace(/\.[0-9]{3}Z$/, 'Z'),
+      error_code: null,
+      detail: null,
+    });
+  await report('ready');
+  await report('applied');
+  applied.set(assignment.display_id, payload.version);
+  console.log(
+    `[${new Date().toLocaleTimeString('fr-FR')}] manifest v${payload.version} pour ${assignment.display.name} : ${payload.timeline.length} intervalle(s), ${payload.assets.length} asset(s), jusqu’au ${new Date(payload.schedule_until).toLocaleString('fr-FR')} — appliqué (simulé, sans rendu)`,
+  );
+}
+
 let tokenExpiry = await authenticate();
 for (;;) {
   try {
     if (Date.now() > tokenExpiry - 60_000) tokenExpiry = await authenticate();
     const config = await call('GET', '/config');
     const known = config.assignments;
+    for (const assignment of known) await syncManifest(assignment);
     const heartbeat = await call('POST', '/heartbeat', {
       uptime_seconds: Math.round(process.uptime()),
       renderer: 'ok',
-      displays: known.map((a) => ({ display_id: a.display_id, assignment_generation: a.assignment_generation, manifest_applied_version: null, playback: 'standby' })),
+      displays: known.map((a) => ({ display_id: a.display_id, assignment_generation: a.assignment_generation, manifest_applied_version: applied.get(a.display_id) ?? null, playback: 'standby' })),
     });
     const summary = known.map((a) => `${a.display.name} (${a.display.width}×${a.display.height}) sur ${a.output_key}, génération ${a.assignment_generation}`);
     console.log(`[${new Date().toLocaleTimeString('fr-FR')}] heartbeat · ${summary.length ? summary.join(' ; ') : 'aucun Display affecté'}${heartbeat.stale_displays.length ? ' · affectation périmée signalée' : ''}`);

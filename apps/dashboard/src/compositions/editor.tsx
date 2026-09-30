@@ -531,6 +531,9 @@ export function CompositionEditorPage() {
           <button type="button" onClick={() => add('clock')}>
             + Horloge
           </button>
+          <button type="button" onClick={() => add('playlist_zone')}>
+            + Zone playlist
+          </button>
           <span className="toolbar-sep" />
           <button
             type="button"
