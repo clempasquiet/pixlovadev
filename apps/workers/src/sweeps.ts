@@ -1,5 +1,6 @@
 import { adjustUsage, enqueueJob, schema } from '@pixlova/db';
 import { and, eq, inArray, isNotNull, isNull, lt, lte, sql } from 'drizzle-orm';
+import { renewManifestHorizons } from './programming/compile.js';
 import type { WorkerContext } from './context.js';
 import { MEDIA_PURGE } from './media/purge.js';
 
@@ -121,4 +122,5 @@ export async function runSweeps(ctx: WorkerContext): Promise<void> {
   await cleanQuarantine(ctx);
   await schedulePurges(ctx);
   await pruneFinishedJobs(ctx);
+  await renewManifestHorizons(ctx);
 }

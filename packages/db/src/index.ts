@@ -34,12 +34,16 @@ export async function withTenant<T>(
   db: Database,
   organizationId: string,
   work: (tx: Transaction) => Promise<T>,
+  options: { isolationLevel?: 'read committed' | 'repeatable read' | 'serializable' } = {},
 ): Promise<T> {
   if (!UUID.test(organizationId)) throw new Error('Identifiant d’organisation invalide.');
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('pixlova.organization_id', ${organizationId}, true)`);
-    return work(tx);
-  });
+  return db.transaction(
+    async (tx) => {
+      await tx.execute(sql`select set_config('pixlova.organization_id', ${organizationId}, true)`);
+      return work(tx);
+    },
+    options.isolationLevel ? { isolationLevel: options.isolationLevel } : undefined,
+  );
 }
 
 export {

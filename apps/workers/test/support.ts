@@ -12,6 +12,9 @@ import {
   uploadObjectKey,
   type ObjectStorage,
 } from '@pixlova/storage';
+import { ed25519 } from '@noble/curves/ed25519.js';
+import { encodeBase64url } from '@pixlova/contracts';
+import { manifestSignerFromSeed } from '@pixlova/scheduling/compiler';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import {
@@ -199,6 +202,10 @@ export async function createHarness(): Promise<Harness> {
     tools: DEFAULT_VIDEO_TOOLS,
     tmpRoot: root,
     trashRetentionDays: 30,
+    manifestSigner: manifestSignerFromSeed(
+      'manifest-key-test',
+      encodeBase64url(ed25519.utils.randomSecretKey()),
+    ),
     now: () => clock.now,
     logger: silentLogger,
   };

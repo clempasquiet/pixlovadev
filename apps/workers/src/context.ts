@@ -1,5 +1,6 @@
 import type { MediaLimits } from '@pixlova/contracts';
 import type { Database } from '@pixlova/db';
+import type { ManifestSigner } from '@pixlova/scheduling/compiler';
 import type { ObjectStorage } from '@pixlova/storage';
 import type { VideoTools } from './media/video.js';
 
@@ -20,6 +21,8 @@ export interface WorkerContext {
   /** Répertoire des fichiers temporaires, un sous-dossier par tâche. */
   tmpRoot: string;
   trashRetentionDays: number;
+  /** Clé Ed25519 du compilateur de manifests (ADR-011) ; absente, les compilations échouent. */
+  manifestSigner?: ManifestSigner | null;
   now: () => Date;
   logger: Logger;
 }

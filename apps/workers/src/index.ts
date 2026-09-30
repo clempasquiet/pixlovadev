@@ -4,6 +4,7 @@ export { Worker, retryDelayMs, type JobHandler, type WorkerOptions } from './run
 export { ingestHandler, MEDIA_INGEST } from './media/ingest.js';
 export { purgeHandler, MEDIA_PURGE } from './media/purge.js';
 export { hardenImageDecoder } from './media/image.js';
+export { compileHandler, renewManifestHorizons } from './programming/compile.js';
 export { DEFAULT_VIDEO_TOOLS, type VideoTools } from './media/video.js';
 export {
   cleanQuarantine,
@@ -16,10 +17,17 @@ export {
 import type { WorkerContext } from './context.js';
 import { ingestHandler } from './media/ingest.js';
 import { purgeHandler } from './media/purge.js';
+import { compileHandler } from './programming/compile.js';
 import { Worker, type WorkerOptions } from './runner.js';
 import { runSweeps } from './sweeps.js';
 
-/** Worker média complet : ingestion, purge et balayages. */
-export function createMediaWorker(ctx: WorkerContext, options: WorkerOptions = {}): Worker {
-  return new Worker(ctx, [ingestHandler, purgeHandler], { sweep: runSweeps, ...options });
+/** Worker complet : ingestion et purge des médias, compilation des manifests, balayages. */
+export function createWorker(ctx: WorkerContext, options: WorkerOptions = {}): Worker {
+  return new Worker(ctx, [ingestHandler, purgeHandler, compileHandler], {
+    sweep: runSweeps,
+    ...options,
+  });
 }
+
+/** @deprecated Nom historique de `createWorker`. */
+export const createMediaWorker = createWorker;
