@@ -6,6 +6,8 @@ export interface ListenerConfig {
 export interface SecurityConfig {
   /** Origines autorisées pour les requêtes modifiantes du dashboard (protection CSRF). */
   allowedOrigins: string[];
+  /** Origines du Player Web servi hors de l’origine de l’API (ADR-013) ; vide par défaut. */
+  webPlayerOrigins: string[];
   /** URL publique du dashboard, utilisée dans les liens des emails. */
   appBaseUrl: string;
   cookieSecure: boolean;
@@ -88,6 +90,10 @@ export function defaultSecurityConfig(env: NodeJS.ProcessEnv = process.env): Sec
   const appBaseUrl = env.PIXLOVA_APP_BASE_URL ?? 'http://localhost:5173';
   return {
     allowedOrigins: (env.PIXLOVA_ALLOWED_ORIGINS ?? new URL(appBaseUrl).origin)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    webPlayerOrigins: (env.PIXLOVA_WEB_PLAYER_ORIGINS ?? '')
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),

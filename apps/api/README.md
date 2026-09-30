@@ -49,6 +49,7 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_DATA_KEYS` | Clés AES-256 `kid:base64` séparées par des virgules ; la première chiffre |
 | `REDIS_URL` | Limitation de débit partagée ; obligatoire en production |
 | `PIXLOVA_APP_BASE_URL`, `PIXLOVA_ALLOWED_ORIGINS` | Liens des emails ; origines acceptées (CSRF) |
+| `PIXLOVA_WEB_PLAYER_ORIGINS` | Origines d’un Player Web servi hors de l’origine de l’API (CORS de `/player/v1` et du stockage local, sans credentials) ; vide par défaut ([ADR-013](../../docs/architecture/adr/0013-player-web.md)) |
 | `PIXLOVA_COOKIE_SECURE` | `false` uniquement en développement HTTP |
 | `PIXLOVA_SESSION_IDLE_HOURS`, `PIXLOVA_SESSION_ABSOLUTE_DAYS`, `PIXLOVA_RECENT_AUTH_MINUTES` | Durées de session |
 | `PIXLOVA_REQUIRE_MFA_FOR_ADMINS` | MFA exigée des administrateurs pour les actions sensibles (défaut `true`) |
