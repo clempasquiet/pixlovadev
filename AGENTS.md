@@ -47,7 +47,8 @@ pnpm run check                  # docs, format, lint, build, typecheck, tests Ty
                                 # worker média : FFmpeg ; pilote S3 : PIXLOVA_TEST_S3_ENDPOINT (voir apps/workers)
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo test --workspace          # PIXLOVA_TEST_RENDERER=target/debug/pixlova-renderer : tests avec le vrai renderer
+node apps/api/scripts/e2e-native-player.mjs [--webview]   # Player natif de bout en bout (voir native/README.md)
 ```
 
 Versions et choix d’outillage : [ADR-001](docs/architecture/adr/0001-outillage-workspace-versions.md).

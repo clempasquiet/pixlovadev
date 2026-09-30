@@ -11,6 +11,7 @@ export * from './ws.js';
 export * from './events.js';
 export * from './player-api.js';
 export * from './programming.js';
+export * from './release.js';
 
 import { PlayerCapabilities } from './capabilities.js';
 import { CommandPayload, CommandResult, SignedCommand } from './command.js';
@@ -22,6 +23,7 @@ import { PlayerEventBatch } from './events.js';
 import { ManifestPayload, SignedManifest } from './manifest.js';
 import { Organization } from './tenant.js';
 import { PlaylistDocument, ProgramDocument } from './programming.js';
+import { ReleasePayload } from './release.js';
 import {
   AssetUrlResponse,
   HeartbeatResponse,
@@ -84,5 +86,6 @@ export const ROOT_SCHEMAS = {
   'program-document.json': root('program-document.json', ProgramDocument),
   'manifest-status-request.json': root('manifest-status-request.json', ManifestStatusRequest),
   'asset-url-response.json': root('asset-url-response.json', AssetUrlResponse),
+  'release-payload.json': root('release-payload.json', ReleasePayload),
 } as const;
 export type RootSchemaName = keyof typeof ROOT_SCHEMAS;

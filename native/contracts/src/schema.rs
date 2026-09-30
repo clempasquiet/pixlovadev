@@ -19,6 +19,7 @@ pub enum RootSchema {
     WsMessage,
     PlayerEventBatch,
     PlayerCapabilities,
+    ReleasePayload,
 }
 
 impl RootSchema {
@@ -29,6 +30,7 @@ impl RootSchema {
             RootSchema::WsMessage => schema!("ws-message.json"),
             RootSchema::PlayerEventBatch => schema!("player-event-batch.json"),
             RootSchema::PlayerCapabilities => schema!("player-capabilities.json"),
+            RootSchema::ReleasePayload => schema!("release-payload.json"),
         }
     }
 
@@ -38,12 +40,14 @@ impl RootSchema {
         static WS: OnceLock<Validator> = OnceLock::new();
         static EVENTS: OnceLock<Validator> = OnceLock::new();
         static CAPABILITIES: OnceLock<Validator> = OnceLock::new();
+        static RELEASE: OnceLock<Validator> = OnceLock::new();
         match self {
             RootSchema::ManifestPayload => &MANIFEST,
             RootSchema::CommandPayload => &COMMAND,
             RootSchema::WsMessage => &WS,
             RootSchema::PlayerEventBatch => &EVENTS,
             RootSchema::PlayerCapabilities => &CAPABILITIES,
+            RootSchema::ReleasePayload => &RELEASE,
         }
     }
 
