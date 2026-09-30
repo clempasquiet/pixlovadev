@@ -26,6 +26,7 @@ Le parcours compte → organisation → membres est utilisable sur un poste de d
 | [Décisions ouvertes](docs/architecture/DECISIONS.md) | Choix techniques et commerciaux encore à fixer |
 | [Contribution](CONTRIBUTING.md) | Branches, PR, tests et définition de terminé |
 | [Recette](docs/quality/ACCEPTANCE.md) | Invariants et preuves attendues |
+| [Déployer la recette](docs/operations/RECETTE.md) | Serveur Docker et Cloudflare Tunnel : installation, sauvegarde, mise à jour |
 
 ## Vérifications disponibles
 

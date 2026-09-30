@@ -167,3 +167,5 @@ docker compose -f infra/dev/compose.yaml down -v     # suppression des données 
 ```
 
 Après une suppression des données, supprimer aussi `work/storage` : ses fichiers ne correspondent plus à aucun média.
+
+Pour une instance complète en conteneurs (images de production, stockage S3, emails dans Mailpit), sur un poste ou un serveur : [Déployer la recette](../operations/RECETTE.md#essai-local-sans-cloudflare).
