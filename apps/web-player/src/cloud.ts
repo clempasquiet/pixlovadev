@@ -5,10 +5,13 @@
  */
 import {
   playerChallengeSigningInput,
+  type CommandResult,
   type PlayerAuthChallenge,
   type PlayerConfig,
+  type StatusPayload,
 } from '@pixlova/contracts';
 import type { Identity } from './identity.js';
+import { instant } from './state.js';
 
 export class CloudError extends Error {
   constructor(
@@ -167,7 +170,9 @@ export class Cloud {
     return this.json('/outputs', { method: 'POST', body: JSON.stringify({ outputs }) });
   }
 
-  heartbeat(body: unknown): Promise<{ server_time: string; stale_displays: string[] }> {
+  heartbeat(
+    body: unknown,
+  ): Promise<{ server_time: string; stale_displays: string[]; pending_commands?: number }> {
     return this.json('/heartbeat', { method: 'POST', body: JSON.stringify(body) });
   }
 
@@ -181,6 +186,37 @@ export class Cloud {
     if (response.status === 404) return { kind: 'none' };
     if (!response.ok) return this.fail(response);
     return { kind: 'envelope', raw: await response.text() };
+  }
+
+  /** Lot d’événements ; seuls les identifiants accusés sont retirés de la file. */
+  events(events: unknown[], droppedCount: number): Promise<{ accepted: string[] }> {
+    return this.json('/events', {
+      method: 'POST',
+      body: JSON.stringify({ events, dropped_count: droppedCount }),
+    });
+  }
+
+  status(status: StatusPayload): Promise<void> {
+    return this.json('/status', { method: 'POST', body: JSON.stringify(status) });
+  }
+
+  /** Enveloppes signées, vérifiées par le Player avant tout effet. */
+  async commands(): Promise<string[]> {
+    return (await this.json<{ commands: string[] }>('/commands')).commands;
+  }
+
+  async commandAck(commandId: string): Promise<void> {
+    await this.json(`/commands/${commandId}/ack`, {
+      method: 'POST',
+      body: JSON.stringify({ acknowledged_at: instant() }),
+    });
+  }
+
+  async commandResult(commandId: string, result: CommandResult): Promise<void> {
+    await this.json(`/commands/${commandId}/result`, {
+      method: 'POST',
+      body: JSON.stringify(result),
+    });
   }
 
   assetUrl(assetId: string, manifestId: string): Promise<AssetUrl> {

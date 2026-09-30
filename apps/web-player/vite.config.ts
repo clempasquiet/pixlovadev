@@ -19,7 +19,7 @@ function appShellWorker(): Plugin {
 const VERSION = ${JSON.stringify(version)};
 const CACHE = 'pixlova-app-' + VERSION;
 const REQUIRED = ${JSON.stringify(['./', ...files.map((f) => `./${f}`), './trust/manifest-keys.json'])};
-const OPTIONAL = ['./config.json'];
+const OPTIONAL = ['./config.json', './trust/command-keys.json'];
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);

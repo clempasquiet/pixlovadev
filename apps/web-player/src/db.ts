@@ -1,12 +1,12 @@
 /**
  * État local du Player Web dans IndexedDB (WEBPLY-001, WEBPLY-002) : installation,
- * clé, association, Display, manifests reçus (enveloppes signées) et outbox des états de
- * livraison. Un effacement des données du site supprime tout : nouvelle installation.
+ * clé, association, Display, manifests reçus (enveloppes signées), outbox des états de
+ * livraison, file d’événements et journal des commandes. Un effacement des données du site supprime tout : nouvelle installation.
  */
 const DB_NAME = 'pixlova-player';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-export type Store = 'kv' | 'manifests' | 'outbox' | 'assets';
+export type Store = 'kv' | 'manifests' | 'outbox' | 'assets' | 'events' | 'commands';
 
 let opening: Promise<IDBDatabase> | null = null;
 
@@ -29,6 +29,13 @@ export function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true });
       }
       if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets');
+      // Version 2 (ADR-014) : file d’événements et journal des commandes.
+      if (!db.objectStoreNames.contains('events')) {
+        db.createObjectStore('events', { keyPath: 'local_id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('commands')) {
+        db.createObjectStore('commands', { keyPath: 'command_id' });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('IndexedDB indisponible'));

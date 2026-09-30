@@ -13,6 +13,7 @@ import { PlayerHost } from './host.js';
 import { loadOrCreateIdentity, type Identity } from './identity.js';
 import { WebPipeline } from './pipeline.js';
 import { EMPTY_ASSOCIATION, instant, state, type Association } from './state.js';
+import { Supervision } from './supervision.js';
 
 export const APP_VERSION = '0.1.0';
 
@@ -22,7 +23,8 @@ const startRoot = document.querySelector<HTMLElement>('#start')!;
 const panel = document.querySelector<HTMLElement>('#panel')!;
 const alertRoot = document.querySelector<HTMLElement>('#alert')!;
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Statut complet envoyé au plus tard à cet intervalle [à valider] (OBS-003). */
+const STATUS_INTERVAL_MS = 5 * 60_000;
 
 interface Observed {
   online: boolean | null;
@@ -56,11 +58,12 @@ async function loadJson<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Clés publiques des manifests livrées avec l’application (PROTO-012). */
-async function loadTrust(): Promise<TrustStore> {
-  const file = await loadJson<{ keys: { kid: string; public_key: string }[] }>(
-    './trust/manifest-keys.json',
-  );
+/**
+ * Clés publiques livrées avec l’application (PROTO-012) : manifests et commandes, dans deux
+ * fichiers distincts (ADR-014).
+ */
+async function loadTrust(path: string): Promise<TrustStore> {
+  const file = await loadJson<{ keys: { kid: string; public_key: string }[] }>(path);
   const trust = new Map<string, Uint8Array>();
   for (const key of file?.keys ?? []) {
     const bytes = decodeBase64url(key.public_key);
@@ -118,18 +121,39 @@ class WebPlayer {
   private readonly assets = new AssetCache();
   private readonly host: PlayerHost;
   private readonly pipeline: WebPipeline;
+  private readonly supervision: Supervision;
   private outputsReported: string | null = null;
   private readonly started = Date.now();
+  private statusSentAt = 0;
+  private lastPlayback: string | null = null;
+  private wake: (() => void) | null = null;
 
   constructor(
     private readonly identity: Identity,
     trust: TrustStore,
+    commandTrust: TrustStore,
     apiUrl: string,
   ) {
     this.cloud = new Cloud(apiUrl);
     this.host = new PlayerHost(surface, (sha) => this.assets.urlFor(sha));
     this.pipeline = new WebPipeline(this.cloud, this.assets, trust, this.host);
+    this.supervision = new Supervision(this.cloud, commandTrust);
     this.host.onFrame(() => document.body.classList.add('playing'));
+  }
+
+  /** Pause interrompue par `FORCE_SYNC`. */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.wake = null;
+        resolve();
+      }, ms);
+      this.wake = () => {
+        clearTimeout(timer);
+        this.wake = null;
+        resolve();
+      };
+    });
   }
 
   private async setNotice(notice: Notice | null): Promise<void> {
@@ -139,6 +163,8 @@ class WebPlayer {
 
   async start(): Promise<void> {
     await this.pipeline.recover();
+    await this.supervision.recover();
+    await this.supervision.record('PLAYER_STARTED', 'info', { version: APP_VERSION });
     // Reprise locale avant tout accès réseau : un redémarrage hors ligne rediffuse.
     const restored = await this.pipeline.restoreCurrent();
     if (!restored) await this.refreshNotice();
@@ -154,7 +180,7 @@ class WebPlayer {
         pause = await this.failed(error);
       }
       this.renderPanel();
-      await sleep(pause);
+      await this.sleep(pause);
     }
   }
 
@@ -258,8 +284,12 @@ class WebPlayer {
     if (display) await this.pipeline.fetchCandidate(organizationId, playerId, display);
     await this.pipeline.advance();
     await this.flushOutbox();
-    await this.heartbeat();
+    const pending = await this.heartbeat();
+    if (observed.online === false) {
+      await this.supervision.record('CLOUD_RESTORED', 'info');
+    }
     observed.online = true;
+    await this.superviseOnline(organizationId, playerId, pending);
     observed.lastError = (await state.display())?.last_error ?? null;
     await this.refreshNotice();
     return Math.min(config.heartbeat_interval_s * 1000, 10_000);
@@ -329,10 +359,93 @@ class WebPlayer {
     }
   }
 
-  private async heartbeat(): Promise<void> {
+  /**
+   * Commandes, statut et événements (ADR-014). Leur échec n’interrompt ni la lecture ni la
+   * synchronisation : tout est conservé et retransmis au tour suivant.
+   */
+  private async superviseOnline(
+    organizationId: string,
+    playerId: string,
+    pending: number,
+  ): Promise<void> {
+    try {
+      await this.supervision.flushCommands();
+      if (pending > 0) {
+        await this.supervision.processCommands(organizationId, playerId, {
+          sync: () => this.wake?.(),
+          reloadContent: async () => {
+            await this.pipeline.restoreCurrent();
+          },
+          sendStatus: () => this.sendStatus(),
+          clearUnusedCache: () => this.clearUnusedCache(),
+          restart: () => location.reload(),
+        });
+      }
+      if (Date.now() - this.statusSentAt >= STATUS_INTERVAL_MS) await this.sendStatus();
+      await this.supervision.flushEvents();
+    } catch {
+      // Conservé localement ; nouvel essai au prochain tour.
+    }
+  }
+
+  /** Statut complet : le navigateur ne donne ni disque, ni CPU, ni température (`null`). */
+  private async sendStatus(): Promise<void> {
+    await measureStorage();
+    const output = this.output();
+    await this.cloud.status({
+      observed_at: instant(),
+      renderer: document.hidden ? 'degraded' : 'ok',
+      renderer_restarts: null,
+      storage_persistent: observed.persisted,
+      metrics: {
+        cpu_percent: null,
+        memory_used_bytes: null,
+        memory_total_bytes: null,
+        disk_free_bytes: null,
+        disk_total_bytes: null,
+        temperature_c: null,
+      },
+      cache: null,
+      outputs: [
+        {
+          output_key: output.output_key,
+          connected: null,
+          width: output.width,
+          height: output.height,
+          refresh_hz: null,
+        },
+      ],
+    });
+    this.statusSentAt = Date.now();
+  }
+
+  /** Assets hors des manifests courant, précédent et candidat. */
+  private async clearUnusedCache(): Promise<number> {
+    const pinned = await this.pipeline.pinned();
+    let freed = 0;
+    for (const entry of await this.assets.entries()) {
+      if (pinned.has(entry.sha256)) continue;
+      await this.assets.remove(entry.sha256);
+      freed += entry.size;
+    }
+    return freed;
+  }
+
+  /** Heartbeat ; retourne le nombre de commandes annoncées par le cloud. */
+  private async heartbeat(): Promise<number> {
     const display = await state.display();
     const applied = display?.current ? await state.manifest(display.current) : undefined;
-    await this.cloud.heartbeat({
+    const playback = this.host.status.playback;
+    if (display && playback === 'error' && this.lastPlayback !== 'error') {
+      await this.supervision.record(
+        'PLAYBACK_ERROR',
+        'error',
+        { manifest_id: this.host.status.manifest_id, content_ref: this.host.status.content_ref },
+        display,
+      );
+    }
+    this.lastPlayback = playback;
+    const ack = await this.cloud.heartbeat({
       uptime_seconds: Math.floor((Date.now() - this.started) / 1000),
       // Page masquée : timers ralentis par le navigateur, lecture non garantie.
       renderer: document.hidden ? 'degraded' : 'ok',
@@ -342,11 +455,12 @@ class WebPlayer {
               display_id: display.display_id,
               assignment_generation: display.assignment_generation,
               manifest_applied_version: applied?.version ?? null,
-              playback: this.host.status.playback,
+              playback,
             },
           ]
         : [],
     });
+    return ack.pending_commands ?? 0;
   }
 
   private async failed(error: unknown): Promise<number> {
@@ -358,6 +472,11 @@ class WebPlayer {
       this.host.player.dispose();
       await this.setNotice({ kind: 'revoked' });
       return 3_000;
+    }
+    if (observed.online !== false) {
+      await this.supervision.record('CLOUD_UNREACHABLE', 'warning', {
+        code: error instanceof CloudError ? error.code : 'NETWORK_UNAVAILABLE',
+      });
     }
     observed.online = false;
     observed.lastError = error instanceof CloudError ? error.code : String(error);
@@ -455,9 +574,10 @@ if (new URLSearchParams(location.search).has('status')) panel.hidden = false;
 async function main(): Promise<void> {
   await registerAppShell();
   await measureStorage();
-  const [config, trust] = await Promise.all([
+  const [config, trust, commandTrust] = await Promise.all([
     loadJson<{ api_url?: string }>('./config.json'),
-    loadTrust(),
+    loadTrust('./trust/manifest-keys.json'),
+    loadTrust('./trust/command-keys.json'),
   ]);
   if (trust.size === 0) {
     showAlert('Clés de confiance absentes : aucun contenu ne peut être accepté.');
@@ -472,7 +592,7 @@ async function main(): Promise<void> {
     return;
   }
   setupStart();
-  const player = new WebPlayer(identity, trust, config?.api_url ?? '');
+  const player = new WebPlayer(identity, trust, commandTrust, config?.api_url ?? '');
   player.renderPanel();
   await player.start();
 }

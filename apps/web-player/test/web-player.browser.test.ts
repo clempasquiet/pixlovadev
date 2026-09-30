@@ -15,7 +15,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildPublicApp } from '@pixlova/api';
 import { createTestServices, type TestServices } from '@pixlova/api/testing';
-import { DEFAULT_MEDIA_LIMITS, encodeBase64url } from '@pixlova/contracts';
+import { DEFAULT_MEDIA_LIMITS, encodeBase64url, publicKeyFromSecret } from '@pixlova/contracts';
 import { createTestDatabase, type TestDatabase } from '@pixlova/db/testing';
 import { manifestSignerFromSeed } from '@pixlova/scheduling/compiler';
 import {
@@ -74,6 +74,19 @@ beforeAll(async () => {
     join(root, 'dist/trust/manifest-keys.json'),
     JSON.stringify({ keys: [{ kid: KID, public_key: encodeBase64url(signer.publicKey) }] }),
   );
+  // Clé des commandes, distincte (ADR-014).
+  const commandKey = test.services.supervision.commandKey!;
+  await writeFile(
+    join(root, 'dist/trust/command-keys.json'),
+    JSON.stringify({
+      keys: [
+        {
+          kid: commandKey.kid,
+          public_key: encodeBase64url(publicKeyFromSecret(commandKey.secretKey)),
+        },
+      ],
+    }),
+  );
   process.env.PIXLOVA_API_URL = apiUrl;
   server = await preview({
     root,
@@ -91,6 +104,7 @@ afterAll(async () => {
   await api?.close();
   await database?.close();
   await rm(join(root, 'dist/trust/manifest-keys.json'), { force: true });
+  await rm(join(root, 'dist/trust/command-keys.json'), { force: true });
 });
 
 // --- Dashboard simulé par l’API --------------------------------------------------------
@@ -335,6 +349,60 @@ describe('Player Web (Chromium, API et worker réels)', () => {
     await expect.poll(() => panelData(page, 'online'), { timeout: 30_000 }).toBe('false');
     expect(await panelData(page, 'applied')).not.toBe('');
     await context.setOffline(false);
+    await context.close();
+  }, 240_000);
+
+  it('exécute les commandes signées et remonte statut et événements (L07)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const account = await Account.create('web-commands@example.test');
+    const page = await openPlayer(context);
+    const { playerId, displayId } = await pairAndAssign(account, page);
+    await account.publish(await account.image(320, 180));
+    await expect.poll(() => panelData(page, 'applied'), { timeout: 60_000 }).not.toBe('');
+    type Command = { id: string; status: string; result_code: string | null };
+    const commandStatus = async (id: string) =>
+      (await account.call<{ items: Command[] }>('GET', `/players/${playerId}/commands`)).items.find(
+        (c) => c.id === id,
+      );
+    const run = async (type: string, extra: Record<string, unknown> = {}) => {
+      const created = await account.call<Command>('POST', `/players/${playerId}/commands`, {
+        type,
+        ...extra,
+      });
+      return until(async () => {
+        const command = await commandStatus(created.id);
+        return command && ['success', 'failed', 'rejected'].includes(command.status)
+          ? command
+          : null;
+      }, 60);
+    };
+    expect((await run('GET_STATUS')).status).toBe('success');
+    expect((await run('CLEAR_UNUSED_CACHE')).status).toBe('success');
+    expect((await run('RELOAD_CONTENT', { display_id: displayId })).status).toBe('success');
+    const view = await account.call<{
+      health: { renderer: string; storage_persistent: boolean | null; metrics: unknown };
+      capture: { supported: string };
+    }>('GET', `/displays/${displayId}/supervision`);
+    expect(view.health.renderer).toMatch(/ok|degraded/);
+    expect(view.health.metrics).toMatchObject({ disk_free_bytes: null, cpu_percent: null });
+    expect(view.capture.supported).toBe('unsupported');
+    // Capture impossible dans un navigateur : refusée avant tout envoi.
+    await expect(account.call('POST', `/displays/${displayId}/screenshots`, {})).rejects.toThrow(
+      /CAPABILITY_UNSUPPORTED/,
+    );
+    // Événements du Player dans la timeline, avec boot et instant observé.
+    await until(async () => {
+      const timeline = await account.call<{ items: { type: string; source: string }[] }>(
+        'GET',
+        `/displays/${displayId}/timeline`,
+      );
+      return timeline.items.some((i) => i.type === 'PLAYER_STARTED' && i.source === 'player');
+    });
+    // RESTART_RENDERER : résultat transmis, puis rechargement de la page sans réexécution.
+    expect((await run('RESTART_RENDERER')).status).toBe('success');
+    await expect
+      .poll(() => page.locator('#surface img').getAttribute('src'), { timeout: 30_000 })
+      .toMatch(/^blob:/);
     await context.close();
   }, 240_000);
 
