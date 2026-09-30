@@ -143,6 +143,20 @@ Prérequis : Rust ([ADR-001](../architecture/adr/0001-outillage-workspace-versio
 
 L’installation sur une machine dédiée (service, session kiosk, mises à jour signées) est décrite dans [Qualification matérielle du Player natif](../quality/PLAYER-NATIF.md).
 
+## Essayer le Player Web
+
+1. Écrire la clé **publique** des manifests dans `apps/web-player/public/trust/manifest-keys.json` (même commande que pour le Player natif, avec ce chemin de sortie). Ce fichier est ignoré par Git.
+2. Démarrer le Player Web ; le serveur de développement relaie `/player/v1` et `/storage` vers l’API :
+
+   ```sh
+   pnpm --filter @pixlova/web-player run dev    # http://localhost:5173 est pris par le dashboard : Vite choisit le port suivant
+   ```
+
+3. Ouvrir l’adresse affichée : le code d’appairage s’affiche. Appairez-le, affectez sa sortie `browser` à un écran, puis publiez un planning.
+4. La touche `i` (ou `?status` dans l’adresse) affiche l’état : installation, protection de la clé, persistance et quota du stockage, manifest appliqué, dernière erreur.
+
+Le service worker n’est actif que sur une version construite (`pnpm --filter @pixlova/web-player run build` puis `preview`). Limites et matrice : [Qualification du Player Web](../quality/PLAYER-WEB.md).
+
 ## Arrêter et repartir de zéro
 
 ```sh

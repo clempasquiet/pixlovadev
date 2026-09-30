@@ -4,9 +4,8 @@
  * d’overrides sont respectées sans le cloud (NAT-011, PROTO-014).
  */
 import '@pixlova/render-engine/fonts.css';
-import { post, type HostMessage } from './bridge.js';
-import { renderNotice } from './notice.js';
-import { DisplayPlayer } from './player.js';
+import { DisplayPlayer, renderNotice, type HostMessage } from '@pixlova/player-core';
+import { post } from './bridge.js';
 
 const surface = document.querySelector<HTMLElement>('#surface')!;
 const noticeRoot = document.querySelector<HTMLElement>('#notice')!;
@@ -15,8 +14,9 @@ let player: DisplayPlayer | null = null;
 function receive(message: HostMessage): void {
   switch (message.type) {
     case 'configure': {
-      if (player) player.configure(message.display, message.asset_base);
-      else player = new DisplayPlayer(surface, message.display, message.asset_base);
+      const base = message.asset_base;
+      if (player) player.setAssetResolver((sha) => `${base}${sha}`);
+      else player = new DisplayPlayer(surface, post, (sha) => `${base}${sha}`);
       renderNotice(noticeRoot, message.display ? null : message.notice);
       if (!message.display) {
         // L’écran d’information est affiché : première image de cette fenêtre.

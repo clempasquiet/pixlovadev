@@ -14,10 +14,7 @@ import {
 const manifest = (
   JSON.parse(
     readFileSync(
-      resolve(
-        import.meta.dirname,
-        '../../../packages/contracts/fixtures/manifests/valid-led-2688x672.json',
-      ),
+      resolve(import.meta.dirname, '../../contracts/fixtures/manifests/valid-led-2688x672.json'),
       'utf8',
     ),
   ) as { payload: ManifestPayload }

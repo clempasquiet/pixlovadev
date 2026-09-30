@@ -1,0 +1,3 @@
+# Clés de confiance et configuration propres à un déploiement : produites à l’installation.
+public/trust/manifest-keys.json
+public/config.json

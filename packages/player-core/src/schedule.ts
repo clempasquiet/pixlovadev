@@ -4,7 +4,7 @@
  */
 import type { ManifestPayload } from '@pixlova/contracts';
 import { selectAt, type Selection } from '@pixlova/render-engine';
-import type { Playback } from './bridge.js';
+import type { Playback } from './messages.js';
 
 /** Réévaluation au plus tard toutes les 30 s (sauts d’horloge, reprise après veille). */
 export const MAX_WAIT_MS = 30_000;

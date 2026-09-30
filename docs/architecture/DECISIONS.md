@@ -26,6 +26,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-010](adr/0010-compositions-editeur-templates.md) | Document d’édition distinct du document résolu, six polices OFL empaquetées, brouillon à concurrence optimiste, versions immuables, validation avant publication, templates versionnés avec le code, comparaison Chromium / WebKitGTK | L04 |
 | [ADR-011](adr/0011-programmation-compilation-manifests.md) | Playlists et programmes (planning, campagne, override) en brouillon + versions immuables, heures locales et DST, arbitrage unique, compilation idempotente par révision désirée, préflight, états désiré/préparé/appliqué | L05 |
 | [ADR-012](adr/0012-player-natif-agent-cache-mises-a-jour.md) | Player natif : agent et renderer séparés, SQLite additive, cache SHA-256 épinglé, activation atomique confirmée par la première image, IPC local authentifié, watchdog, mises à jour signées avec lanceur A/B et retour arrière | L06-N |
+| [ADR-013](adr/0013-player-web.md) | Player Web : identité par profil navigateur (clé WebCrypto non extractible), clés de confiance livrées avec l’application, IndexedDB et Cache API vérifiée, quota et éviction, service worker d’application versionné, lecture partagée avec le natif (`@pixlova/player-core`), limites assumées | L06-W |
 
 ## ADR proposés (en attente de preuves)
 

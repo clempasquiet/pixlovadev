@@ -11,7 +11,9 @@ import {
   type Rendered,
 } from '@pixlova/render-engine/dom';
 import type { Selection } from '@pixlova/render-engine';
-import { post, type DisplayInfo, type Playback } from './bridge.js';
+import type { Emit, Playback } from './messages.js';
+
+export type AssetResolver = (sha256: string) => string;
 import { nextWakeMs, playbackOf, referencedAssets, selectNow, selectionKey } from './schedule.js';
 
 const PREPARE_TIMEOUT_MS = 60_000;
@@ -82,23 +84,44 @@ export class DisplayPlayer {
   private lastError: string | null = null;
   private pendingFrame: string | null = null;
 
+  private readonly interval: ReturnType<typeof setInterval>;
+
+  /**
+   * @param surface élément plein écran qui reçoit la scène
+   * @param emit messages vers l’hôte (préparé, première image, statut)
+   * @param resolveAsset URL locale d’un asset vérifié à partir de son SHA-256
+   */
   constructor(
     private readonly surface: HTMLElement,
-    private display: DisplayInfo | null,
-    private assetBase: string,
+    private readonly emit: Emit,
+    private resolveAsset: AssetResolver,
   ) {
-    setInterval(() => this.reportStatus(), STATUS_INTERVAL_MS);
+    this.interval = setInterval(() => this.reportStatus(), STATUS_INTERVAL_MS);
   }
 
-  configure(display: DisplayInfo | null, assetBase: string): void {
-    this.display = display;
-    this.assetBase = assetBase;
+  /** Arrête la lecture et libère les timers (fermeture, remplacement du Display). */
+  dispose(): void {
+    clearInterval(this.interval);
+    clearTimeout(this.timer);
+    this.current?.rendered.destroy();
+    this.surface.replaceChildren();
+    this.active = null;
+  }
+
+  /** Manifest affiché, s’il y en a un. */
+  get activeManifestId(): string | null {
+    return this.active?.id ?? null;
+  }
+
+  /** Change la résolution des assets (préfixe local fourni par l’hôte). */
+  setAssetResolver(resolveAsset: AssetResolver): void {
+    this.resolveAsset = resolveAsset;
   }
 
   private assetUrl(assets: Record<string, string>, assetId: string): string {
     const sha = assets[assetId];
     if (!sha) throw new PrepareError('ASSET_MISSING', assetId);
-    return `${this.assetBase}${sha}`;
+    return this.resolveAsset(sha);
   }
 
   /** Prépare sans afficher ; rejette si un élément nécessaire n’est pas utilisable. */
@@ -128,10 +151,10 @@ export class DisplayPlayer {
         if (key !== this.active?.id) this.prepared.delete(key);
       }
       this.prepared.set(id, { manifest, assets });
-      post({ type: 'prepared', manifest_id: id, error: null });
+      this.emit({ type: 'prepared', manifest_id: id, error: null });
     } catch (error) {
       const code = error instanceof PrepareError ? error.code : 'PREPARATION_FAILED';
-      post({
+      this.emit({
         type: 'prepared',
         manifest_id: id,
         error: { code, detail: error instanceof Error ? error.message.slice(0, 300) : '' },
@@ -143,7 +166,7 @@ export class DisplayPlayer {
   activate(id: string): void {
     const prepared = this.prepared.get(id);
     if (!prepared) {
-      post({
+      this.emit({
         type: 'prepared',
         manifest_id: id,
         error: { code: 'NOT_PREPARED', detail: id },
@@ -223,7 +246,7 @@ export class DisplayPlayer {
         previous?.layer.remove();
         if (this.pendingFrame === active.id && this.active?.id === active.id) {
           this.pendingFrame = null;
-          post({ type: 'frame', manifest_id: active.id });
+          this.emit({ type: 'frame', manifest_id: active.id });
         }
         this.reportStatus();
       }),
@@ -232,7 +255,7 @@ export class DisplayPlayer {
 
   reportStatus(): void {
     const selection = this.selection;
-    post({
+    this.emit({
       type: 'status',
       manifest_id: this.active?.id ?? null,
       playback: this.lastError ? 'error' : this.active ? this.playback : 'standby',

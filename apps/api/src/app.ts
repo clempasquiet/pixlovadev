@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie';
 import { LocalObjectStorage } from '@pixlova/storage';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { ApiError, registerErrorHandling } from './errors.js';
+import { registerPlayerCors } from './http/player-cors.js';
 import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
@@ -69,6 +70,7 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
 
 /** API des Players : jeton Bearer, aucun cookie, aucune route d’administration (API-001). */
 async function playerV1(app: FastifyInstance, services: Services): Promise<void> {
+  registerPlayerCors(app, services.security.webPlayerOrigins);
   playerApiRoutes(app, services);
 }
 
@@ -90,7 +92,11 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
     void app.register((instance) => playerV1(instance, services), { prefix: '/player/v1' });
     if (services.storage instanceof LocalObjectStorage) {
       const storage = services.storage;
-      void app.register((instance) => localStorageRoutes(instance, storage));
+      void app.register(async (instance) => {
+        // Lecture des assets par un Player Web d’une autre origine (ADR-013).
+        registerPlayerCors(instance, services.security.webPlayerOrigins);
+        await localStorageRoutes(instance, storage);
+      });
     }
   }
   return app;

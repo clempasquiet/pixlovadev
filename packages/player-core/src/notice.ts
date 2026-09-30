@@ -1,5 +1,5 @@
 /** Écrans d’information hors diffusion : appairage, révocation, attente. */
-import type { Notice } from './bridge.js';
+import type { Notice } from './messages.js';
 
 export function renderNotice(root: HTMLElement, notice: Notice | null): void {
   if (!notice) {

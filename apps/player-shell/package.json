@@ -2,17 +2,17 @@
   "name": "@pixlova/player-shell",
   "version": "0.1.0",
   "private": true,
-  "description": "Page de lecture du Player (renderer natif, puis Player Web) : exécute localement un manifest vérifié avec le moteur de rendu partagé.",
+  "description": "Page de lecture du renderer natif : relaie l’IPC de la WebView vers la lecture partagée (@pixlova/player-core).",
   "type": "module",
   "scripts": {
     "build": "vite build",
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/schedule.test.ts",
     "test:browser": "vitest run test/shell.browser.test.ts"
   },
   "dependencies": {
     "@pixlova/contracts": "workspace:*",
+    "@pixlova/player-core": "workspace:*",
     "@pixlova/render-engine": "workspace:*"
   },
   "devDependencies": {
