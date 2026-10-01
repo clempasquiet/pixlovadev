@@ -119,7 +119,7 @@ Garde-fous :
 - **Plusieurs réplicas** : l’API et le worker doivent être sans état local pour tourner derrière le répartiteur. La file de tâches PostgreSQL à bail (ADR-009) est déjà faite pour plusieurs workers ; les autres états en mémoire (limites de débit, caches, sessions) sont à **vérifier** avant la mise en production et à déplacer vers Redis ou PostgreSQL si besoin. Ce point est un prérequis du lot de mise en production, pas du découpage.
 - **Ordre entre dépôts** : un changement qui touche l’API et un Player passe d’abord par `platform`, compatible avec les deux versions, puis par le Player (règle de version de `@pixlova/contracts`).
 - **Player natif** : pas de déploiement automatique sur les écrans. Un tag `vX.Y.Z` de `player-natif` construit, signe et dépose le paquet en **brouillon** ; la publication aux Players reste une action de l’administration avec TOTP et périmètre (ADR-019).
-- **Choix ouverts** : fournisseur cloud, Kubernetes géré ou non, Argo CD ou Flux, stockage S3 du fournisseur ou autre. Ils relèvent du lot de mise en production et ne bloquent pas le découpage : le format de `build` reste le même.
+- **Choix ouverts** : fournisseur cloud, Kubernetes géré ou non, Argo CD ou Flux, stockage S3 du fournisseur ou autre. Ils relèvent du lot de mise en production et ne bloquent pas le découpage : la structure de `deploy/` reste la même.
 
 ### Ordre de migration
 
