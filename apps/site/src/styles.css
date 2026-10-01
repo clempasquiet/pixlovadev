@@ -950,8 +950,36 @@ th:first-child {
   max-width: 1100px;
   margin-bottom: 28px;
 }
-.page-hero.legal p + p {
-  margin-top: 28px;
+.legal-body {
+  padding: 0 0 96px;
+}
+.legal-body .wrap > section {
+  max-width: 760px;
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
+}
+.legal-body h2 {
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+.legal-body p + p {
+  margin-top: 14px;
+}
+.legal-body ul {
+  padding-left: 20px;
+  list-style: square;
+}
+.legal-body li + li {
+  margin-top: 10px;
+}
+.legal-body a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+mark.todo {
+  background: var(--rose);
+  color: var(--ink);
+  padding: 0 2px;
 }
 .features-sec {
   padding-top: 0;

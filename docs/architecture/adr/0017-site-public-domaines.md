@@ -1,6 +1,6 @@
 # ADR-017 — Site public : génération statique, conteneur dédié et répartition des domaines
 
-- Statut : **acceptée** pour l’application, son conteneur et ses règles de publication. La répartition des domaines est **proposée** : elle doit être validée par le responsable produit avant toute configuration DNS ou certificat.
+- Statut : **acceptée**. La répartition des domaines a été validée par le responsable produit le 2026-10-01.
 - Date : 2026-10-01
 - Ticket / lot : [L09-M #13](https://github.com/clempasquiet/pixlovadev/issues/13)
 - Exigences concernées : WEB-001, WEB-002, WEB-003, WEB-004, ARC-008, DEC-01, DOC-010 (comparaison des Players avant installation), PAR-001 (liens d’inscription)
@@ -15,7 +15,7 @@ D’autres contraintes s’ajoutent :
 - les tarifs affichés ne doivent pas diverger de Checkout (WEB-001) ;
 - aucune fonction V1.5/V2, aucun essai ni remise annuelle ne doit être présenté comme disponible (WEB-003) ;
 - accessibilité clavier, responsive, métadonnées, sitemap et page d’erreur sont exigés (WEB-004) ;
-- le domaine principal entre pixlova.com et pixlova.fr reste à choisir (DEC-01).
+- le domaine principal entre pixlova.com et pixlova.fr devait être choisi (DEC-01).
 
 La maquette de la page d’accueil a été validée en PNG par le responsable produit le 2026-10-01, avec la charte de la marque (plaquette pixlova).
 
@@ -52,7 +52,7 @@ Sans JavaScript, les pages restent complètes et navigables.
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `PIXLOVA_SITE_ORIGIN` | Liens canoniques, sitemap | `https://pixlova.com` (proposition ci-dessous) |
+| `PIXLOVA_SITE_ORIGIN` | Liens canoniques, sitemap | `https://www.pixlova.com` |
 | `PIXLOVA_SITE_APP_URL` | Liens « Connexion » (`/login`) et « Créer un compte » (`/register`) | `https://app.pixlova.com` |
 | `PIXLOVA_SITE_STATUS_URL` | Lien « État du service » | absent : aucun lien n’est affiché |
 | `PIXLOVA_SITE_INDEXABLE` | `true` autorise l’indexation | `false` : `noindex` sur toutes les pages et `robots.txt` refuse tout |
@@ -63,7 +63,7 @@ L’indexation doit être activée explicitement, pour la seule production : une
 
 **Pages livrées** : accueil, fonctionnalités, Player natif & Web, cas d’usage, tarifs, FAQ, mentions légales, CGV, confidentialité, accord de traitement des données, et 404.
 
-**Pages légales.** Elles n’affichent qu’un gabarit « en cours de rédaction et de validation », sans identité juridique ni clause. Elles restent `noindex` et hors du sitemap jusqu’au texte validé.
+**Pages légales.** Ce sont des modèles génériques (`src/legal.tsx`), demandés par le responsable produit le 2026-10-01 en attendant les textes définitifs. L’identité de l’éditeur, l’hébergeur, les durées et le plafond de responsabilité y sont des champs entre crochets, visibles dans la page : aucune identité juridique n’est inventée. Les clauses reprennent les règles du cahier des charges (renouvellement, diminution à échéance, résiliation vers Free sans suppression des données, rôle de sous-traitant). Les pages restent `noindex` et hors du sitemap jusqu’aux textes validés.
 
 **Pages reportées.** La documentation produit et l’état du service ne sont pas livrés :
 
@@ -101,25 +101,29 @@ S’y ajoutent HSTS, `nosniff`, `Referrer-Policy` et `Permissions-Policy`.
 
 Le site ne pose aucun cookie et ne charge aucun outil de mesure d’audience. Leur choix relève de la conception RGPD (WEB-004).
 
-### Répartition des domaines — **proposée, à valider avant DNS**
+### Répartition des domaines — validée le 2026-10-01
 
 | Hostname | Rôle |
 |---|---|
-| `pixlova.com` | Site public, origine canonique |
-| `www.pixlova.com` | Redirection 301 vers `https://pixlova.com`, chemin conservé |
-| `pixlova.fr`, `www.pixlova.fr` | Redirection 301 vers `https://pixlova.com`, chemin conservé |
-| `app.pixlova.com` | Dashboard, Player Web (`/play/`), API (`/api`, `/player`) sur une origine unique, comme en recette |
+| `www.pixlova.com` | Site public, origine canonique |
+| `pixlova.com` | Redirection 301 vers `https://www.pixlova.com`, chemin conservé |
+| `pixlova.fr`, `www.pixlova.fr` | Redirection 301 vers `https://www.pixlova.com`, chemin conservé |
+| `app.pixlova.com` | Dashboard |
+| `player.pixlova.com` | Player Web |
+| `api.pixlova.com` | API HTTP et canal WSS des Players (PROTO-005) |
+| `update.pixlova.com` | Distribution des mises à jour signées du Player natif (SEC-011) |
 | `status.pixlova.com` | État du service, hébergé hors du serveur principal (fournisseur à choisir) |
 
-Motifs de la proposition :
+Les redirections se configurent chez Cloudflare (règles de redirection), sans serveur supplémentaire. Une seule origine canonique évite le contenu dupliqué ; le `.fr` reste protégé et utile en communication, sans second site à maintenir.
 
-- `.com` sert déjà d’exemple à ARC-008 et aux identifiants de schéma ([ADR-003](0003-contrats-signature-fixtures.md)) ;
-- une seule origine canonique évite le contenu dupliqué ;
-- le `.fr` reste protégé et utile en communication, sans second site à maintenir.
+Cette répartition reprend les rôles `www`, `app`, `api` et `player` d’ARC-008. Elle diffère de la recette, où dashboard, Player Web et API partagent une origine unique ([ADR-015](0015-infrastructure-recette.md)). Séparer ces origines en production demande un travail hors de ce lot, à mener avant la mise en production :
 
-Les redirections se configurent chez Cloudflare (règles de redirection), sans serveur supplémentaire.
+- politique CORS explicite de l’API pour `app` et `player` ;
+- portée des cookies de session et protection CSRF entre origines ;
+- configuration des URL d’API dans le dashboard, le Player Web et l’agent natif ;
+- routes du tunnel et certificats pour chaque hostname.
 
-Les sous-domaines `api` et `player` d’ARC-008 restent possibles si l’origine unique est abandonnée. Il faudrait alors une politique CORS explicite.
+Le site public ne dépend que de `app.pixlova.com` (`/login`, `/register`) et, quand elle existera, de `status.pixlova.com`.
 
 Aucune publication DNS, aucun certificat et aucun achat n’est réalisé par ce lot.
 
@@ -154,9 +158,8 @@ Aucune publication DNS, aucun certificat et aucun achat n’est réalisé par ce
 
 **À valider par le responsable produit** :
 
-- la répartition des domaines ;
 - les prix, quotas et libellés commerciaux (« 1 écran gratuit, sans carte bancaire », mise en avant de Pro) ;
-- les textes légaux et l’identité de l’éditeur ;
+- les textes légaux définitifs et l’identité de l’éditeur ;
 - l’hébergement de la page d’état.
 
-**Réexamen** si le site doit servir du contenu dynamique (blog éditable, documentation versionnée), si le catalogue L08 impose une publication à chaud sans rebuild, ou si le domaine principal retenu diffère.
+**Réexamen** si le site doit servir du contenu dynamique (blog éditable, documentation versionnée), si le catalogue L08 impose une publication à chaud sans rebuild, ou si la répartition des domaines change.

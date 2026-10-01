@@ -20,7 +20,7 @@ function plan(key: string) {
 describe('configuration', () => {
   it('applique les valeurs par défaut sans indexation', () => {
     expect(readConfig({})).toEqual({
-      origin: 'https://pixlova.com',
+      origin: 'https://www.pixlova.com',
       appUrl: 'https://app.pixlova.com',
       statusUrl: undefined,
       indexable: false,
@@ -115,6 +115,20 @@ describe('pages générées', () => {
     expect(sitemap(config)).not.toContain('mentions-legales');
     expect(sitemap(config)).toContain('<loc>https://site.test/tarifs/</loc>');
     expect(robots(config)).toContain('Sitemap: https://site.test/sitemap.xml');
+  });
+
+  it('publient des textes légaux génériques sans identité juridique inventée', () => {
+    for (const path of [
+      '/mentions-legales/',
+      '/cgv/',
+      '/confidentialite/',
+      '/traitement-des-donnees/',
+    ]) {
+      const html = pages.find((p) => p.page.path === path)!.html;
+      expect(html, path).toContain('<mark class="todo">[Raison sociale]</mark>');
+      expect(html.match(/<h2>/g)?.length ?? 0, path).toBeGreaterThanOrEqual(4);
+      expect(html, path).not.toMatch(/\b\d{9}\b/);
+    }
   });
 
   it('refusent l’indexation hors production', () => {

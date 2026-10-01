@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Catalog } from './catalog.js';
 import type { SiteConfig } from './config.js';
 import type { PageMeta } from './layout.js';
-import { appLinks } from './layout.js';
+import { LEGAL_DOCUMENTS, type LegalDocument } from './legal.js';
 import type { Question } from './sections.js';
 import {
   Compare,
@@ -307,46 +307,45 @@ export const PAGES: readonly Page[] = [
       </>
     ),
   },
-  ...(
-    [
-      ['/mentions-legales/', 'Mentions légales'],
-      ['/cgv/', 'Conditions générales de vente'],
-      ['/confidentialite/', 'Politique de confidentialité'],
-      ['/traitement-des-donnees/', 'Accord de traitement des données'],
-    ] as const
-  ).map(([path, title]): Page => ({
-    path,
-    title,
-    description: `${title} de pixlova.`,
+  ...LEGAL_DOCUMENTS.map((doc): Page => ({
+    path: doc.path,
+    title: doc.title,
+    description: doc.description,
     noindex: true,
-    render: ({ config }) => <PendingLegal title={title} config={config} />,
+    render: () => <LegalPage doc={doc} />,
   })),
 ];
 
 /**
- * Pages légales : aucune identité juridique, aucune clause inventée (critère de recette
- * L09-M). Le texte validé remplace ce gabarit ; la page reste exclue de l’index d’ici là.
+ * Pages légales : modèles génériques dont les champs à compléter restent visibles. Aucune
+ * identité juridique n’est inventée ; les pages restent exclues de l’index jusqu’à la
+ * validation des textes définitifs.
  */
-function PendingLegal(props: { title: string; config: SiteConfig }) {
+function LegalPage(props: { doc: LegalDocument }) {
+  const { doc } = props;
   return (
-    <section className="page-hero legal" aria-labelledby="titre">
-      <div className="wrap">
-        <p className="mono kicker">Informations légales</p>
-        <h1 id="titre">{props.title}</h1>
-        <p className="lede">
-          Ce document est en cours de rédaction et de validation. Il sera publié ici avant toute
-          ouverture commerciale du service.
-        </p>
-        <p>
-          <a className="btn" href="/">
-            Retour à l’accueil
-          </a>{' '}
-          <a className="btn" href={appLinks(props.config).login}>
-            Connexion
-          </a>
-        </p>
-      </div>
-    </section>
+    <>
+      <section className="page-hero legal" aria-labelledby="titre">
+        <div className="wrap">
+          <p className="mono kicker">Informations légales</p>
+          <h1 id="titre">{doc.title}</h1>
+          <p className="lede">
+            Modèle générique en cours de finalisation. Les champs entre crochets seront complétés
+            avant l’ouverture commerciale du service.
+          </p>
+        </div>
+      </section>
+      <section className="legal-body">
+        <div className="wrap">
+          {doc.sections.map((section) => (
+            <section key={section.title}>
+              <h2>{section.title}</h2>
+              {section.body}
+            </section>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 

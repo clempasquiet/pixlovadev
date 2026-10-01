@@ -13,7 +13,7 @@ export interface SiteConfig {
   readonly indexable: boolean;
 }
 
-export const DEFAULT_ORIGIN = 'https://pixlova.com';
+export const DEFAULT_ORIGIN = 'https://www.pixlova.com';
 export const DEFAULT_APP_URL = 'https://app.pixlova.com';
 
 function origin(name: string, value: string | undefined, fallback: string | undefined) {

@@ -32,7 +32,7 @@ Cette arborescence est une cible. L00 crée les workspaces réels, leurs command
 - Les APIs publiques ne portent pas les routes internes d’administration.
 - La programmation est compilée au cloud ; les Players appliquent des manifests signés et des assets vérifiés.
 - Le renderer partage le moteur visuel et ne reçoit pas les credentials de l’agent.
-- Les domaines pixlova.com et pixlova.fr sont confirmés. L’[ADR-017](adr/0017-site-public-domaines.md) propose `pixlova.com` comme domaine canonique, le `.fr` en redirection et `app.pixlova.com` pour le dashboard ; à valider avant DNS.
+- Les domaines pixlova.com et pixlova.fr sont confirmés. Leur répartition est validée dans l’[ADR-017](adr/0017-site-public-domaines.md) : `www.pixlova.com` canonique, le reste en redirection, et `app`, `player`, `api`, `update` et `status` pour les surfaces applicatives.
 
 ## Décider avant d’implémenter
 
