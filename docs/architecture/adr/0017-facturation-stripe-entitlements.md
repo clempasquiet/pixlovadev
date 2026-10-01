@@ -63,6 +63,7 @@ Les quotas (Displays, utilisateurs, stockage, templates) étaient fixés à l’
 - **Annulation hors parcours** (portail, tableau de bord Stripe, DEC-20) : aucun Display n’est choisi au hasard. Tous restent actifs, le dépassement est signalé (`over_capacity`) et bloque les nouvelles activations.
   - La préférence `preferred_free_display_id` et la suspension des nouvelles publications proposées par DEC-20 restent **à ratifier**.
 - Le changement de périodicité ou de devise est refusé tant qu’aucun tarif annuel n’est validé (BILL-016).
+- Validé par le responsable produit le 2026-10-01 : hausse immédiate, baisse et annulation à l’échéance, annulation hors parcours sans désactivation (`over_capacity`).
 
 ### Projection et webhooks
 
