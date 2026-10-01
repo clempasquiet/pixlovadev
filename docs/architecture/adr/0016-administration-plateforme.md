@@ -30,7 +30,7 @@ L’équipe pixlova doit pouvoir diagnostiquer les organisations, aider un clien
 |---|---|
 | SuperAdmin | Toutes, dont gestion de l’équipe, réinitialisation du second facteur et désactivation d’un compte client |
 | Support | Organisations et diagnostic du parc, droits appliqués, recherche d’un compte par adresse exacte, révocation des sessions, incidents, tâches en échec |
-| BillingAdmin | Organisations et droits appliqués (abonnements : L08) |
+| BillingAdmin | Organisations et droits appliqués ; facturation en lecture (`platform.billing.read` : abonnements, demandes, codes promotionnels, événements Stripe, [ADR-017](0017-facturation-stripe-entitlements.md)) |
 | Operator (`operations`) | Santé, organisations et parc, incidents, tâches en échec et relance |
 | ContentAdmin | Catalogue de templates (versionné avec le code, ADR-010) |
 
@@ -129,6 +129,6 @@ L’équipe pixlova doit pouvoir diagnostiquer les organisations, aider un clien
 **Non couvert.** L’accès distant par Cloudflare One et un poste enrôlé n’a pas été exercé ici, faute de compte Zero Trust.
 
 **Réexamen.** Il interviendra :
-- avec L08 (vues abonnements et promotions, BillingAdmin) ;
+- avec L08 : vues abonnements et promotions livrées (ADR-017) ; actions de facturation (dérogations, remboursements) encore absentes ;
 - avec un registre de releases ;
 - avant la production (durées de session, matrice des rôles, information des clients sur les consultations, WebAuthn).

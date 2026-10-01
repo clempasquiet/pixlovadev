@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, lt, lte, or, sql } from 'drizzle-orm';
 import type { BillingEnvironment } from '@pixlova/contracts';
 import { schema, type Database, type Transaction } from '@pixlova/db';
+import { settleSubscriptionChanges } from './changes.js';
 import type { BillingGateway, GatewaySubscription } from './gateway.js';
 
 /** Dépendances de la synchronisation : rôle système (inter-tenants nommé, ADR-004). */
@@ -210,6 +211,8 @@ export async function syncCustomer(
           canceledAt: subscription.canceledAt,
           endedAt: subscription.endedAt,
           graceUntil,
+          stripeScheduleId: subscription.scheduleId,
+          pendingUpdate: subscription.pendingUpdate,
           lastSyncedAt: now,
           updatedAt: now,
         };
@@ -229,6 +232,13 @@ export async function syncCustomer(
           .returning({ id: schema.subscriptions.id });
         await recordDiscounts(tx, organizationId, environment, row!.id, subscription);
         await settleChange(tx, organizationId, subscription, now);
+        await settleSubscriptionChanges(
+          tx,
+          row!.id,
+          subscription,
+          { planPriceId: resolved.price.id, extra: resolved.extra },
+          now,
+        );
         const changed =
           !previous ||
           previous.stripeStatus !== subscription.status ||
@@ -311,6 +321,22 @@ export async function reconcileOpenChanges(
     );
   let settled = 0;
   for (const change of open) {
+    if (change.kind !== 'subscribe') {
+      // Appel Stripe d’une modification jamais abouti (panne, arrêt) : demande close.
+      if (change.status !== 'requested') continue;
+      if (now.getTime() - change.createdAt.getTime() < 60 * 60 * 1000) continue;
+      await ctx.db
+        .update(schema.billingChanges)
+        .set({ status: 'failed', failureReason: 'provider_call_not_completed', updatedAt: now })
+        .where(
+          and(
+            eq(schema.billingChanges.id, change.id),
+            eq(schema.billingChanges.status, 'requested'),
+          ),
+        );
+      settled += 1;
+      continue;
+    }
     if (!change.stripeCheckoutSessionId) {
       if (now.getTime() - change.createdAt.getTime() < 60 * 60 * 1000) continue;
       await ctx.db
@@ -366,7 +392,14 @@ export async function customersToReconcile(
       and(
         eq(schema.billingChanges.organizationId, schema.billingCustomers.organizationId),
         eq(schema.billingChanges.environment, schema.billingCustomers.environment),
-        inArray(schema.billingChanges.status, ['requested', 'pending_payment']),
+        or(
+          inArray(schema.billingChanges.status, ['requested', 'pending_payment']),
+          // Échéance d’une baisse ou d’une annulation : constater l’effet sans attendre.
+          and(
+            eq(schema.billingChanges.status, 'scheduled'),
+            lte(schema.billingChanges.effectiveAt, now),
+          ),
+        ),
       ),
     )
     .where(

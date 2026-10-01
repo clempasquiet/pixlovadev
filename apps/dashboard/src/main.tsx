@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppLayout, RequireSession } from './layout.js';
 import { AccountPage } from './pages/account.js';
+import { BillingPage } from './pages/billing.js';
 import { DisplayDetailPage, DisplaysPage, PlayersPage } from './pages/fleet.js';
 import { FleetOverviewPage, IncidentsPage } from './pages/supervision.js';
 import { LibraryPage } from './pages/library.js';
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
           { path: 'sites', element: <SitesPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'audit', element: <AuditPage /> },
+          { path: 'billing', element: <BillingPage /> },
           { path: 'account', element: <AccountPage /> },
         ],
       },

@@ -1,3 +1,4 @@
+import type { BillingEnvironment } from '@pixlova/contracts';
 import type { Database } from '@pixlova/db';
 import type { DataCipher } from '../lib/crypto.js';
 import type { EntitlementsProvider } from '../lib/entitlements.js';
@@ -12,6 +13,8 @@ export interface AdminServices {
   limiter: RateLimiter;
   /** Même source des droits que l’API : la vue montre ce qui est réellement appliqué. */
   entitlements: EntitlementsProvider;
+  /** Environnement Stripe consulté (ADR-017) ; `test` par défaut. */
+  billingEnvironment?: BillingEnvironment;
   config: AdminConfig;
   now(): Date;
 }

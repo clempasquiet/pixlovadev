@@ -95,6 +95,7 @@ export function AppLayout() {
             <NavLink to="/sites">Sites</NavLink>
             <NavLink to="/members">Membres</NavLink>
             <NavLink to="/audit">Journal d’audit</NavLink>
+            <NavLink to="/billing">Abonnement</NavLink>
           </nav>
         )}
         <main className="content">

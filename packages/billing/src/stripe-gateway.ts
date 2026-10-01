@@ -6,9 +6,13 @@ import {
   type BillingGateway,
   type CheckoutSession,
   type CheckoutSessionInput,
+  type DesiredItem,
   type GatewayDiscount,
   type GatewayEvent,
   type GatewaySubscription,
+  type SubscriptionItemsChange,
+  type UpgradePreview,
+  itemsDiff,
 } from './gateway.js';
 
 /**
@@ -26,6 +30,11 @@ export interface StripeGatewayConfig {
   webhookSecret: string;
   /** Délai d’une requête Stripe ; un appel ne bloque jamais une action utilisateur. */
   timeoutMs?: number;
+  /**
+   * Recette uniquement : chaque nouveau client est rattaché à une horloge de test Stripe,
+   * avançable depuis le tableau de bord (échéances, relances). Refusé avec une clé live.
+   */
+  testClocks?: boolean;
 }
 
 /** Mode déduit de la clé : une clé de test ne peut jamais débiter réellement. */
@@ -84,8 +93,12 @@ export function subscriptionOf(subscription: Stripe.Subscription): GatewaySubscr
     discounts: subscription.discounts
       .map(discountOf)
       .filter((d): d is GatewayDiscount => d !== null),
+    scheduleId: idOf(subscription.schedule),
+    pendingUpdate: subscription.pending_update !== null,
   };
 }
+
+const unix = (date: Date) => Math.floor(date.getTime() / 1000);
 
 function checkoutOf(session: Stripe.Checkout.Session): CheckoutSession {
   return {
@@ -116,6 +129,9 @@ export class StripeGateway implements BillingGateway {
 
   constructor(private readonly config: StripeGatewayConfig) {
     this.environment = environmentOfKey(config.secretKey);
+    if (config.testClocks && this.environment !== 'test') {
+      throw new Error('Les horloges de test Stripe exigent une clé de test.');
+    }
     if (!config.webhookSecret.startsWith('whsec_')) {
       throw new Error('Secret de webhook Stripe invalide (whsec_ attendu).');
     }
@@ -131,11 +147,21 @@ export class StripeGateway implements BillingGateway {
     input: { organizationId: string; name: string; email: string | null },
     idempotencyKey: string,
   ): Promise<{ id: string }> {
+    const clock = this.config.testClocks
+      ? await this.client.testHelpers.testClocks.create(
+          {
+            frozen_time: Math.floor(Date.now() / 1000),
+            name: `pixlova ${input.organizationId}`.slice(0, 300),
+          },
+          { idempotencyKey: `${idempotencyKey}:clock` },
+        )
+      : null;
     const customer = await this.client.customers.create(
       {
         name: input.name,
         ...(input.email ? { email: input.email } : {}),
         metadata: { organization_id: input.organizationId },
+        ...(clock ? { test_clock: clock.id } : {}),
       },
       { idempotencyKey },
     );
@@ -190,6 +216,118 @@ export class StripeGateway implements BillingGateway {
       result.push(subscriptionOf(subscription));
     }
     return result;
+  }
+
+  private async subscription(id: string): Promise<GatewaySubscription> {
+    return subscriptionOf(await this.client.subscriptions.retrieve(id));
+  }
+
+  async previewUpgrade(input: SubscriptionItemsChange): Promise<UpgradePreview> {
+    const current = await this.subscription(input.subscriptionId);
+    const invoice = await this.client.invoices.createPreview({
+      customer: input.customerId,
+      subscription: input.subscriptionId,
+      subscription_details: {
+        items: itemsDiff(current.items, input.items),
+        proration_behavior: 'always_invoice',
+        proration_date: unix(input.prorationDate),
+      },
+    });
+    return {
+      amountDueMinor: invoice.amount_due,
+      currency: invoice.currency,
+      prorationDate: input.prorationDate,
+    };
+  }
+
+  async upgradeSubscription(
+    input: SubscriptionItemsChange,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription> {
+    const current = await this.subscription(input.subscriptionId);
+    // `pending_if_incomplete` n’accepte pas de métadonnées : la demande est identifiée par
+    // ses lignes cibles lors de la projection.
+    const updated = await this.client.subscriptions.update(
+      input.subscriptionId,
+      {
+        items: itemsDiff(current.items, input.items),
+        proration_behavior: 'always_invoice',
+        proration_date: unix(input.prorationDate),
+        payment_behavior: 'pending_if_incomplete',
+      },
+      { idempotencyKey },
+    );
+    return subscriptionOf(updated);
+  }
+
+  async scheduleDowngrade(
+    input: { subscriptionId: string; items: DesiredItem[]; metadata: Record<string, string> },
+    idempotencyKey: string,
+  ): Promise<{ scheduleId: string; effectiveAt: Date }> {
+    const current = await this.client.subscriptions.retrieve(input.subscriptionId);
+    const scheduleId =
+      idOf(current.schedule) ??
+      (
+        await this.client.subscriptionSchedules.create(
+          { from_subscription: input.subscriptionId },
+          { idempotencyKey: `${idempotencyKey}:create` },
+        )
+      ).id;
+    const schedule = await this.client.subscriptionSchedules.retrieve(scheduleId);
+    const phase = schedule.current_phase
+      ? schedule.phases.find((p) => p.start_date === schedule.current_phase!.start_date)
+      : schedule.phases[0];
+    if (!phase) throw new Error('Planification Stripe sans phase courante.');
+    const interval = current.items.data[0]?.price.recurring;
+    const updated = await this.client.subscriptionSchedules.update(
+      scheduleId,
+      {
+        end_behavior: 'release',
+        metadata: input.metadata,
+        phases: [
+          {
+            items: phase.items.map((item) => ({
+              price: idOf(item.price)!,
+              quantity: item.quantity ?? 1,
+            })),
+            start_date: phase.start_date,
+            end_date: phase.end_date,
+            proration_behavior: 'none',
+          },
+          {
+            items: input.items.filter((item) => item.quantity > 0),
+            duration: {
+              interval: interval?.interval === 'year' ? 'year' : 'month',
+              interval_count: interval?.interval_count ?? 1,
+            },
+            proration_behavior: 'none',
+          },
+        ],
+      },
+      { idempotencyKey },
+    );
+    return { scheduleId: updated.id, effectiveAt: new Date(phase.end_date * 1000) };
+  }
+
+  async releaseSchedule(scheduleId: string): Promise<void> {
+    const schedule = await this.client.subscriptionSchedules.retrieve(scheduleId);
+    if (schedule.status === 'active' || schedule.status === 'not_started') {
+      await this.client.subscriptionSchedules.release(scheduleId);
+    }
+  }
+
+  async setCancelAtPeriodEnd(
+    subscriptionId: string,
+    cancel: boolean,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription> {
+    return subscriptionOf(
+      await this.client.subscriptions.update(
+        subscriptionId,
+        { cancel_at_period_end: cancel },
+        { idempotencyKey },
+      ),
+    );
   }
 
   verifyWebhook(rawBody: Buffer, signature: string): GatewayEvent {

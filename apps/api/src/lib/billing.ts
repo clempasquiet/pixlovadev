@@ -55,9 +55,11 @@ export function billingEnvironmentFromEnv(env: NodeJS.ProcessEnv): BillingEnviro
 export function billingFromEnv(
   env: NodeJS.ProcessEnv,
   deployment: Deployment,
-  createGateway: (config: { secretKey: string; webhookSecret: string }) => BillingGateway = (
-    config,
-  ) => new StripeGateway(config),
+  createGateway: (config: {
+    secretKey: string;
+    webhookSecret: string;
+    testClocks: boolean;
+  }) => BillingGateway = (config) => new StripeGateway(config),
 ): BillingConfig {
   const secretKey = env.STRIPE_SECRET_KEY;
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
@@ -70,7 +72,12 @@ export function billingFromEnv(
       'La facturation Stripe de production est interdite hors déploiement production.',
     );
   }
-  const gateway = secretKey && webhookSecret ? createGateway({ secretKey, webhookSecret }) : null;
+  const testClocks = env.PIXLOVA_STRIPE_TEST_CLOCKS === 'true';
+  if (testClocks && (environment !== 'test' || deployment === 'production')) {
+    throw new Error('PIXLOVA_STRIPE_TEST_CLOCKS est réservé au mode test hors production.');
+  }
+  const gateway =
+    secretKey && webhookSecret ? createGateway({ secretKey, webhookSecret, testClocks }) : null;
   return {
     gateway,
     environment,

@@ -12,9 +12,12 @@ import {
   type BillingGateway,
   type CheckoutSession,
   type CheckoutSessionInput,
+  type DesiredItem,
   type GatewayDiscount,
   type GatewayEvent,
   type GatewaySubscription,
+  type SubscriptionItemsChange,
+  type UpgradePreview,
 } from './gateway.js';
 import { gatewayEventOf } from './stripe-gateway.js';
 
@@ -35,10 +38,25 @@ export class FakeStripeGateway implements BillingGateway {
   readonly customers = new Map<string, { id: string; organizationId: string; name: string }>();
   readonly sessions = new Map<string, StoredSession>();
   readonly subscriptions = new Map<string, GatewaySubscription>();
+  /** Planifications de baisse : lignes appliquées à l’échéance. */
+  readonly schedules = new Map<
+    string,
+    { subscriptionId: string; items: DesiredItem[]; metadata: Record<string, string> }
+  >();
+  /** Montant unitaire mensuel des prix connus, pour le calcul du prorata simulé. */
+  readonly unitAmounts = new Map<string, number>();
   /** Nombre d’appels par opération (contrôle des doublons). */
-  readonly calls = { createCustomer: 0, createCheckoutSession: 0, listSubscriptions: 0 };
+  readonly calls = {
+    createCustomer: 0,
+    createCheckoutSession: 0,
+    listSubscriptions: 0,
+    upgradeSubscription: 0,
+    scheduleDowngrade: 0,
+  };
   /** Simule une indisponibilité de Stripe pour les `n` prochains appels. */
   outages = 0;
+  /** Simule le refus du prochain paiement d’une hausse (SCA, carte refusée). */
+  declineNextPayment = false;
   private readonly idempotency = new Map<string, unknown>();
 
   constructor(
@@ -125,6 +143,131 @@ export class FakeStripeGateway implements BillingGateway {
       .map((subscription) => structuredClone(subscription));
   }
 
+  private recurring(items: readonly { priceId?: string; price?: string; quantity: number }[]) {
+    return items.reduce(
+      (sum, item) => sum + (this.unitAmounts.get(item.priceId ?? item.price!) ?? 0) * item.quantity,
+      0,
+    );
+  }
+
+  private stored(subscriptionId: string): GatewaySubscription {
+    const subscription = this.subscriptions.get(subscriptionId);
+    if (!subscription) throw new Error(`Abonnement inconnu : ${subscriptionId}`);
+    return subscription;
+  }
+
+  async previewUpgrade(input: SubscriptionItemsChange): Promise<UpgradePreview> {
+    this.guard();
+    const subscription = this.stored(input.subscriptionId);
+    const start = subscription.currentPeriodStart!.getTime();
+    const end = subscription.currentPeriodEnd!.getTime();
+    const remaining = Math.max(0, end - input.prorationDate.getTime()) / (end - start);
+    const delta = this.recurring(input.items) - this.recurring(subscription.items);
+    return {
+      amountDueMinor: Math.max(0, Math.round(delta * remaining)),
+      currency: 'eur',
+      prorationDate: input.prorationDate,
+    };
+  }
+
+  async upgradeSubscription(
+    input: SubscriptionItemsChange,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription> {
+    this.guard();
+    return structuredClone(
+      this.once(`upgrade:${idempotencyKey}`, () => {
+        this.calls.upgradeSubscription += 1;
+        const subscription = this.stored(input.subscriptionId);
+        if (this.declineNextPayment) {
+          this.declineNextPayment = false;
+          subscription.pendingUpdate = true;
+          return structuredClone(subscription);
+        }
+        subscription.items = this.applyItems(subscription.items, input.items);
+        subscription.pendingUpdate = false;
+        return structuredClone(subscription);
+      }),
+    );
+  }
+
+  private applyItems(current: GatewaySubscription['items'], desired: readonly DesiredItem[]) {
+    return desired
+      .filter((item) => item.quantity > 0)
+      .map((item) => ({
+        id: current.find((line) => line.priceId === item.price)?.id ?? id('si'),
+        priceId: item.price,
+        quantity: item.quantity,
+      }));
+  }
+
+  async scheduleDowngrade(
+    input: { subscriptionId: string; items: DesiredItem[]; metadata: Record<string, string> },
+    idempotencyKey: string,
+  ): Promise<{ scheduleId: string; effectiveAt: Date }> {
+    this.guard();
+    return this.once(`schedule:${idempotencyKey}`, () => {
+      this.calls.scheduleDowngrade += 1;
+      const subscription = this.stored(input.subscriptionId);
+      const scheduleId = subscription.scheduleId ?? id('sub_sched');
+      this.schedules.set(scheduleId, {
+        subscriptionId: subscription.id,
+        items: input.items,
+        metadata: { ...input.metadata },
+      });
+      subscription.scheduleId = scheduleId;
+      return { scheduleId, effectiveAt: subscription.currentPeriodEnd! };
+    });
+  }
+
+  async releaseSchedule(scheduleId: string): Promise<void> {
+    this.guard();
+    const schedule = this.schedules.get(scheduleId);
+    if (!schedule) return;
+    this.schedules.delete(scheduleId);
+    const subscription = this.subscriptions.get(schedule.subscriptionId);
+    if (subscription?.scheduleId === scheduleId) subscription.scheduleId = null;
+  }
+
+  async setCancelAtPeriodEnd(
+    subscriptionId: string,
+    cancel: boolean,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription> {
+    this.guard();
+    void idempotencyKey;
+    const subscription = this.stored(subscriptionId);
+    if (subscription.scheduleId) {
+      throw new Error('Abonnement géré par une planification : annulation refusée.');
+    }
+    subscription.cancelAtPeriodEnd = cancel;
+    subscription.canceledAt = cancel ? this.clock() : null;
+    return structuredClone(subscription);
+  }
+
+  /**
+   * Fin de période côté Stripe : annulation effective, ou renouvellement avec application de
+   * la baisse planifiée (planification relâchée).
+   */
+  advancePeriod(subscriptionId: string): GatewaySubscription {
+    const subscription = this.stored(subscriptionId);
+    const end = subscription.currentPeriodEnd!;
+    if (subscription.cancelAtPeriodEnd) {
+      subscription.status = 'canceled';
+      subscription.endedAt = end;
+      return structuredClone(subscription);
+    }
+    const schedule = subscription.scheduleId ? this.schedules.get(subscription.scheduleId) : null;
+    if (schedule) {
+      subscription.items = this.applyItems(subscription.items, schedule.items);
+      this.schedules.delete(subscription.scheduleId!);
+      subscription.scheduleId = null;
+    }
+    subscription.currentPeriodStart = end;
+    subscription.currentPeriodEnd = new Date(end.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return structuredClone(subscription);
+  }
+
   verifyWebhook(rawBody: Buffer, signature: string): GatewayEvent {
     try {
       const event = Stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
@@ -177,6 +320,8 @@ export class FakeStripeGateway implements BillingGateway {
         end: null,
         ...discount,
       })),
+      scheduleId: null,
+      pendingUpdate: false,
     };
     this.subscriptions.set(subscription.id, subscription);
     session.status = 'complete';

@@ -331,6 +331,9 @@ importers:
       '@pixlova/api':
         specifier: workspace:*
         version: link:../api
+      '@pixlova/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@pixlova/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -473,6 +476,9 @@ importers:
       '@pixlova/db':
         specifier: workspace:*
         version: link:../db
+      '@pixlova/scheduling':
+        specifier: workspace:*
+        version: link:../scheduling
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(@types/pg@8.23.1)(pg@8.23.0)

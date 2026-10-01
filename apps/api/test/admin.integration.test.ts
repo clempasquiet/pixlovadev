@@ -326,7 +326,14 @@ describe.skipIf(skipDatabaseTests)('administration plateforme (L09-A)', () => {
       expect(detail.members[0].email).toBe('ow•••@client.test');
       expect(detail.members[0].roles).toEqual(['Owner']);
       expect(detail.entitlements).toMatchObject({ max_users: 1, display_slots: 1 });
-      expect(detail.subscription.available).toBe(false);
+      // Sans abonnement Stripe : la projection est vide, rien n’est inventé (ADR-017).
+      expect(detail.subscription).toMatchObject({
+        available: true,
+        environment: 'test',
+        customer: null,
+        subscriptions: [],
+        changes: [],
+      });
       const fleet = (await root.get(`/organizations/${organizationId}/fleet`, REASON)).json();
       expect(fleet).toEqual({ players: [], displays: [], incidents: [] });
 
@@ -347,6 +354,31 @@ describe.skipIf(skipDatabaseTests)('administration plateforme (L09-A)', () => {
       expect(health.organizations).toBeGreaterThanOrEqual(1);
       expect(health.schema.migrations_applied).toBeGreaterThanOrEqual(17);
       expect(health.players).toEqual({ paired: 0, online: 0 });
+    });
+  });
+
+  describe('facturation (BillingAdmin, ADM-004, BILL-019)', () => {
+    it('BillingAdmin consulte abonnements et codes sans accès aux diagnostics ; le support ne voit pas la facturation', async () => {
+      const billing = await newOperator('billing@pixlova.test', ['billing_admin']);
+      const overview = await billing.get('/billing');
+      expect(overview.statusCode).toBe(200);
+      expect(overview.json()).toMatchObject({
+        environment: 'test',
+        subscriptions: [],
+        promotion_codes: [],
+        events: { failed: 0, pending: 0 },
+        failed_events: [],
+      });
+      expect((await platformAudit('platform.billing.viewed')).rows).toHaveLength(1);
+      const detail = (await billing.get(`/organizations/${organizationId}`, REASON)).json();
+      expect(detail.subscription.available).toBe(true);
+      expect((await billing.get(`/organizations/${organizationId}/fleet`, REASON)).statusCode).toBe(
+        403,
+      );
+      const support = await newOperator('support-billing@pixlova.test', ['support']);
+      expect((await support.get('/billing')).statusCode).toBe(403);
+      const seen = (await support.get(`/organizations/${organizationId}`, REASON)).json();
+      expect(seen.subscription.available).toBe(false);
     });
   });
 

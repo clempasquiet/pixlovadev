@@ -22,6 +22,7 @@
   "dependencies": {
     "@pixlova/contracts": "workspace:*",
     "@pixlova/db": "workspace:*",
+    "@pixlova/scheduling": "workspace:*",
     "drizzle-orm": "0.45.3",
     "stripe": "22.6.2"
   },

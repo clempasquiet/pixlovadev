@@ -25,6 +25,7 @@
   "devDependencies": {
     "@noble/curves": "2.4.0",
     "@pixlova/api": "workspace:*",
+    "@pixlova/billing": "workspace:*",
     "@pixlova/db": "workspace:*",
     "@pixlova/workers": "workspace:*",
     "@types/react": "19.3.0",

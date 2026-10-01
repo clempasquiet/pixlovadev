@@ -129,9 +129,14 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
     await page.getByRole('button', { name: 'Consulter' }).click();
     await page.getByRole('heading', { name: 'Boulangerie Martin' }).waitFor();
     await page.getByText('ow•••@client.test').waitFor();
-    await page.getByText('Abonnements non implémentés (L08).').waitFor();
+    await page.getByText('Aucun compte de facturation (test).').waitFor();
     await page.getByRole('button', { name: 'Charger le diagnostic du parc' }).click();
     await page.getByText('Aucun Player.').waitFor();
+
+    // Facturation (BillingAdmin) : synthèse lisible sans abonnement.
+    await page.getByRole('link', { name: 'Facturation' }).click();
+    await page.getByRole('heading', { name: 'Facturation' }).waitFor();
+    await page.getByText('Aucun abonnement.').waitFor();
 
     // Compte client : révocation des sessions après ressaisie du TOTP.
     await page.getByRole('link', { name: 'Comptes clients' }).click();

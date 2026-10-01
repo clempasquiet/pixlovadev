@@ -21,6 +21,35 @@ export interface BillingGateway {
   /** Abonnements du client, tous statuts, avec réductions développées. */
   listSubscriptions(customerId: string): Promise<GatewaySubscription[]>;
   /**
+   * Montant facturé immédiatement par une hausse (BILL-011) : prorata calculé par Stripe à
+   * la date `prorationDate`, réutilisée par `upgradeSubscription`.
+   */
+  previewUpgrade(input: SubscriptionItemsChange): Promise<UpgradePreview>;
+  /**
+   * Hausse immédiate facturée au prorata (`always_invoice`). Avec `pending_if_incomplete`,
+   * Stripe n’applique les nouvelles lignes qu’une fois le paiement confirmé.
+   */
+  upgradeSubscription(
+    input: SubscriptionItemsChange,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription>;
+  /**
+   * Baisse à l’échéance (BILL-012) : planification Stripe dont la phase suivante porte les
+   * nouvelles lignes, sans prorata ; la planification est relâchée ensuite.
+   */
+  scheduleDowngrade(
+    input: { subscriptionId: string; items: DesiredItem[]; metadata: Record<string, string> },
+    idempotencyKey: string,
+  ): Promise<{ scheduleId: string; effectiveAt: Date }>;
+  /** Abandon d’une baisse planifiée : l’abonnement garde ses lignes actuelles. */
+  releaseSchedule(scheduleId: string): Promise<void>;
+  /** Annulation à l’échéance (BILL-014) ou reprise avant l’échéance. */
+  setCancelAtPeriodEnd(
+    subscriptionId: string,
+    cancel: boolean,
+    idempotencyKey: string,
+  ): Promise<GatewaySubscription>;
+  /**
    * Vérifie la signature sur le corps brut (BILL-010) et renvoie l’événement ; lève
    * `WebhookSignatureError` sinon.
    */
@@ -38,6 +67,26 @@ export interface CheckoutSessionInput {
   expiresAt: Date;
   /** BILL-017 : saisie des codes promotionnels par Stripe Checkout. */
   allowPromotionCodes: boolean;
+}
+
+/** Ligne souhaitée d’un abonnement ; une quantité nulle retire la ligne. */
+export interface DesiredItem {
+  price: string;
+  quantity: number;
+}
+
+export interface SubscriptionItemsChange {
+  customerId: string;
+  subscriptionId: string;
+  items: DesiredItem[];
+  prorationDate: Date;
+}
+
+export interface UpgradePreview {
+  /** Montant dû immédiatement (prorata, réductions et taxes configurées comprises). */
+  amountDueMinor: number;
+  currency: string;
+  prorationDate: Date;
 }
 
 export interface CheckoutSession {
@@ -77,6 +126,40 @@ export interface GatewaySubscription {
   metadata: Record<string, string>;
   items: { id: string; priceId: string; quantity: number }[];
   discounts: GatewayDiscount[];
+  /** Planification Stripe attachée (baisse à l’échéance). */
+  scheduleId: string | null;
+  /** Hausse en attente de paiement : les lignes ci-dessus restent celles en vigueur. */
+  pendingUpdate: boolean;
+}
+
+/**
+ * Lignes Stripe à transmettre pour passer de `current` à `desired` : mise à jour de la
+ * quantité d’un prix conservé, ajout d’un nouveau prix, suppression des autres lignes.
+ */
+export function itemsDiff(
+  current: GatewaySubscription['items'],
+  desired: readonly DesiredItem[],
+): (
+  | { id: string; quantity: number }
+  | { price: string; quantity: number }
+  | { id: string; deleted: true }
+)[] {
+  const wanted = desired.filter((item) => item.quantity > 0);
+  const result: (
+    | { id: string; quantity: number }
+    | { price: string; quantity: number }
+    | { id: string; deleted: true }
+  )[] = [];
+  for (const item of wanted) {
+    const existing = current.find((line) => line.priceId === item.price);
+    result.push(existing ? { id: existing.id, quantity: item.quantity } : { ...item });
+  }
+  for (const line of current) {
+    if (!wanted.some((item) => item.price === line.priceId)) {
+      result.push({ id: line.id, deleted: true });
+    }
+  }
+  return result;
 }
 
 export interface GatewayEvent {

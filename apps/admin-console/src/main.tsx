@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppLayout, HomeRedirect, RequireSession } from './layout.js';
 import { ActivatePage, LoginPage, MfaPage } from './pages/auth.js';
+import { BillingPage } from './pages/billing.js';
 import { CustomersPage } from './pages/customers.js';
 import { HealthPage } from './pages/health.js';
 import { AuditPage, IncidentsPage, JobsPage, TemplatesPage } from './pages/operations.js';
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
           { path: 'organizations', element: <OrganizationsPage /> },
           { path: 'organizations/:id', element: <OrganizationPage /> },
           { path: 'customers', element: <CustomersPage /> },
+          { path: 'billing', element: <BillingPage /> },
           { path: 'incidents', element: <IncidentsPage /> },
           { path: 'jobs', element: <JobsPage /> },
           { path: 'templates', element: <TemplatesPage /> },

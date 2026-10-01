@@ -41,7 +41,17 @@ export const BILLING_CHANGE_STATUSES = [
   'failed',
   'cancelled',
   'expired',
+  'scheduled',
 ] as const;
+
+/**
+ * Nature d’une demande (BILL-011, BILL-012, BILL-014) : première souscription, hausse
+ * immédiate avec prorata, baisse ou annulation à l’échéance.
+ */
+export const BILLING_CHANGE_KINDS = ['subscribe', 'upgrade', 'downgrade', 'cancel'] as const;
+
+/** Sélection des Displays conservés lors d’une baisse de capacité (BILL-012, BILL-014). */
+export const DISPLAY_SELECTION_STATUSES = ['pending', 'applied', 'invalid'] as const;
 
 const environmentCheck = (column: unknown) => sql`${column} in ('test', 'live')`;
 
@@ -198,6 +208,10 @@ export const subscriptions = pgTable(
     endedAt: timestamp('ended_at', { withTimezone: true }),
     /** Fin de la période de grâce d’un impayé (BILL-015, durée à valider). */
     graceUntil: timestamp('grace_until', { withTimezone: true }),
+    /** Planification Stripe portant une baisse à l’échéance (BILL-012). */
+    stripeScheduleId: text('stripe_schedule_id'),
+    /** Hausse en attente de paiement (`pending_update` Stripe) : droits inchangés. */
+    pendingUpdate: boolean('pending_update').notNull().default(false),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }).notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -232,18 +246,25 @@ export const billingChanges = pgTable(
     id: id(),
     organizationId: organizationId(),
     environment: text('environment', { enum: BILLING_ENVIRONMENTS }).notNull(),
-    kind: text('kind', { enum: ['subscribe'] }).notNull(),
+    kind: text('kind', { enum: BILLING_CHANGE_KINDS }).notNull(),
     status: text('status', { enum: BILLING_CHANGE_STATUSES }).notNull().default('requested'),
     requestedBy: uuid('requested_by').references(() => users.id),
     idempotencyKey: text('idempotency_key').notNull(),
     requestHash: text('request_hash').notNull(),
-    planId: uuid('plan_id')
-      .notNull()
-      .references(() => plans.id),
-    planPriceId: uuid('plan_price_id')
-      .notNull()
-      .references(() => planPrices.id),
+    /** Offre visée ; `null` pour une annulation (retour à l’offre de repli). */
+    planId: uuid('plan_id').references(() => plans.id),
+    planPriceId: uuid('plan_price_id').references(() => planPrices.id),
     extraDisplaySlots: integer('extra_display_slots').notNull().default(0),
+    /** Abonnement modifié (hausse, baisse, annulation). */
+    subscriptionId: uuid('subscription_id'),
+    /** Date d’effet : immédiate pour une hausse, fin de période sinon. */
+    effectiveAt: timestamp('effective_at', { withTimezone: true }),
+    /** Date de prorata transmise à Stripe, identique à celle de la prévisualisation. */
+    prorationDate: timestamp('proration_date', { withTimezone: true }),
+    stripeScheduleId: text('stripe_schedule_id'),
+    /** Displays à conserver actifs à l’échéance, choisis explicitement (BILL-012). */
+    keepDisplayIds: uuid('keep_display_ids').array(),
+    selectionStatus: text('selection_status', { enum: DISPLAY_SELECTION_STATUSES }),
     stripeCheckoutSessionId: text('stripe_checkout_session_id'),
     checkoutUrl: text('checkout_url'),
     checkoutExpiresAt: timestamp('checkout_expires_at', { withTimezone: true }),
@@ -261,14 +282,40 @@ export const billingChanges = pgTable(
     uniqueIndex('billing_changes_one_open_subscribe')
       .on(t.organizationId, t.environment)
       .where(sql`${t.kind} = 'subscribe' and ${t.status} in ('requested', 'pending_payment')`),
+    // Une seule modification d’abonnement en cours par organisation (BILL-011, BILL-012).
+    uniqueIndex('billing_changes_one_open_change')
+      .on(t.organizationId, t.environment)
+      .where(
+        sql`${t.kind} <> 'subscribe' and ${t.status} in ('requested', 'pending_payment', 'scheduled')`,
+      ),
+    foreignKey({
+      name: 'billing_changes_subscription_same_tenant_fk',
+      columns: [t.organizationId, t.subscriptionId],
+      foreignColumns: [subscriptions.organizationId, subscriptions.id],
+    }),
     uniqueIndex('billing_changes_checkout_unique')
       .on(t.stripeCheckoutSessionId)
       .where(sql`${t.stripeCheckoutSessionId} is not null`),
     check('billing_changes_environment_check', environmentCheck(t.environment)),
-    check('billing_changes_kind_check', sql`${t.kind} in ('subscribe')`),
+    check(
+      'billing_changes_kind_check',
+      sql`${t.kind} in ('subscribe', 'upgrade', 'downgrade', 'cancel')`,
+    ),
     check(
       'billing_changes_status_check',
-      sql`${t.status} in ('requested', 'pending_payment', 'applied', 'failed', 'cancelled', 'expired')`,
+      sql`${t.status} in ('requested', 'pending_payment', 'applied', 'failed', 'cancelled', 'expired', 'scheduled')`,
+    ),
+    check(
+      'billing_changes_plan_check',
+      sql`(${t.kind} = 'cancel') = (${t.planId} is null and ${t.planPriceId} is null)`,
+    ),
+    check(
+      'billing_changes_subscription_check',
+      sql`${t.kind} = 'subscribe' or ${t.subscriptionId} is not null`,
+    ),
+    check(
+      'billing_changes_selection_check',
+      sql`${t.selectionStatus} is null or ${t.selectionStatus} in ('pending', 'applied', 'invalid')`,
     ),
     check('billing_changes_extra_check', sql`${t.extraDisplaySlots} >= 0`),
     tenantPolicy(t.organizationId),
