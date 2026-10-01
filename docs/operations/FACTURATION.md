@@ -93,6 +93,18 @@ Chaque événement ci-dessous déclenche la relecture complète du client chez S
 - **Rattrapage manuel** : relancer la tâche en échec depuis l’administration (Tâches), ou attendre le balayage.
 - **Sans Stripe** : sans `STRIPE_SECRET_KEY`, le catalogue et les droits restent servis, les achats répondent `503 BILLING_UNAVAILABLE` et l’endpoint webhook `404`.
 
+## Domaines cibles de production
+
+Domaines fixés par le responsable produit le 2026-10-01. L’hébergement de production reste à décider : ce ne sont que des valeurs de configuration, aucune n’est codée en dur.
+
+| Usage | Valeur cible |
+|---|---|
+| Endpoint webhook Stripe (mode live) | `https://api.pixlova.com/webhooks/stripe` |
+| Retour de Checkout et du portail (`PIXLOVA_APP_BASE_URL`) | `https://app.pixlova.com` → `/billing?change=…` |
+| Lecture du catalogue public par le site `www.pixlova.com` | `https://api.pixlova.com/api/v1/billing/catalog` (CORS ouvert, sans credentials) |
+
+`pixlova.fr` redirige vers `www.pixlova.com` et n’intervient pas dans la facturation.
+
 ## Variables
 
 | Variable | Rôle |
