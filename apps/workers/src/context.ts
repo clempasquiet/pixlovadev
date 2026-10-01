@@ -1,3 +1,4 @@
+import type { BillingGateway } from '@pixlova/billing';
 import type { MediaLimits } from '@pixlova/contracts';
 import type { Database } from '@pixlova/db';
 import type { ManifestSigner } from '@pixlova/scheduling/compiler';
@@ -28,6 +29,11 @@ export interface WorkerContext {
   alerting?: AlertingConfig;
   /** Conservation des événements de timeline, en jours [à valider]. */
   timelineRetentionDays?: number;
+  /**
+   * Facturation Stripe (ADR-017) : traitement des webhooks et réconciliation. Absente, ces
+   * tâches ne sont pas réclamées et restent en file.
+   */
+  billing?: { gateway: BillingGateway; graceDays: number } | null;
   now: () => Date;
   logger: Logger;
 }

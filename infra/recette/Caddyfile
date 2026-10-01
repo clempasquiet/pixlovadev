@@ -43,6 +43,13 @@
 		}
 		reverse_proxy api:3000
 	}
+	# Webhooks Stripe (ADR-017) : authentifiés par signature, corps brut transmis tel quel.
+	handle /webhooks/stripe {
+		request_body {
+			max_size 512KB
+		}
+		reverse_proxy api:3000
+	}
 	handle /player/* {
 		request_body {
 			max_size 2MB

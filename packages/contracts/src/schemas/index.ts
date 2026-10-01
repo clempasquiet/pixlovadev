@@ -12,7 +12,9 @@ export * from './events.js';
 export * from './player-api.js';
 export * from './programming.js';
 export * from './release.js';
+export * from './billing.js';
 
+import { BillingCatalog, CatalogFile, PlanEntitlements } from './billing.js';
 import { PlayerCapabilities } from './capabilities.js';
 import { CommandPayload, CommandResult, SignedCommand } from './command.js';
 import { Composition } from './composition.js';
@@ -101,5 +103,8 @@ export const ROOT_SCHEMAS = {
     'screenshot-upload-response.json',
     ScreenshotUploadResponse,
   ),
+  'plan-entitlements.json': root('plan-entitlements.json', PlanEntitlements),
+  'billing-catalog.json': root('billing-catalog.json', BillingCatalog),
+  'billing-catalog-file.json': root('billing-catalog-file.json', CatalogFile),
 } as const;
 export type RootSchemaName = keyof typeof ROOT_SCHEMAS;

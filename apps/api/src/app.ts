@@ -8,6 +8,7 @@ import { instrument, type Gauge, type Metrics } from './observability.js';
 import type { Services } from './http/services.js';
 import { auditRoutes } from './modules/audit-log.js';
 import { authRoutes } from './modules/auth.js';
+import { billingRoutes, stripeWebhookRoutes } from './modules/billing.js';
 import { compositionRoutes } from './modules/compositions.js';
 import { displayProgramRoutes } from './modules/display-program.js';
 import { playlistRoutes } from './modules/playlists.js';
@@ -47,7 +48,8 @@ export function createBase(options: AppOptions): FastifyInstance {
   });
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
-    reply.header('cache-control', 'no-store');
+    // Réponses non mises en cache, sauf exception explicite d’une route (catalogue public).
+    if (!reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');
     reply.header('x-content-type-options', 'nosniff');
   });
   registerErrorHandling(app);
@@ -78,6 +80,7 @@ async function apiV1(app: FastifyInstance, services: Services): Promise<void> {
   supervisionRoutes(app, services);
   incidentRoutes(app, services);
   auditRoutes(app, services);
+  billingRoutes(app, services);
 }
 
 /** API des Players : jeton Bearer, aucun cookie, aucune route d’administration (API-001). */
@@ -105,6 +108,10 @@ export function buildPublicApp(options: AppOptions = {}): FastifyInstance {
   if (services) {
     void app.register((instance) => apiV1(instance, services), { prefix: '/api/v1' });
     void app.register((instance) => playerV1(instance, services), { prefix: '/player/v1' });
+    // Webhooks de prestataires : ni cookie, ni CSRF ; authentifiés par signature (API §17.2).
+    void app.register((instance) => stripeWebhookRoutes(instance, services), {
+      prefix: '/webhooks',
+    });
     if (services.storage instanceof LocalObjectStorage) {
       const storage = services.storage;
       void app.register(async (instance) => {

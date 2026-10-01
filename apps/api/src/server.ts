@@ -10,6 +10,7 @@ import { DataCipher } from './lib/crypto.js';
 import { dispatchAlertNotifications } from './lib/alert-notifications.js';
 import { collectGauges, loggerOptions, Metrics } from './observability.js';
 import { ConsoleMailer, dispatchEmails, SmtpMailer, type Mailer } from './lib/email.js';
+import { billingFromEnv } from './lib/billing.js';
 import { deploymentFromEnv, entitlementsFromEnv } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
 
@@ -43,12 +44,19 @@ if (process.env.PIXLOVA_MAILER === 'console') {
   throw new Error('PIXLOVA_MAILER est requis en production (vérification des comptes).');
 }
 
+const db = createDatabase(appPool);
+// Facturation (ADR-017) : sans clé Stripe, catalogue et droits servis, achats indisponibles.
+const billing = billingFromEnv(process.env, deployment);
 const services: Services = {
-  db: createDatabase(appPool),
+  db,
   system: createDatabase(systemPool),
   cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
   limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
-  entitlements: entitlementsFromEnv(process.env, deployment),
+  entitlements: entitlementsFromEnv(process.env, deployment, {
+    db,
+    environment: billing.environment,
+  }),
+  billing,
   security: config.security,
   storage: createStorageFromEnv(),
   media: { ...config.media, limits: mediaLimitsFromEnv(process.env) },

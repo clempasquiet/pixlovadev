@@ -24,6 +24,7 @@
   "dependencies": {
     "@fastify/cookie": "11.1.2",
     "@node-rs/argon2": "2.2.1",
+    "@pixlova/billing": "workspace:*",
     "@pixlova/contracts": "workspace:*",
     "@pixlova/db": "workspace:*",
     "@pixlova/permissions": "workspace:*",

@@ -1,5 +1,6 @@
 import { adjustUsage, enqueueJob, schema } from '@pixlova/db';
 import { and, eq, inArray, isNotNull, isNull, lt, lte, sql } from 'drizzle-orm';
+import { billingSweep } from './billing/handlers.js';
 import { renewManifestHorizons } from './programming/compile.js';
 import type { WorkerContext } from './context.js';
 import { MEDIA_PURGE } from './media/purge.js';
@@ -125,15 +126,18 @@ export async function runSweeps(ctx: WorkerContext): Promise<void> {
   await schedulePurges(ctx);
   await pruneFinishedJobs(ctx);
   await renewManifestHorizons(ctx);
-  // Supervision (ADR-014) : une étape en échec n’empêche pas les suivantes.
-  for (const step of [recordPresenceLost, evaluateAlerts, purgeScreenshots, pruneTimeline]) {
+  // Supervision (ADR-014) et facturation (ADR-017) : une étape en échec n’empêche pas les suivantes.
+  for (const step of [
+    recordPresenceLost,
+    evaluateAlerts,
+    purgeScreenshots,
+    pruneTimeline,
+    billingSweep,
+  ]) {
     try {
       await step(ctx);
     } catch (error) {
-      ctx.logger.error(
-        { step: step.name, error: String(error) },
-        'balayage de supervision en échec',
-      );
+      ctx.logger.error({ step: step.name, error: String(error) }, 'balayage en échec');
     }
   }
 }

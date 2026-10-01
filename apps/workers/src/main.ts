@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mediaLimitsFromEnv } from '@pixlova/contracts';
+import { environmentOfKey, StripeGateway } from '@pixlova/billing';
 import { createDatabase } from '@pixlova/db';
 import { manifestSignerFromSeed } from '@pixlova/scheduling/compiler';
 import { createStorageFromEnv } from '@pixlova/storage';
@@ -58,6 +59,28 @@ const manifestSigner = manifestSignerFromSeed(
   required('PIXLOVA_MANIFEST_SIGNING_KEY'),
 );
 
+// Facturation (ADR-017) : mêmes variables que l’API ; sans clé, les tâches Stripe attendent.
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (Boolean(stripeKey) !== Boolean(stripeWebhookSecret)) {
+  throw new Error('STRIPE_SECRET_KEY et STRIPE_WEBHOOK_SECRET vont ensemble.');
+}
+if (
+  stripeKey &&
+  environmentOfKey(stripeKey) === 'live' &&
+  (process.env.PIXLOVA_DEPLOYMENT ??
+    (process.env.NODE_ENV === 'production' ? 'production' : 'development')) !== 'production'
+) {
+  throw new Error('Une clé Stripe de production est interdite hors déploiement production.');
+}
+const billing =
+  stripeKey && stripeWebhookSecret
+    ? {
+        gateway: new StripeGateway({ secretKey: stripeKey, webhookSecret: stripeWebhookSecret }),
+        graceDays: Number(process.env.PIXLOVA_BILLING_GRACE_DAYS ?? 7),
+      }
+    : null;
+
 const worker = createWorker(
   {
     appDb: createDatabase(appPool),
@@ -70,6 +93,7 @@ const worker = createWorker(
     manifestSigner,
     alerting: alertingFromEnv(),
     timelineRetentionDays: Number(process.env.PIXLOVA_TIMELINE_RETENTION_DAYS ?? 90),
+    billing,
     now: () => new Date(),
     logger,
   },

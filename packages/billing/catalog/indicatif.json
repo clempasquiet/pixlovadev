@@ -1,0 +1,83 @@
+{
+  "plans": [
+    {
+      "key": "free",
+      "name": "Free",
+      "fallback": true,
+      "sort_order": 0,
+      "included_display_slots": 1,
+      "max_extra_display_slots": 0,
+      "entitlements": { "max_users": 1, "storage_quota_bytes": 2000000000, "features": [] },
+      "indicative": true,
+      "prices": [
+        { "environment": "test", "interval": "month", "currency": "eur", "base_amount_minor": 0 }
+      ]
+    },
+    {
+      "key": "starter",
+      "name": "Starter",
+      "sort_order": 10,
+      "included_display_slots": 3,
+      "max_extra_display_slots": 1000,
+      "entitlements": {
+        "max_users": 3,
+        "storage_quota_bytes": 20000000000,
+        "features": ["templates"]
+      },
+      "indicative": true,
+      "prices": [
+        {
+          "environment": "test",
+          "interval": "month",
+          "currency": "eur",
+          "base_amount_minor": 1490,
+          "extra_slot_amount_minor": 500
+        }
+      ]
+    },
+    {
+      "key": "pro",
+      "name": "Pro",
+      "sort_order": 20,
+      "included_display_slots": 10,
+      "max_extra_display_slots": 1000,
+      "entitlements": {
+        "max_users": 10,
+        "storage_quota_bytes": 100000000000,
+        "features": ["templates"]
+      },
+      "indicative": true,
+      "prices": [
+        {
+          "environment": "test",
+          "interval": "month",
+          "currency": "eur",
+          "base_amount_minor": 3900,
+          "extra_slot_amount_minor": 400
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "name": "Business",
+      "sort_order": 30,
+      "included_display_slots": 30,
+      "max_extra_display_slots": 1000,
+      "entitlements": {
+        "max_users": 100,
+        "storage_quota_bytes": 500000000000,
+        "features": ["templates"]
+      },
+      "indicative": true,
+      "prices": [
+        {
+          "environment": "test",
+          "interval": "month",
+          "currency": "eur",
+          "base_amount_minor": 9900,
+          "extra_slot_amount_minor": 300
+        }
+      ]
+    }
+  ]
+}
