@@ -30,6 +30,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-014](adr/0014-supervision-commandes-alertes.md) | Supervision : signaux distincts (présence, santé, rendu, sortie, capture), commandes signées par une clé dédiée via HTTPS (WSS reporté), captures privées à rétention courte, timeline corrélée, incidents dédupliqués avec maintenance et corrélation plateforme, métriques à cardinalité bornée | L07 |
 | [ADR-016](adr/0016-administration-plateforme.md) | Administration plateforme privée : identités et rôles `platform_*` distincts des clients, TOTP obligatoire, sessions courtes, conteneur et listener dédiés (8081, jamais publics), rôle PostgreSQL `pixlova_platform` à droits par colonnes, vues motivées et auditées, actions de support bornées sans impersonation | L09-A |
 | [ADR-015](adr/0015-infrastructure-recette.md) | Recette mono-serveur Docker Compose : images épinglées non root, réseaux internes, passerelle Caddy à origine unique, stockage S3 privé (versitygw), Mailpit, Cloudflare Tunnel ; mode `recette`, SMTP, limites d’envoi bornées par le transport ; sauvegarde, restauration et retour arrière exercés | L09-I |
+| [ADR-017](adr/0017-facturation-stripe-entitlements.md) | Facturation : catalogue d’offres versionné et publiable, Checkout idempotent, webhooks signés stockés puis projetés par relecture complète du client Stripe, réconciliation périodique, droits effectifs (actif, grâce, restreint, repli) sans suppression ; valeurs commerciales à valider | L08 |
 
 ## ADR proposés (en attente de preuves)
 
@@ -45,7 +46,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
 | Matrice RBAC : confirmation produit des valeurs de l’ADR-007 | Responsable produit | Validation ou PR du catalogue |
 | Limites de médias (proposées par l’ADR-009, à valider), cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
-| Prix, quotas, grâce, downgrade et annulation sans sélection | L08 | Matrice des transitions ; validation produit avant activation payante |
+| Prix, quotas, grâce, downgrade et annulation sans sélection | L08 (socle : [ADR-017](adr/0017-facturation-stripe-entitlements.md)) puis responsable produit | Grille indicative en place ; reste : changement d’offre et sélection des Displays, valeurs validées avant activation payante |
 | Hébergement, stockage/CDN, relais email et secrets de **production** | Mandat de déploiement (après L09-I) | Recette : [ADR-015](adr/0015-infrastructure-recette.md) ; production à décider |
 | Rétention, DPA, sous-traitants et effacement offline | L09-R | Politique validée et recette d’effacement |
 | SLO, PRA, support et plateformes supportées | L09-R | Mesures réelles et engagement approuvé avant lancement |

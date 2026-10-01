@@ -55,7 +55,9 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_REQUIRE_MFA_FOR_ADMINS` | MFA exigée des administrateurs pour les actions sensibles (défaut `true`) |
 | `PIXLOVA_MAILER` | `smtp` (avec `PIXLOVA_SMTP_URL`, par ex. `smtp://mailpit:1025`, et `PIXLOVA_MAIL_FROM`) ou `console` (développement, refusé en production) ; obligatoire en production ([ADR-015](../../docs/architecture/adr/0015-infrastructure-recette.md)) |
 | `PIXLOVA_DEPLOYMENT` | `development`, `recette` ou `production` (défaut selon `NODE_ENV`) ; `recette` garde les contrôles de production mais autorise les quotas `PIXLOVA_DEV_*` |
-| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES`, `PIXLOVA_DEV_FEATURES` | Quotas et fonctionnalités avant L08, par ex. `PIXLOVA_DEV_FEATURES=templates` (refusés en production, acceptés en recette) |
+| `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES`, `PIXLOVA_DEV_FEATURES` | Quotas fixes pour les scénarios sans Stripe, par ex. `PIXLOVA_DEV_FEATURES=templates` ; prioritaires sur l’abonnement projeté, refusés en production, acceptés en recette |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Facturation (ensemble) : clé `sk_test_`/`rk_test_`, `sk_live_` refusée hors production ; sans elles, achats en `503 BILLING_UNAVAILABLE`, webhook en 404, offre de repli appliquée ([ADR-017](../../docs/architecture/adr/0017-facturation-stripe-entitlements.md), [procédure](../../docs/operations/FACTURATION.md)) |
+| `PIXLOVA_BILLING_GRACE_DAYS`, `PIXLOVA_BILLING_CHECKOUT_MINUTES` | Grâce d’un impayé (7 j **[à valider]**) et validité d’une session Checkout (60 min) ; mêmes valeurs pour le worker |
 | `PIXLOVA_MEDIA_IMAGE_MAX_BYTES`, `PIXLOVA_MEDIA_VIDEO_MAX_BYTES` | Abaissent la taille maximale d’envoi (50 Mio / 2 Gio) quand le transport la borne, par ex. 95 000 000 derrière un tunnel Cloudflare ; mêmes valeurs pour le worker |
 | `PIXLOVA_STORAGE_DRIVER` | `s3` (production) ou `local` (développement, refusé en production) |
 | `PIXLOVA_STORAGE_LOCAL_ROOT`, `PIXLOVA_STORAGE_LOCAL_SECRET`, `PIXLOVA_STORAGE_PUBLIC_URL` | Pilote local : répertoire, secret HMAC des URLs signées, origine publique facultative |
@@ -78,8 +80,11 @@ Point d’entrée distinct `node dist/admin-server.js` (conteneur `admin`, liste
 | `PIXLOVA_ADMIN_SESSION_IDLE_MINUTES`, `PIXLOVA_ADMIN_SESSION_ABSOLUTE_HOURS`, `PIXLOVA_ADMIN_RECENT_AUTH_MINUTES`, `PIXLOVA_ADMIN_ACTIVATION_HOURS` | 30 min, 8 h, 5 min, 24 h **[à valider]** |
 | `ADMIN_HOST`, `ADMIN_PORT`, `PIXLOVA_ADMIN_CONSOLE_DIR` | Écoute (127.0.0.1:8081 par défaut) et build de la console |
 | `REDIS_URL`, `PIXLOVA_DATA_KEYS`, `PIXLOVA_DEV_*` | Comme l’API (limitation, chiffrement des TOTP, droits appliqués affichés) |
+| `PIXLOVA_BILLING_ENVIRONMENT` | Catalogue et abonnements lus (`test` par défaut, `live`) ; le conteneur ne détient pas la clé Stripe |
 
 Amorçage et secours, depuis le serveur : `node dist/admin-cli.js create-operator --email … --name … --role super_admin` ou `reset-operator --email …` (code d’activation affiché une fois).
+
+Publication du catalogue d’offres (ADR-017) : `node dist/admin-cli.js catalog-import --file <catalogue.json|-> [--dry-run]`. Une offre modifiée devient une nouvelle version ; les abonnements en cours gardent la leur.
 
 ## Tests
 

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.pixlova.com/v1/billing-catalog-file.json",
+  "type": "object",
+  "required": [
+    "plans"
+  ],
+  "properties": {
+    "plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "included_display_slots",
+          "max_extra_display_slots",
+          "entitlements",
+          "indicative",
+          "prices"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,39}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "included_display_slots": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "max_extra_display_slots": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "entitlements": {
+            "type": "object",
+            "required": [
+              "max_users",
+              "storage_quota_bytes",
+              "features"
+            ],
+            "properties": {
+              "max_users": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "storage_quota_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000000
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "templates"
+                    }
+                  ]
+                },
+                "uniqueItems": true,
+                "maxItems": 32
+              }
+            },
+            "additionalProperties": false,
+            "title": "PlanEntitlements"
+          },
+          "indicative": {
+            "type": "boolean"
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "environment",
+                "interval",
+                "currency",
+                "base_amount_minor"
+              ],
+              "properties": {
+                "environment": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "test"
+                    },
+                    {
+                      "type": "string",
+                      "const": "live"
+                    }
+                  ]
+                },
+                "interval": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "month"
+                    },
+                    {
+                      "type": "string",
+                      "const": "year"
+                    }
+                  ]
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[a-z]{3}$"
+                },
+                "base_amount_minor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000
+                },
+                "extra_slot_amount_minor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000
+                },
+                "base_stripe_price_id": {
+                  "type": "string",
+                  "pattern": "^price_[A-Za-z0-9]{1,250}$"
+                },
+                "extra_slot_stripe_price_id": {
+                  "type": "string",
+                  "pattern": "^price_[A-Za-z0-9]{1,250}$"
+                }
+              },
+              "additionalProperties": false
+            },
+            "maxItems": 16
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 32
+    }
+  },
+  "additionalProperties": false,
+  "title": "CatalogFile"
+}

@@ -18,6 +18,7 @@
     "start:dev": "node --env-file=../api/.env dist/main.js"
   },
   "dependencies": {
+    "@pixlova/billing": "workspace:*",
     "@pixlova/contracts": "workspace:*",
     "@pixlova/db": "workspace:*",
     "@pixlova/scheduling": "workspace:*",

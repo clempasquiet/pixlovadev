@@ -16,6 +16,7 @@ export {
   type EvaluationReport,
 } from './supervision/alerts.js';
 export { pruneTimeline, purgeScreenshots } from './supervision/purge.js';
+export { billingSweep, stripeEventHandler, syncCustomerHandler } from './billing/handlers.js';
 export {
   cleanQuarantine,
   expireUploadSessions,
@@ -24,6 +25,7 @@ export {
   schedulePurges,
 } from './sweeps.js';
 
+import { stripeEventHandler, syncCustomerHandler } from './billing/handlers.js';
 import type { WorkerContext } from './context.js';
 import { ingestHandler } from './media/ingest.js';
 import { purgeHandler } from './media/purge.js';
@@ -31,9 +33,13 @@ import { compileHandler } from './programming/compile.js';
 import { Worker, type WorkerOptions } from './runner.js';
 import { runSweeps } from './sweeps.js';
 
-/** Worker complet : ingestion et purge des médias, compilation des manifests, balayages. */
+/**
+ * Worker complet : ingestion et purge des médias, compilation des manifests, facturation
+ * (si Stripe est configuré), balayages.
+ */
 export function createWorker(ctx: WorkerContext, options: WorkerOptions = {}): Worker {
-  return new Worker(ctx, [ingestHandler, purgeHandler, compileHandler], {
+  const billing = ctx.billing ? [stripeEventHandler, syncCustomerHandler] : [];
+  return new Worker(ctx, [ingestHandler, purgeHandler, compileHandler, ...billing], {
     sweep: runSweeps,
     ...options,
   });
