@@ -2,17 +2,23 @@
  * Console d’administration dans Chromium (L09-A) : serveur d’administration réel servant
  * le build, PostgreSQL réel. Activation d’un SuperAdmin avec TOTP, consultation motivée
  * d’une organisation, action de support avec ressaisie du second facteur, création d’un
- * opérateur et journal.
+ * opérateur, dépôt et publication d’une release du Player natif (ADR-019) et journal.
  */
 import { randomBytes } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildAdminApp, buildPublicApp, DataCipher, MemoryRateLimiter } from '@pixlova/api';
-import { createOperator, createTestServices, currentStep, totpAt } from '@pixlova/api/testing';
+import {
+  createOperator,
+  createTestServices,
+  currentStep,
+  testReleaseSigner,
+  totpAt,
+} from '@pixlova/api/testing';
 import { createTestDatabase, skipDatabaseTests, type TestDatabase } from '@pixlova/db/testing';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,6 +31,7 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
   let admin: ReturnType<typeof buildAdminApp>;
   let browser: Browser;
   let base: string;
+  const releases = testReleaseSigner();
 
   beforeAll(async () => {
     database = await createTestDatabase();
@@ -70,6 +77,8 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
         cipher: new DataCipher([{ kid: 'test', key: randomBytes(32) }]),
         limiter: new MemoryRateLimiter(),
         entitlements: test.services.entitlements,
+        releaseTrust: releases.trust,
+        storage: test.storage,
         config: {
           allowedOrigins,
           cookieSecure: false,
@@ -98,7 +107,7 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
     await database?.close();
   });
 
-  it('activation TOTP, consultation motivée, action de support et équipe', async () => {
+  it('activation TOTP, consultation motivée, action de support, équipe et release', async () => {
     const issued = await createOperator(
       database.platform,
       { email: 'root@pixlova.test', displayName: 'Root', roles: ['super_admin'] },
@@ -151,7 +160,8 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
     await revoke.getByLabel('Motif (ticket, demande client…)').fill('Ticket #2 : appareil perdu');
     await revoke.getByRole('button', { name: 'Révoquer les sessions' }).click();
     const dialog = page.getByRole('dialog', { name: 'Confirmer avec votre second facteur' });
-    await dialog.getByLabel('Code à 6 chiffres').fill(code(secret, 1));
+    let usedStep = currentStep(Date.now()) + 1;
+    await dialog.getByLabel('Code à 6 chiffres').fill(totpAt(secret, usedStep));
     await dialog.getByRole('button', { name: 'Confirmer' }).click();
     await page.getByText('1 session(s) révoquée(s).').waitFor();
 
@@ -166,10 +176,41 @@ describe.skipIf(skipDatabaseTests)('console d’administration dans un vrai navi
       .poll(async () => (await page.getByTestId('activation-code').textContent())?.length ?? 0)
       .toBeGreaterThan(20);
 
+    // Release du Player natif : dépôt signé, paquet vérifié, périmètre puis publication.
+    const bytes = new Uint8Array(randomBytes(3000));
+    const packagePath = resolve(output, 'release-0.2.0.tar');
+    await writeFile(packagePath, bytes);
+    await page.getByRole('link', { name: 'Releases Player' }).click();
+    await page.getByText('Aucune release déposée.').waitFor();
+    await page.getByLabel('Enveloppe signée (JSON)').fill(releases.sign('0.2.0', bytes));
+    await page.getByLabel('Notes de version (facultatif)').fill('Correctif de lecture vidéo');
+    await page.getByRole('button', { name: 'Déposer le brouillon' }).click();
+    await page.getByRole('heading', { name: 'Release 0.2.0 (linux / x86_64)' }).waitFor();
+    await page.getByLabel('Archive tar signée').setInputFiles(packagePath);
+    await page.getByRole('button', { name: 'Envoyer le paquet' }).click();
+    await page
+      .getByText('Release souhaitée actuelle : aucune ; après publication : 0.2.0.')
+      .waitFor();
+    await page.waitForTimeout(3_500);
+    const publish = page.locator('form', { has: page.getByRole('button', { name: 'Publier' }) });
+    await publish.getByLabel('Motif de la publication').fill('Mise en production 0.2.0');
+    await publish.getByLabel('Confirmer en saisissant la version (0.2.0)').fill('0.2.0');
+    await publish.getByRole('button', { name: 'Publier' }).click();
+    // Un code déjà utilisé est refusé : attendre le pas TOTP suivant.
+    await expect
+      .poll(() => currentStep(Date.now()) + 1, { timeout: 35_000, interval: 500 })
+      .toBeGreaterThan(usedStep);
+    usedStep = currentStep(Date.now()) + 1;
+    await dialog.getByLabel('Code à 6 chiffres').fill(totpAt(secret, usedStep));
+    await dialog.getByRole('button', { name: 'Confirmer' }).click();
+    await page.getByText('souhaitée', { exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Bloquer' }).waitFor();
+
     // Journal : actions visibles avec leur motif.
     await page.getByRole('link', { name: 'Journal' }).click();
     await page.getByText('platform.customer.sessions_revoked').waitFor();
     await page.getByText('Ticket #2 : appareil perdu').first().waitFor();
+    await page.getByText('Mise en production 0.2.0').first().waitFor();
     await page.screenshot({ path: resolve(output, 'admin-console-journal.png'), fullPage: true });
   });
 });

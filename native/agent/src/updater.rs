@@ -42,6 +42,10 @@ pub enum UpdateError {
     Incomplete(String),
     #[error("version {0} déjà installée")]
     AlreadyInstalled(String),
+    #[error("aucune version précédente installée vers laquelle revenir")]
+    RollbackUnavailable,
+    #[error("une mise à jour est en cours d’essai")]
+    TrialInProgress,
     #[error("{0}")]
     Io(#[from] std::io::Error),
 }
@@ -58,6 +62,8 @@ impl UpdateError {
             Self::UnsafePackage(_) => "PACKAGE_UNSAFE",
             Self::Incomplete(_) => "PACKAGE_INCOMPLETE",
             Self::AlreadyInstalled(_) => "ALREADY_INSTALLED",
+            Self::RollbackUnavailable => "ROLLBACK_UNAVAILABLE",
+            Self::TrialInProgress => "UPDATE_IN_PROGRESS",
             Self::Io(_) => "LOCAL_STORAGE_ERROR",
         }
     }
@@ -88,6 +94,10 @@ pub struct LauncherState {
     pub blocked: Vec<String>,
     #[serde(default)]
     pub history: Vec<HistoryEntry>,
+    /// Retour arrière demandé par l’agent (plateforme ou commande `ROLLBACK_PLAYER`),
+    /// exécuté par le lanceur au prochain démarrage, base fermée (ADR-019).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rollback_requested: Option<String>,
 }
 
 pub fn versions_dir(data_dir: &Path) -> PathBuf {
@@ -143,6 +153,30 @@ impl LauncherState {
         let excess = self.history.len().saturating_sub(50);
         self.history.drain(..excess);
     }
+}
+
+/// Version précédente encore installée, vers laquelle un retour arrière est possible.
+pub fn rollback_target(data_dir: &Path, state: &LauncherState) -> Option<String> {
+    let previous = state.previous.clone()?;
+    versions_dir(data_dir)
+        .join(&previous)
+        .join("pixlova-agent")
+        .is_file()
+        .then_some(previous)
+}
+
+/// Inscrit une demande de retour arrière : le lanceur l’exécute au prochain démarrage
+/// (version en service bloquée, version précédente rétablie, base restaurée si besoin).
+/// Retourne la version visée.
+pub fn request_rollback(data_dir: &Path, reason: &str) -> Result<String, UpdateError> {
+    let mut state = LauncherState::load(data_dir)?;
+    if state.pending.is_some() {
+        return Err(UpdateError::TrialInProgress);
+    }
+    let target = rollback_target(data_dir, &state).ok_or(UpdateError::RollbackUnavailable)?;
+    state.rollback_requested = Some(reason.chars().take(200).collect());
+    state.save(data_dir)?;
+    Ok(target)
 }
 
 /// Métadonnées vérifiées d’une version installée (`versions/<v>/release.json`).

@@ -148,6 +148,20 @@
       "when": 1790851383021,
       "tag": "0020_billing_plan_changes_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790855388674,
+      "tag": "0021_player_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790855397024,
+      "tag": "0022_player_releases_grants",
+      "breakpoints": true
     }
   ]
 }

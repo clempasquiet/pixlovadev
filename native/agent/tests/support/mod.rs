@@ -230,6 +230,12 @@ pub struct MockState {
     pub screenshot_sessions: Vec<Value>,
     pub uploads: HashMap<String, Vec<u8>>,
     pub completed_screenshots: Vec<String>,
+    /// Réponse de `GET /releases/desired` (ADR-019) ; absente : aucune release.
+    pub desired_release: Option<Value>,
+    /// Versions annoncées par l’agent à chaque contrôle.
+    pub desired_requests: Vec<Option<String>>,
+    /// États de mise à jour déclarés : (release_id, corps).
+    pub update_reports: Vec<(String, Value)>,
 }
 
 pub type Shared = Arc<Mutex<MockState>>;
@@ -634,6 +640,38 @@ async fn status(
     Json(json!({ "state": state_name })).into_response()
 }
 
+async fn desired_release(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    let mut s = state.lock().unwrap();
+    s.desired_requests
+        .push(query.get("current_version").cloned());
+    Json(
+        s.desired_release
+            .clone()
+            .unwrap_or_else(|| json!({ "release": null, "package": null, "rollback": false })),
+    )
+    .into_response()
+}
+
+async fn update_status(
+    State(state): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(response) = guard(&state, &headers) {
+        return response;
+    }
+    state.lock().unwrap().update_reports.push((id, body));
+    StatusCode::NO_CONTENT.into_response()
+}
+
 pub struct MockApi {
     pub url: String,
     pub state: Shared,
@@ -666,6 +704,8 @@ impl MockApi {
                 "/player/v1/screenshots/{id}/complete",
                 post(screenshot_complete),
             )
+            .route("/player/v1/releases/desired", get(desired_release))
+            .route("/player/v1/updates/{id}/status", post(update_status))
             .route("/upload/{id}", axum::routing::put(upload))
             .route("/storage/{id}", get(storage))
             .with_state(state.clone());

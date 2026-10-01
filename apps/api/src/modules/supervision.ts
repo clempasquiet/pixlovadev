@@ -23,12 +23,15 @@ import {
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
 import { idempotencyScope, idempotent } from '../lib/idempotency.js';
+import { desiredRelease, isNewerVersion, releasePlatform } from '../lib/releases.js';
 import { cloudEvent, screenshotObjectKey, signCommand } from '../lib/supervision.js';
 import { activeAssignments, presence, siteCondition, visibleSites } from './fleet.js';
 import { Strict, Uuid } from './schemas.js';
 
-/** Types refusés tant que la distribution des releases n’existe pas (ADR-014). */
-const NOT_AVAILABLE: readonly CommandType[] = ['UPDATE_PLAYER', 'ROLLBACK_PLAYER'];
+/** Commandes qui redémarrent le Player : permission des actions perturbatrices. */
+const DISRUPTIVE: readonly CommandType[] = ['REBOOT_HOST', 'UPDATE_PLAYER', 'ROLLBACK_PLAYER'];
+/** Mise à jour et retour arrière : Player natif seulement (ADR-019). */
+const RELEASE_COMMANDS: readonly CommandType[] = ['UPDATE_PLAYER', 'ROLLBACK_PLAYER'];
 const DISPLAY_SCOPED: readonly CommandType[] = ['RELOAD_CONTENT', 'TAKE_SCREENSHOT'];
 const MAX_TTL_SECONDS = 24 * 3600;
 const SCREENSHOT_URL_SECONDS = 60;
@@ -138,6 +141,35 @@ async function currentGeneration(
       ),
     );
   return row ? String(row.generation) : null;
+}
+
+/**
+ * Paramètres d’une mise à jour ou d’un retour arrière (ADR-019) : Player natif d’une
+ * plateforme du registre ; une mise à jour vise la release souhaitée, plus récente que
+ * la version en service. Le Player revérifie tout avant d’installer.
+ */
+async function releaseCommandParams(
+  tx: Transaction,
+  player: PlayerRow,
+  type: CommandType,
+): Promise<Record<string, string>> {
+  const platform = releasePlatform(player);
+  if (!platform) {
+    throw new ApiError(
+      422,
+      'CAPABILITY_UNSUPPORTED',
+      'Mises à jour et retours arrière distants : Player natif seulement.',
+    );
+  }
+  if (type === 'ROLLBACK_PLAYER') return {};
+  const release = await desiredRelease(tx, platform);
+  if (!release) {
+    throw new ApiError(409, 'NO_RELEASE_AVAILABLE', 'Aucune release publiée pour ce Player.');
+  }
+  if (!isNewerVersion(release.version, player.appVersion)) {
+    throw new ApiError(409, 'PLAYER_UP_TO_DATE', 'Ce Player exécute déjà la dernière release.');
+  }
+  return { release_id: release.id };
 }
 
 /**
@@ -375,17 +407,14 @@ export function supervisionRoutes(app: FastifyInstance, services: Services): voi
       const result = await withTenant(services.db, member.organizationId, async (tx) => {
         const player = await loadPlayer(tx, id, true);
         authorize(member, 'player.command', { siteId: player.siteId });
-        if (body.type === 'REBOOT_HOST') {
+        if (DISRUPTIVE.includes(body.type)) {
           authorize(member, 'player.command.disruptive', { siteId: player.siteId });
         }
         return idempotent(tx, scope, async () => {
           await rateLimit(services, `commands:org:${member.organizationId}`, 120, 600);
-          if (NOT_AVAILABLE.includes(body.type)) {
-            throw new ApiError(
-              422,
-              'COMMAND_NOT_AVAILABLE',
-              'Mises à jour et retours arrière distants indisponibles dans cette version.',
-            );
+          let params: Record<string, string> = {};
+          if (RELEASE_COMMANDS.includes(body.type)) {
+            params = await releaseCommandParams(tx, player, body.type);
           }
           if (body.type === 'TAKE_SCREENSHOT') {
             throw new ApiError(
@@ -410,9 +439,10 @@ export function supervisionRoutes(app: FastifyInstance, services: Services): voi
               type: body.type,
               displayId: body.display_id ?? null,
               ttlSeconds: body.ttl_seconds ?? services.supervision.commandTtlSeconds,
-              params: {},
-              permission:
-                body.type === 'REBOOT_HOST' ? 'player.command.disruptive' : 'player.command',
+              params,
+              permission: DISRUPTIVE.includes(body.type)
+                ? 'player.command.disruptive'
+                : 'player.command',
             },
             requestMeta(request),
           );
@@ -441,6 +471,47 @@ export function supervisionRoutes(app: FastifyInstance, services: Services): voi
         return {
           commands_available: services.supervision.commandKey !== null,
           items: commands.map(publicCommand),
+        };
+      });
+    },
+  );
+
+  /**
+   * Versions du Player natif (PLY-005) : installée, souhaitée et dernier résultat de mise
+   * à jour déclaré. Une valeur inconnue est `null`, jamais déduite.
+   */
+  app.get(
+    '/players/:id/update',
+    { schema: { params: Type.Object({ id: Uuid }, Strict) } },
+    async (request) => {
+      const member = await requireMember(request, services);
+      const { id } = request.params as { id: string };
+      return withTenant(services.db, member.organizationId, async (tx) => {
+        const player = await loadPlayer(tx, id);
+        authorize(member, 'organization.read', { siteId: player.siteId });
+        const platform = releasePlatform(player);
+        const desired = platform ? await desiredRelease(tx, platform) : null;
+        const [report] = await tx
+          .select()
+          .from(schema.playerUpdateReports)
+          .where(eq(schema.playerUpdateReports.playerId, id))
+          .orderBy(desc(schema.playerUpdateReports.observedAt))
+          .limit(1);
+        return {
+          supported: platform !== null,
+          installed_version: player.appVersion,
+          desired: desired ? { release_id: desired.id, version: desired.version } : null,
+          update_available: desired ? isNewerVersion(desired.version, player.appVersion) : false,
+          last_report: report
+            ? {
+                release_id: report.releaseId,
+                version: report.version,
+                state: report.state,
+                code: report.code,
+                detail: report.detail,
+                observed_at: report.observedAt.toISOString(),
+              }
+            : null,
         };
       });
     },

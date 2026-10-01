@@ -156,6 +156,23 @@ pub struct AssetUrl {
     pub range_supported: bool,
 }
 
+/// Paquet d’une release : URL signée, taille et empreinte annoncées (revérifiées).
+#[derive(Debug, Clone, Deserialize)]
+pub struct PackageRef {
+    pub url: String,
+    pub expires_at: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+}
+
+/// `GET /releases/desired` (ADR-019) : l’enveloppe reste brute jusqu’à sa vérification.
+#[derive(Debug, Clone, Deserialize)]
+pub struct DesiredRelease {
+    pub release: Option<String>,
+    pub package: Option<PackageRef>,
+    pub rollback: bool,
+}
+
 /// Réponse de `GET /manifest` : l’enveloppe brute, jamais réinterprétée avant vérification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManifestFetch {
@@ -175,6 +192,8 @@ struct AccessToken {
 #[derive(Clone)]
 pub struct Cloud {
     http: reqwest::Client,
+    /// Téléchargement des paquets de release : pas de délai total, délai de lecture borné.
+    packages: reqwest::Client,
     /// Origine de l’API (`https://hôte[:port]`), pour les URLs de stockage relatives.
     origin: String,
     base: String,
@@ -226,6 +245,13 @@ impl Cloud {
             .https_only(!is_local(api_url))
             .build()
             .map_err(|e| CloudError::Protocol(e.to_string()))?;
+        let packages = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .read_timeout(Duration::from_secs(60))
+            .user_agent(format!("pixlova-agent/{}", crate::AGENT_VERSION))
+            .https_only(!is_local(api_url))
+            .build()
+            .map_err(|e| CloudError::Protocol(e.to_string()))?;
         let trimmed = api_url.trim_end_matches('/');
         let origin = trimmed
             .find("://")
@@ -238,6 +264,7 @@ impl Cloud {
             .to_owned();
         Ok(Self {
             http,
+            packages,
             origin,
             base: format!("{trimmed}/player/v1"),
             token: Arc::new(Mutex::new(None)),
@@ -259,6 +286,11 @@ impl Cloud {
     /// Client HTTP pour les téléchargements (URLs de stockage signées, sans jeton Player).
     pub fn downloader(&self) -> reqwest::Client {
         self.http.clone()
+    }
+
+    /// Client des paquets de release (URLs signées, sans jeton Player).
+    pub fn package_downloader(&self) -> reqwest::Client {
+        self.packages.clone()
     }
 
     async fn anonymous<T: DeserializeOwned>(&self, path: &str, body: &Value) -> CloudResult<T> {
@@ -562,6 +594,28 @@ impl Cloud {
         )))
         .await
         .map(|_| ())
+    }
+
+    /// Release souhaitée pour ce Player ; la version en service est déclarée au passage.
+    pub async fn desired_release(
+        &self,
+        current_version: Option<&str>,
+    ) -> CloudResult<DesiredRelease> {
+        let mut request = self.http.get(format!("{}/releases/desired", self.base));
+        if let Some(version) = current_version {
+            request = request.query(&[("current_version", version)]);
+        }
+        self.json(request).await
+    }
+
+    /// Dernier état local d’une mise à jour (PLY-005).
+    pub async fn update_status(&self, release_id: &str, body: &Value) -> CloudResult<()> {
+        self.no_content(
+            self.http
+                .post(format!("{}/updates/{release_id}/status", self.base))
+                .json(body),
+        )
+        .await
     }
 
     pub async fn manifest_status(

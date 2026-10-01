@@ -33,6 +33,10 @@ export const PLATFORM_PERMISSIONS = {
   'platform.jobs.retry': 'Relancer une tâche en échec',
   'platform.incidents.read': 'Consulter les incidents de toutes les organisations',
   'platform.templates.read': 'Consulter le catalogue de templates',
+  'platform.releases.read':
+    'Consulter les releases du Player natif, leur périmètre et le résultat des déploiements',
+  'platform.releases.manage':
+    'Déposer, publier ou bloquer une release du Player natif (retour arrière du parc)',
   'platform.audit.read': 'Consulter le journal d’audit de la plateforme',
   'platform.team.manage': 'Gérer les opérateurs, leurs rôles et leurs accès',
 } as const;
@@ -54,6 +58,7 @@ export const PLATFORM_ROLES: Record<
       'platform.customers.revoke_sessions',
       'platform.incidents.read',
       'platform.jobs.read',
+      'platform.releases.read',
     ],
   },
   billing_admin: {
@@ -73,6 +78,8 @@ export const PLATFORM_ROLES: Record<
       'platform.incidents.read',
       'platform.jobs.read',
       'platform.jobs.retry',
+      'platform.releases.read',
+      'platform.releases.manage',
     ],
   },
   content_admin: { label: 'ContentAdmin', permissions: ['platform.templates.read'] },

@@ -50,8 +50,8 @@ Une valeur indisponible, par exemple sur le Player Web, reste « non disponible 
   - `FORCE_SYNC`, `RELOAD_CONTENT`, `GET_STATUS` ;
   - `RESTART_RENDERER`, `CLEAR_UNUSED_CACHE` ;
   - `TAKE_SCREENSHOT` : seulement si la capacité `screenshot` est `supported`.
-- **Types refusés** :
-  - `UPDATE_PLAYER` et `ROLLBACK_PLAYER` : refusés par l’API tant que la distribution des releases n’existe pas ;
+- **Mises à jour** ([ADR-019](0019-registre-releases-player.md)) : `UPDATE_PLAYER` (release souhaitée) et `ROLLBACK_PLAYER` (version précédente locale), Player natif et permission `player.command.disruptive`.
+- **Type refusé** :
   - `REBOOT_HOST` : seulement pour une capacité qualifiée, avec la permission `player.command.disruptive`. Aucun Player ne la déclare en V1.
 - **Signature** : chaque commande est signée par le cloud (`SIGNAGE_COMMAND_V1`) avec une **clé de commande distincte** de la clé des manifests (`PIXLOVA_COMMAND_KEY_ID`, `PIXLOVA_COMMAND_SIGNING_KEY`). Les Players la reçoivent avec leurs clés de confiance (`command-keys.json`).
 - **Création** :

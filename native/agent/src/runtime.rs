@@ -3,6 +3,7 @@
 //! chaque étape réseau peut échouer sans toucher à l’état local validé.
 
 mod commands;
+mod releases;
 
 use crate::cache::Cache;
 use crate::clock::{Clock, SystemClock, format_instant, parse_instant_millis};
@@ -73,6 +74,11 @@ pub struct Runtime {
     /// Réveille la boucle principale (commande `FORCE_SYNC`).
     wake: Arc<Notify>,
     status_sent: Mutex<Option<Instant>>,
+    /// Clés de release, distinctes des clés de manifest et de commande (NAT-013).
+    release_trust: TrustStore,
+    release_checked: Mutex<Option<Instant>>,
+    /// Arrêt demandé pour essayer une version installée ou revenir en arrière (ADR-019).
+    restart: std::sync::atomic::AtomicBool,
 }
 
 fn init<E: std::fmt::Display>(context: &str) -> impl FnOnce(E) -> RuntimeError + '_ {
@@ -135,6 +141,9 @@ impl Runtime {
                 shutdown: Arc::new(Notify::new()),
                 events,
                 command_trust: trust.commands,
+                release_trust: trust.releases,
+                release_checked: Mutex::new(None),
+                restart: std::sync::atomic::AtomicBool::new(false),
                 screenshot_supported,
                 wake: Arc::new(Notify::new()),
                 status_sent: Mutex::new(None),
@@ -574,6 +583,11 @@ impl Runtime {
                     && let Err(error) = self.process_commands(org, player).await
                 {
                     tracing::debug!(%error, "commandes non récupérées");
+                }
+                self.report_updates().await;
+                self.periodic_release_check().await;
+                if self.restart_if_requested().await {
+                    return Duration::from_secs(60);
                 }
                 let due = self
                     .status_sent

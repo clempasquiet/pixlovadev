@@ -1,5 +1,6 @@
-import type { BillingEnvironment } from '@pixlova/contracts';
+import type { BillingEnvironment, TrustStore } from '@pixlova/contracts';
 import type { Database } from '@pixlova/db';
+import type { ObjectStorage } from '@pixlova/storage';
 import type { DataCipher } from '../lib/crypto.js';
 import type { EntitlementsProvider } from '../lib/entitlements.js';
 import type { RateLimiter } from '../lib/rate-limit.js';
@@ -16,5 +17,9 @@ export interface AdminServices {
   /** Environnement Stripe consulté (ADR-017) ; `test` par défaut. */
   billingEnvironment?: BillingEnvironment;
   config: AdminConfig;
+  /** Clés publiques de release (ADR-019) ; vides : aucun dépôt possible. */
+  releaseTrust: TrustStore;
+  /** Stockage privé des paquets de release ; absent : dépôt de paquet indisponible. */
+  storage?: ObjectStorage | null;
   now(): Date;
 }

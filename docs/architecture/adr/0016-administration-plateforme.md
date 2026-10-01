@@ -73,7 +73,7 @@ L’équipe pixlova doit pouvoir diagnostiquer les organisations, aider un clien
 - **Compte client.** Recherche par adresse **exacte** seulement, jamais de liste. Motif obligatoire.
 - **Autres vues.** Incidents ouverts, tâches en échec, journal de la plateforme, catalogue de templates.
 - **Abonnements.** Affichés « indisponibles (L08) ». Aucune valeur n’est inventée.
-- **Registre des releases.** Déclaré inexistant.
+- **Registre des releases.** Livré par [ADR-019](0019-registre-releases-player.md) : dépôt signé, paquet vérifié, périmètre, publication et blocage (Operator, SuperAdmin ; lecture Support).
 
 ### Actions de support (ADM-003) : explicites, bornées, traçables
 
@@ -130,5 +130,5 @@ L’équipe pixlova doit pouvoir diagnostiquer les organisations, aider un clien
 
 **Réexamen.** Il interviendra :
 - avec L08 : vues abonnements et promotions livrées (ADR-017) ; actions de facturation (dérogations, remboursements) encore absentes ;
-- avec un registre de releases ;
+- avec un registre de releases : livré (ADR-019) ;
 - avant la production (durées de session, matrice des rôles, information des clients sur les consultations, WebAuthn).

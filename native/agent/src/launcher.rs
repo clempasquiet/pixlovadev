@@ -10,7 +10,7 @@
 use crate::clock::{Clock, SystemClock, format_instant};
 use crate::identity::sync_dir;
 use crate::store::{READER_LEVEL, snapshot_path};
-use crate::updater::{LauncherState, installed_release, versions_dir};
+use crate::updater::{LauncherState, installed_release, rollback_target, versions_dir};
 use rusqlite::{Connection, OpenFlags, OptionalExtension};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
@@ -182,6 +182,37 @@ fn rollback(options: &LauncherOptions, state: &mut LauncherState, version: &str,
     }
 }
 
+/// Retour arrière demandé par l’agent (ADR-019) : la version en service est bloquée et la
+/// précédente rétablie, base restaurée seulement si nécessaire et compatible (NAT-015).
+fn revert(options: &LauncherOptions, state: &mut LauncherState, reason: &str) {
+    let (Some(current), Some(target), None) = (
+        state.current.clone(),
+        rollback_target(&options.data_dir, state),
+        state.pending.as_ref(),
+    ) else {
+        log("retour arrière demandé sans version précédente installée : ignoré");
+        return;
+    };
+    log(&format!(
+        "retour arrière demandé de {current} vers {target} : {reason}"
+    ));
+    if !state.blocked.iter().any(|b| b == &current) {
+        state.blocked.push(current.clone());
+    }
+    let release_id = installed_release(&options.data_dir, &current, &options.release_trust)
+        .map(|r| r.release_id);
+    state.record(
+        &current,
+        release_id,
+        "rolled_back",
+        Some(reason.to_owned()),
+        &now(),
+    );
+    state.current = Some(target.clone());
+    state.previous = None;
+    restore_database_if_needed(&options.data_dir, reader_level(options, &target));
+}
+
 /// Boucle du lanceur ; retourne le code de sortie à transmettre à systemd.
 pub fn run(options: &LauncherOptions) -> i32 {
     loop {
@@ -196,6 +227,9 @@ pub fn run(options: &LauncherOptions) -> i32 {
         };
         if state.current.is_none() {
             state.current = discover(&options.data_dir);
+        }
+        if let Some(reason) = state.rollback_requested.take() {
+            revert(options, &mut state, &reason);
         }
         if let Some(pending) = state.pending.clone() {
             let installed = versions_dir(&options.data_dir)
