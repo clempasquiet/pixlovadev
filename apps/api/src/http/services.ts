@@ -2,6 +2,7 @@ import type { MediaLimits } from '@pixlova/contracts';
 import type { Database } from '@pixlova/db';
 import type { ObjectStorage } from '@pixlova/storage';
 import type { MediaConfig, SecurityConfig, SupervisionConfig } from '../config.js';
+import type { BillingConfig } from '../lib/billing.js';
 import type { DataCipher } from '../lib/crypto.js';
 import type { EntitlementsProvider } from '../lib/entitlements.js';
 import type { RateLimiter } from '../lib/rate-limit.js';
@@ -15,6 +16,8 @@ export interface Services {
   cipher: DataCipher;
   limiter: RateLimiter;
   entitlements: EntitlementsProvider;
+  /** Facturation Stripe (ADR-017) ; sans passerelle, les achats répondent 503. */
+  billing: BillingConfig;
   security: SecurityConfig;
   /** Stockage objet privé (ADR-009) : seules des URLs signées sortent de l’API. */
   storage: ObjectStorage;

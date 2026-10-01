@@ -8,6 +8,7 @@ import pg from 'pg';
 import { createDatabase } from '@pixlova/db';
 import { buildAdminApp } from './admin/app.js';
 import { loadAdminConfig } from './admin/config.js';
+import { billingEnvironmentFromEnv } from './lib/billing.js';
 import { DataCipher } from './lib/crypto.js';
 import { deploymentFromEnv, entitlementsFromEnv } from './lib/entitlements.js';
 import { MemoryRateLimiter, RedisRateLimiter } from './lib/rate-limit.js';
@@ -31,13 +32,18 @@ if (production && !config.cookieSecure) {
   throw new Error('PIXLOVA_ADMIN_COOKIE_SECURE=false est interdit en production.');
 }
 
+const platform = createDatabase(pool);
 const app = buildAdminApp({
   logger: loggerOptions(),
   services: {
-    platform: createDatabase(pool),
+    platform,
     cipher: DataCipher.fromEnv(process.env.PIXLOVA_DATA_KEYS),
     limiter: redis ? new RedisRateLimiter(redis) : new MemoryRateLimiter(),
-    entitlements: entitlementsFromEnv(process.env, deployment),
+    entitlements: entitlementsFromEnv(process.env, deployment, {
+      db: platform,
+      environment: billingEnvironmentFromEnv(process.env),
+    }),
+    billingEnvironment: billingEnvironmentFromEnv(process.env),
     config,
     now: () => new Date(),
   },

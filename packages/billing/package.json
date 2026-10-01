@@ -1,0 +1,32 @@
+{
+  "name": "@pixlova/billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Facturation pixlova : catalogue versionné, droits effectifs, passerelle Stripe, projection des abonnements et traitement des webhooks.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pixlova/contracts": "workspace:*",
+    "@pixlova/db": "workspace:*",
+    "@pixlova/scheduling": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "stripe": "22.6.2"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

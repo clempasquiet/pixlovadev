@@ -1,6 +1,6 @@
 /**
  * Configuration du site, fixée au build (pages statiques). Les origines par défaut suivent
- * la proposition de l’ADR-017 et ne valent pas décision DNS.
+ * la répartition des domaines validée dans l’ADR-018.
  */
 export interface SiteConfig {
   /** Origine canonique du site, sans barre finale (liens canoniques, sitemap). */

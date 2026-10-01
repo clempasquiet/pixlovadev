@@ -40,9 +40,9 @@ export interface Stack {
 }
 
 /** API réelle + PostgreSQL + dashboard construit, servi par Vite preview, et Chromium. */
-export async function startStack(): Promise<Stack> {
+export async function startStack(options: { billing?: boolean } = {}): Promise<Stack> {
   const database = await createTestDatabase();
-  const test = createTestServices(database, { cookieSecure: false });
+  const test = createTestServices(database, { cookieSecure: false }, options);
   test.setMaxUsers(5);
   test.setDisplaySlots(5);
   const api = buildPublicApp({ services: test.services });

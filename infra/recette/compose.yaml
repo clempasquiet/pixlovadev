@@ -203,6 +203,11 @@ services:
       PIXLOVA_MAIL_FROM: pixlova recette <noreply@recette.invalid>
       PIXLOVA_COMMAND_KEY_ID: ${PIXLOVA_COMMAND_KEY_ID:?}
       PIXLOVA_COMMAND_SIGNING_KEY: ${PIXLOVA_COMMAND_SIGNING_KEY:?}
+      # Facturation Stripe en mode TEST uniquement (ADR-017) ; vide : achats indisponibles.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      PIXLOVA_BILLING_GRACE_DAYS: ${PIXLOVA_BILLING_GRACE_DAYS:-7}
+      PIXLOVA_STRIPE_TEST_CLOCKS: ${PIXLOVA_STRIPE_TEST_CLOCKS:-false}
       PIXLOVA_DEV_MAX_USERS: ${PIXLOVA_DEV_MAX_USERS:-}
       PIXLOVA_DEV_DISPLAY_SLOTS: ${PIXLOVA_DEV_DISPLAY_SLOTS:-}
       PIXLOVA_DEV_STORAGE_BYTES: ${PIXLOVA_DEV_STORAGE_BYTES:-}
@@ -224,6 +229,11 @@ services:
       PIXLOVA_MANIFEST_KEY_ID: ${PIXLOVA_MANIFEST_KEY_ID:?}
       PIXLOVA_MANIFEST_SIGNING_KEY: ${PIXLOVA_MANIFEST_SIGNING_KEY:?}
       PIXLOVA_WORKER_CONCURRENCY: ${PIXLOVA_WORKER_CONCURRENCY:-2}
+      PIXLOVA_DEPLOYMENT: recette
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      PIXLOVA_BILLING_GRACE_DAYS: ${PIXLOVA_BILLING_GRACE_DAYS:-7}
+      PIXLOVA_STRIPE_TEST_CLOCKS: ${PIXLOVA_STRIPE_TEST_CLOCKS:-false}
     volumes:
       - worker-tmp:/var/tmp/pixlova-worker
     networks: [data]
@@ -252,7 +262,7 @@ services:
     read_only: true
     cap_drop: [ALL]
 
-  # Site public (WEB-001, ADR-017) : conteneur statique séparé, sans accès à l’API ni à la
+  # Site public (WEB-001, ADR-018) : conteneur statique séparé, sans accès à l’API ni à la
   # base. Origines fixées au build ; jamais indexable en recette. Route du tunnel : site:8090.
   site:
     <<: *hardening
@@ -287,6 +297,8 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
       PIXLOVA_DATA_KEYS: ${PIXLOVA_DATA_KEYS:?}
       PIXLOVA_ADMIN_ALLOWED_ORIGINS: ${PIXLOVA_ADMIN_ORIGINS:-http://127.0.0.1:8081,http://localhost:8081}
+      # Le conteneur d’administration lit les droits sans détenir la clé Stripe.
+      PIXLOVA_BILLING_ENVIRONMENT: test
       PIXLOVA_DEV_MAX_USERS: ${PIXLOVA_DEV_MAX_USERS:-}
       PIXLOVA_DEV_DISPLAY_SLOTS: ${PIXLOVA_DEV_DISPLAY_SLOTS:-}
       PIXLOVA_DEV_STORAGE_BYTES: ${PIXLOVA_DEV_STORAGE_BYTES:-}

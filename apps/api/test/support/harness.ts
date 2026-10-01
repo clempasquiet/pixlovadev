@@ -6,7 +6,8 @@ import { buildPublicApp } from '../../src/app.js';
 import type { SecurityConfig } from '../../src/config.js';
 import type { Services } from '../../src/http/services.js';
 import type { MemoryMailer } from '../../src/lib/email.js';
-import { createTestServices } from '../../src/testing.js';
+import { createTestServices, type TestOptions } from '../../src/testing.js';
+import type { FakeStripeGateway } from '@pixlova/billing/testing';
 import { currentStep, totpAt } from '../../src/lib/totp.js';
 
 export const ORIGIN = 'https://app.pixlova.test';
@@ -22,18 +23,26 @@ export interface Harness {
   setStorageBytes(value: number): void;
   setFeatures(value: string[]): void;
   storage: LocalObjectStorage;
+  stripe: FakeStripeGateway | null;
   flushEmails(): Promise<void>;
   close(): Promise<void>;
 }
 
-export async function createHarness(security: Partial<SecurityConfig> = {}): Promise<Harness> {
+export async function createHarness(
+  security: Partial<SecurityConfig> = {},
+  options: TestOptions = {},
+): Promise<Harness> {
   const database = await createTestDatabase();
-  const test = createTestServices(database, {
-    allowedOrigins: [ORIGIN],
-    appBaseUrl: ORIGIN,
-    cookieSecure: true,
-    ...security,
-  });
+  const test = createTestServices(
+    database,
+    {
+      allowedOrigins: [ORIGIN],
+      appBaseUrl: ORIGIN,
+      cookieSecure: true,
+      ...security,
+    },
+    options,
+  );
   const app = buildPublicApp({ services: test.services });
   await app.ready();
   return {
@@ -47,6 +56,7 @@ export async function createHarness(security: Partial<SecurityConfig> = {}): Pro
     setStorageBytes: test.setStorageBytes,
     setFeatures: test.setFeatures,
     storage: test.storage,
+    stripe: test.stripe,
     flushEmails: test.flushEmails,
     async close() {
       await app.close();

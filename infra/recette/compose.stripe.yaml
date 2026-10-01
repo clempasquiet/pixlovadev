@@ -1,0 +1,16 @@
+# Facturation Stripe en mode TEST (ADR-017), à superposer au fichier principal :
+#
+#   docker compose -f infra/recette/compose.yaml -f infra/recette/compose.stripe.yaml up -d
+#
+# L’API (Checkout, Portal) et le worker (projection, réconciliation) doivent joindre
+# api.stripe.com. Le réseau `data` n’a aucun accès Internet (ADR-015) : ce fichier ajoute
+# une sortie dédiée à ces deux services seulement. La base, Redis et le stockage restent
+# sans sortie. En production, cette sortie passera par un proxy limité à Stripe (ADR-017).
+services:
+  api:
+    networks: [data, front, stripe-egress]
+  worker:
+    networks: [data, stripe-egress]
+
+networks:
+  stripe-egress: {}

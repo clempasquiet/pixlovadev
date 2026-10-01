@@ -13,8 +13,10 @@ export { dispatchEmails, MemoryMailer, type Mailer } from './lib/email.js';
 export {
   FREE_ENTITLEMENTS,
   fixedEntitlements,
+  projectedEntitlements,
   type EntitlementsProvider,
 } from './lib/entitlements.js';
+export { billingEnvironmentFromEnv, billingFromEnv, type BillingConfig } from './lib/billing.js';
 export { MemoryRateLimiter, RedisRateLimiter, type RateLimiter } from './lib/rate-limit.js';
 export { buildAdminApp, type AdminAppOptions } from './admin/app.js';
 export { loadAdminConfig, type AdminConfig } from './admin/config.js';

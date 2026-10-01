@@ -55,7 +55,7 @@ Le script écrit deux choses :
 - `infra/recette/.env` (mode 600) : tous les mots de passe et clés. **Sauvegardez ce fichier hors du serveur.** Sans lui, les données chiffrées et les Players appairés sont inutilisables.
 - `infra/recette/trust/` : les clés **publiques** des manifests et des commandes, pour les Players.
 
-Les quotas de test (`PIXLOVA_DEV_*`) et les limites d’envoi figurent dans `.env`, modifiables avant le démarrage.
+Les quotas de test (`PIXLOVA_DEV_*`) et les limites d’envoi figurent dans `.env`, modifiables avant le démarrage. Pour recetter la facturation Stripe (mode test), suivre [FACTURATION.md](FACTURATION.md) : les quotas fixes y sont vidés.
 
 ## 2. Créer le tunnel Cloudflare
 
@@ -147,7 +147,7 @@ Il crée puis révoque un opérateur jetable `recette-admin-…@pixlova.invalid`
 
 ## 6. Site public
 
-Le site public ([ADR-017](../architecture/adr/0017-site-public-domaines.md)) tourne dans son propre conteneur `site`, sans accès à l’API ni à la base. Ses pages sont générées à la construction de l’image :
+Le site public ([ADR-018](../architecture/adr/0018-site-public-domaines.md)) tourne dans son propre conteneur `site`, sans accès à l’API ni à la base. Ses pages sont générées à la construction de l’image :
 
 - leurs boutons « Connexion » et « Créer un compte » mènent au dashboard de `PIXLOVA_PUBLIC_URL` ;
 - elles ne sont **jamais indexables** en recette (`noindex`, `robots.txt` fermé).

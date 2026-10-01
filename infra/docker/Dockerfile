@@ -4,7 +4,7 @@
 #   worker  : worker média/manifests/alertes, avec FFmpeg
 #   gateway : passerelle Caddy (dashboard, Player Web, routage API et stockage)
 #   admin   : administration plateforme privée (listener 8081, console) — ADR-016
-#   site    : site public statique (Caddy, 8090) — ADR-017, origines fixées au build
+#   site    : site public statique (Caddy, 8090) — ADR-018, origines fixées au build
 # Utilisateurs non root, aucune dépendance de développement dans les images finales.
 
 ARG NODE_IMAGE=node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
@@ -80,7 +80,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
   CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/gateway-health"]
 
-# Site public : pages générées au build avec les origines passées en arguments (ADR-017).
+# Site public : pages générées au build avec les origines passées en arguments (ADR-018).
 FROM build AS site-build
 ARG PIXLOVA_SITE_ORIGIN=
 ARG PIXLOVA_SITE_APP_URL=

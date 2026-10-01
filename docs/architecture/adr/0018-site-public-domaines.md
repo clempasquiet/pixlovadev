@@ -1,4 +1,4 @@
-# ADR-017 — Site public : génération statique, conteneur dédié et répartition des domaines
+# ADR-018 — Site public : génération statique, conteneur dédié et répartition des domaines
 
 - Statut : **acceptée**. La répartition des domaines a été validée par le responsable produit le 2026-10-01.
 - Date : 2026-10-01
@@ -77,7 +77,7 @@ L’indexation doit être activée explicitement, pour la seule production : une
 - l’essai de 14 jours et la remise annuelle ne sont pas affichés ;
 - le nombre d’utilisateurs de Business est affiché « À définir ».
 
-Le branchement sur la publication L08 ne change que la source de `SITE_CATALOG`.
+Le branchement sur la publication L08 ([ADR-017](0017-facturation-stripe-entitlements.md)) ne change que la source de `SITE_CATALOG`.
 
 **Fonctionnalités.** Elles se limitent à la V1. La FAQ dit explicitement que la synchronisation de plusieurs sorties et le découpage d’un contenu sur plusieurs écrans (V2) ne sont pas proposés.
 

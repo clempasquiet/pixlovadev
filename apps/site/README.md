@@ -1,6 +1,6 @@
 # Site public pixlova
 
-Site marketing ([ADR-017](../../docs/architecture/adr/0017-site-public-domaines.md)) : pages React rendues **au build** en HTML statique, servies par leur propre conteneur Caddy. Aucun React n’est envoyé au navigateur ; `src/site.js` gère le menu mobile, le calculateur de tarifs et le mur LED.
+Site marketing ([ADR-018](../../docs/architecture/adr/0018-site-public-domaines.md)) : pages React rendues **au build** en HTML statique, servies par leur propre conteneur Caddy. Aucun React n’est envoyé au navigateur ; `src/site.js` gère le menu mobile, le calculateur de tarifs et le mur LED.
 
 ```sh
 pnpm --filter @pixlova/site run build          # dist/ (origines : variables PIXLOVA_SITE_* ci-dessous)

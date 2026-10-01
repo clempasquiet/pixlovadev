@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Recette du site public (L09-M, ADR-017), sur le serveur qui exécute Docker Compose :
+ * Recette du site public (L09-M, ADR-018), sur le serveur qui exécute Docker Compose :
  *   - le conteneur `site` sert les pages statiques sur la boucle locale (port 8090) ;
  *   - les liens d’inscription et de connexion mènent au dashboard de la recette ;
  *   - en-têtes de sécurité, page 404 et refus d’indexation ;
