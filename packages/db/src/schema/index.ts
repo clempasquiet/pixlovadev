@@ -11,3 +11,4 @@ export * from './supervision.js';
 export { appRole, currentOrganization } from './common.js';
 export * from './platform.js';
 export * from './billing.js';
+export * from './releases.js';

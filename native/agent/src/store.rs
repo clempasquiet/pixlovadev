@@ -144,6 +144,14 @@ CREATE TABLE commands (
 );
 "#,
     },
+    // L09-A (ADR-019) : état de mise à jour déjà déclaré au cloud, par release.
+    Migration {
+        version: 3,
+        min_reader_level: 1,
+        sql: r#"
+ALTER TABLE updates ADD COLUMN reported_state TEXT;
+"#,
+    },
 ];
 
 #[derive(Debug, thiserror::Error)]
@@ -856,11 +864,42 @@ impl Store {
         detail: Option<&str>,
         now: &str,
     ) -> StoreResult<()> {
+        // Un état plus ancien (historique du lanceur relu au démarrage) ne remplace rien.
         self.conn().execute(
             "INSERT INTO updates (release_id, version, state, detail, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT (release_id) DO UPDATE SET state = excluded.state, detail = excluded.detail,
-               updated_at = excluded.updated_at",
+               updated_at = excluded.updated_at
+             WHERE excluded.updated_at >= updates.updated_at",
             params![release_id, version, state, detail, now],
+        )?;
+        Ok(())
+    }
+
+    /// États de mise à jour pas encore déclarés au cloud (PLY-005).
+    pub fn unreported_updates(&self) -> StoreResult<Vec<UpdateReport>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT release_id, version, state, detail, updated_at FROM updates
+             WHERE reported_state IS NULL OR reported_state <> state
+             ORDER BY updated_at LIMIT 20",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(UpdateReport {
+                release_id: row.get(0)?,
+                version: row.get(1)?,
+                state: row.get(2)?,
+                detail: row.get(3)?,
+                updated_at: row.get(4)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Marque un état déclaré ; un état devenu différent entre-temps reste à déclarer.
+    pub fn mark_update_reported(&self, release_id: &str, state: &str) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE updates SET reported_state = ?2 WHERE release_id = ?1 AND state = ?2",
+            params![release_id, state],
         )?;
         Ok(())
     }
@@ -1138,6 +1177,16 @@ fn command_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<CommandRow> {
 /// Mise à jour enregistrée : `release_id`, version, état, détail.
 pub type UpdateRow = (String, String, String, Option<String>);
 
+/// État local d’une mise à jour à déclarer au cloud.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateReport {
+    pub release_id: String,
+    pub version: String,
+    pub state: String,
+    pub detail: Option<String>,
+    pub updated_at: String,
+}
+
 pub fn snapshot_path(path: &Path, version: i64) -> PathBuf {
     let mut name = path.file_name().unwrap_or_default().to_os_string();
     name.push(format!(".pre-v{version}"));
@@ -1170,7 +1219,33 @@ mod tests {
         let (_dir, store) = store();
         let first = store.installation_id(NOW).unwrap();
         assert_eq!(store.installation_id(NOW).unwrap(), first);
-        assert_eq!(store.schema_version().unwrap(), 2);
+        assert_eq!(store.schema_version().unwrap(), 3);
+    }
+
+    #[test]
+    fn declare_chaque_etat_de_mise_a_jour_une_fois() {
+        let (_dir, store) = store();
+        let id = "12345678-1234-4234-8234-000000000020";
+        store
+            .record_update(id, "0.2.0", "installed", None, "2026-10-01T10:00:00Z")
+            .unwrap();
+        let pending = store.unreported_updates().unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].state, "installed");
+        store.mark_update_reported(id, "installed").unwrap();
+        assert!(store.unreported_updates().unwrap().is_empty());
+        // L’historique relu au démarrage ne fait pas reculer l’état.
+        store
+            .record_update(id, "0.2.0", "promoted", None, "2026-10-01T10:05:00Z")
+            .unwrap();
+        store
+            .record_update(id, "0.2.0", "installed", None, "2026-10-01T10:00:00Z")
+            .unwrap();
+        let pending = store.unreported_updates().unwrap();
+        assert_eq!(pending[0].state, "promoted");
+        // Un état déclaré pendant qu’un autre arrive reste à déclarer.
+        store.mark_update_reported(id, "installed").unwrap();
+        assert_eq!(store.unreported_updates().unwrap().len(), 1);
     }
 
     #[test]

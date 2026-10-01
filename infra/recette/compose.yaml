@@ -292,7 +292,11 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     environment:
+      # Paquets des releases du Player natif (ADR-019), sous le préfixe `releases/`.
+      <<: *s3-env
       PIXLOVA_DEPLOYMENT: recette
+      # Clés publiques de release (`kid:clé,…`) : sans elles, aucun dépôt n’est accepté.
+      PIXLOVA_RELEASE_PUBLIC_KEYS: ${PIXLOVA_RELEASE_PUBLIC_KEYS:-}
       DATABASE_PLATFORM_URL: postgres://pixlova_platform:${PIXLOVA_DB_PLATFORM_PASSWORD:?}@postgres:5432/pixlova
       REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
       PIXLOVA_DATA_KEYS: ${PIXLOVA_DATA_KEYS:?}

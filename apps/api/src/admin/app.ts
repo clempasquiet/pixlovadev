@@ -5,6 +5,7 @@ import type { FastifyInstance, FastifyServerOptions } from 'fastify';
 import { createBase } from '../app.js';
 import { ApiError } from '../errors.js';
 import { adminAuthRoutes } from './auth.js';
+import { adminReleaseRoutes } from './releases.js';
 import type { AdminServices } from './services.js';
 import { adminSupportRoutes } from './support.js';
 import { adminTeamRoutes } from './team.js';
@@ -77,6 +78,7 @@ export function buildAdminApp(options: AdminAppOptions): FastifyInstance {
       adminViewRoutes(instance, services);
       adminSupportRoutes(instance, services);
       adminTeamRoutes(instance, services);
+      adminReleaseRoutes(instance, services);
     },
     { prefix: '/admin-api/v1' },
   );

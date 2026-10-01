@@ -108,13 +108,32 @@ Console privée décrite dans [RECETTE.md](RECETTE.md#5-administration-plateform
 - **Média ou manifest bloqué** : dans **Tâches**, lire l’erreur de la tâche en échec, corriger la cause (fichier, stockage), puis la relancer avec un motif.
 - **Contrôle** : chaque consultation et action figure dans le **Journal** avec l’opérateur, le motif et l’état avant/après.
 
+## Publier une release du Player natif
+
+Référence : [ADR-019](../architecture/adr/0019-registre-releases-player.md). Rôles Operator ou SuperAdmin.
+
+1. **Construire et signer** dans l’environnement de release (jamais sur le serveur) : `package-player.sh`, puis `sign-release.mjs` (voir [native/README.md](../../native/README.md#paquets-et-mises-à-jour)).
+2. **Déposer** dans la console, **Releases Player** : coller `release.json`, puis envoyer le paquet `.tar`. La taille et l’empreinte sont vérifiées ; un écart refuse le paquet.
+3. **Lire le périmètre** : Players qui seront mis à jour, déjà à jour, plus récents ou sans version déclarée.
+4. **Publier** avec un motif, la version recopiée et le code TOTP. Les Players concernés installent la release à leur prochain contrôle (1 h par défaut) ou sur la commande « Mettre à jour » d’un client.
+5. **Suivre** les colonnes « En service » et « Déploiement » (installé, validé, annulé, en échec), et les événements `UPDATE_*` de la timeline des Players.
+
+**Release défectueuse.** « Bloquer la release » (motif, version, TOTP) : irréversible. Les Players qui l’exécutent reviennent à leur version précédente à leur prochain contrôle, et elle n’est plus distribuée. Publier ensuite un correctif sous une nouvelle version.
+
+**Échecs fréquents** (colonne « en échec », code dans la timeline) :
+- `RELEASE_INVALID` : signature refusée, souvent une clé de release absente du `release-keys.json` des Players ;
+- `NO_RELEASE_KEYS` : aucun `release-keys.json` installé sur le Player ;
+- `PACKAGE_MISMATCH`, `DOWNLOAD_FAILED` : paquet altéré, incomplet ou injoignable ;
+- `LOCAL_STORAGE_ERROR` : écriture impossible sur le Player (disque plein, droits) ;
+- `LAUNCHER_ABSENT` : agent lancé hors du service `pixlova-launcher`.
+
 ## Rotation des clés
 
 Trois clés distinctes : manifests (worker), releases (paquets) et commandes (API). Une même clé dans deux rôles est refusée par le Player natif.
 
 1. Générer la nouvelle graine : `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`, avec un nouvel identifiant (`kid`).
 2. Publier d’abord la **clé publique** aux Players : `command-keys.json` ou `manifest-keys.json`, livré par un paquet signé (natif) ou avec l’application (Web). Garder l’ancienne clé dans le fichier pendant la transition.
-3. Basculer ensuite l’API (clé de commande) ou le worker (clé de manifest) sur la nouvelle graine.
+3. Basculer ensuite l’API (clé de commande) ou le worker (clé de manifest) sur la nouvelle graine. Pour une clé de release, ajouter la clé publique à `PIXLOVA_RELEASE_PUBLIC_KEYS` du conteneur `admin`, puis signer avec la nouvelle graine.
 4. Retirer l’ancienne clé publique au paquet suivant.
 
 ## Métriques et journaux

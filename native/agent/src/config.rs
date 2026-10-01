@@ -39,6 +39,11 @@ pub struct AgentConfig {
     pub sync_interval: Duration,
     /// Sorties déclarées à la place de la détection (développement, machines sans DRM).
     pub virtual_outputs: Option<Vec<OutputReport>>,
+    /// Intervalle de contrôle de la release souhaitée [à valider] (PLY-005, ADR-019).
+    pub release_check_interval: Duration,
+    /// Agent lancé par le lanceur A/B (`PIXLOVA_VERSION_DIR`) : seule configuration où une
+    /// mise à jour peut être installée puis essayée.
+    pub under_launcher: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -55,6 +60,7 @@ struct FileConfig {
     renderer_watchdog_seconds: Option<u64>,
     sync_interval_seconds: Option<u64>,
     virtual_outputs: Option<Vec<OutputReport>>,
+    release_check_interval_seconds: Option<u64>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -150,6 +156,9 @@ impl AgentConfig {
                         .collect::<Result<_, _>>()?,
                 )
             },
+            release_check_interval: seconds(file.release_check_interval_seconds, 3600)
+                .max(Duration::from_secs(60)),
+            under_launcher: env("PIXLOVA_VERSION_DIR").is_some(),
             data_dir,
         })
     }
@@ -170,6 +179,10 @@ impl AgentConfig {
         self.data_dir.join("logs")
     }
     /// Marqueur de santé lu par le lanceur (NAT-014).
+    /// Paquets de release en cours de téléchargement (jamais exécutés depuis ce dossier).
+    pub fn downloads_dir(&self) -> PathBuf {
+        self.data_dir.join("downloads")
+    }
     pub fn health_marker(&self) -> PathBuf {
         self.data_dir.join("state").join("healthy")
     }

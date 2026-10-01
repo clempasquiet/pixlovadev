@@ -25,7 +25,7 @@ import { PlayerEventBatch } from './events.js';
 import { ManifestPayload, SignedManifest } from './manifest.js';
 import { Organization } from './tenant.js';
 import { PlaylistDocument, ProgramDocument } from './programming.js';
-import { ReleasePayload } from './release.js';
+import { DesiredReleaseResponse, ReleasePayload, UpdateStatusRequest } from './release.js';
 import {
   AssetUrlResponse,
   CommandAckRequest,
@@ -94,6 +94,8 @@ export const ROOT_SCHEMAS = {
   'manifest-status-request.json': root('manifest-status-request.json', ManifestStatusRequest),
   'asset-url-response.json': root('asset-url-response.json', AssetUrlResponse),
   'release-payload.json': root('release-payload.json', ReleasePayload),
+  'desired-release-response.json': root('desired-release-response.json', DesiredReleaseResponse),
+  'update-status-request.json': root('update-status-request.json', UpdateStatusRequest),
   'player-status.json': root('player-status.json', StatusPayload),
   'player-events-ack.json': root('player-events-ack.json', PlayerEventsAck),
   'player-commands-response.json': root('player-commands-response.json', PlayerCommandsResponse),

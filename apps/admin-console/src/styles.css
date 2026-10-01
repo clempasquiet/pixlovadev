@@ -96,7 +96,8 @@ label {
   margin-bottom: 0.3rem;
 }
 input,
-select {
+select,
+textarea {
   width: 100%;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -107,6 +108,7 @@ select {
 }
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 button:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--accent);
@@ -319,4 +321,10 @@ fieldset {
 .content table {
   display: block;
   overflow-x: auto;
+}
+
+textarea {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
 }

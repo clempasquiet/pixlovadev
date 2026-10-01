@@ -134,6 +134,11 @@ La console d’administration ([ADR-016](../architecture/adr/0016-administration
   - réinitialisation du second facteur d’un client qui a perdu son téléphone et ses codes de secours, après vérification de son identité hors de pixlova ;
   - désactivation.
 - **Tâches en échec** (relance), **incidents**, **templates**, **journal** de la plateforme.
+- **Releases Player** : dépôt, périmètre, publication et blocage des releases du Player natif ([procédure](RUNBOOKS.md#publier-une-release-du-player-natif)). Pour l’activer, ajoutez à `.env` la clé publique générée au §4, au format `kid:clé`, puis `up -d admin` :
+
+  ```sh
+  PIXLOVA_RELEASE_PUBLIC_KEYS=release-recette:<public_key de release-keys.json>
+  ```
 
 **Opérateur ayant perdu son TOTP.** Un autre SuperAdmin clique sur « Réinitialiser les facteurs » dans **Équipe**. Sinon, depuis le serveur : `... admin-cli.js reset-operator --email <adresse>`.
 

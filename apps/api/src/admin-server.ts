@@ -6,8 +6,10 @@
 import { Redis } from 'ioredis';
 import pg from 'pg';
 import { createDatabase } from '@pixlova/db';
+import { createStorageFromEnv } from '@pixlova/storage';
 import { buildAdminApp } from './admin/app.js';
 import { loadAdminConfig } from './admin/config.js';
+import { releaseTrustFromEnv } from './admin/releases.js';
 import { billingEnvironmentFromEnv } from './lib/billing.js';
 import { DataCipher } from './lib/crypto.js';
 import { deploymentFromEnv, entitlementsFromEnv } from './lib/entitlements.js';
@@ -45,6 +47,10 @@ const app = buildAdminApp({
     }),
     billingEnvironment: billingEnvironmentFromEnv(process.env),
     config,
+    // Registre des releases (ADR-019) : clés publiques seulement ; stockage des paquets
+    // facultatif, sous le préfixe `releases/`.
+    releaseTrust: releaseTrustFromEnv(process.env.PIXLOVA_RELEASE_PUBLIC_KEYS),
+    storage: process.env.PIXLOVA_STORAGE_DRIVER ? createStorageFromEnv(process.env) : null,
     now: () => new Date(),
   },
   consoleDir: process.env.PIXLOVA_ADMIN_CONSOLE_DIR,

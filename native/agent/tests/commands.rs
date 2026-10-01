@@ -158,8 +158,10 @@ async fn commandes_verifiees_dedupliquees_et_reprises() {
     assert_eq!(code(3), "STALE_ASSIGNMENT");
     assert_eq!(code(4), "COMMAND_EXPIRED");
     assert_eq!(code(5), "SIGNATURE_INVALID");
-    assert_eq!(code(6), "UNSUPPORTED_COMMAND");
-    for n in [3, 4, 5, 6] {
+    // Mise à jour hors du lanceur A/B : exécutée, mais impossible (ADR-019).
+    assert_eq!(code(6), "LAUNCHER_ABSENT");
+    assert_eq!(api.result(&id(6)).unwrap()["status"], "failed");
+    for n in [3, 4, 5] {
         assert_eq!(api.result(&id(n)).unwrap()["status"], "rejected");
     }
     for n in [3, 4, 5] {

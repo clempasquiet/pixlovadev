@@ -35,13 +35,32 @@ export async function api<T = unknown>(
   const headers: Record<string, string> = { accept: 'application/json' };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (reason) headers['x-support-reason'] = reason;
+  return send<T>(method, path, headers, body === undefined ? undefined : JSON.stringify(body));
+}
+
+/** Envoi d’un fichier brut (paquet de release), sans le charger en JSON. */
+export async function upload<T = unknown>(method: string, path: string, file: Blob): Promise<T> {
+  return send<T>(
+    method,
+    path,
+    { accept: 'application/json', 'content-type': 'application/octet-stream' },
+    file,
+  );
+}
+
+async function send<T>(
+  method: string,
+  path: string,
+  headers: Record<string, string>,
+  body: BodyInit | undefined,
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/admin-api/v1${path}`, {
       method,
       headers,
       credentials: 'same-origin',
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body }),
     });
   } catch {
     throw new ApiRequestError(0, {

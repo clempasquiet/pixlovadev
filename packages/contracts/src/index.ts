@@ -17,6 +17,7 @@ export {
 export { validator, describeErrors } from './validate.js';
 export * from './manifest.js';
 export * from './command.js';
+export * from './release.js';
 export * from './player-auth.js';
 export * from './media.js';
 export * from './fonts.js';

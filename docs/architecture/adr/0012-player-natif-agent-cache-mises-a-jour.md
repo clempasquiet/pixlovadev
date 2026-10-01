@@ -146,10 +146,10 @@ Racine configurable. Défaut Linux : `/var/lib/pixlova`.
   - il démarre la version `pending` ;
   - l’agent écrit un marqueur de santé seulement après : SQLite ouverte, IPC prêt, renderer connecté, première image ou écran d’attente affiché. Un accès cloud n’est pas requis (NAT-014) ;
   - **3 démarrages sans santé, ou 2 min sans marqueur [à valider]**, provoquent le retour à la version précédente ;
-  - la release est alors **bloquée localement** et ne sera pas réinstallée automatiquement. L’historique (installée, promue, revenue en arrière) est conservé et visible dans `diagnose` ; sa déclaration au cloud arrive avec la distribution des releases.
+  - la release est alors **bloquée localement** et ne sera pas réinstallée automatiquement. L’historique (installée, promue, revenue en arrière) est conservé et visible dans `diagnose` ; il est déclaré au cloud ([ADR-019](0019-registre-releases-player.md)).
   - après une bascule, l’agent arrête une fois un renderer d’une autre version ; la session le relance depuis `versions/active`.
 - **Base** : en cas de retour arrière, la copie d’avant migration n’est restaurée que si l’association (organisation, Player) y est identique à l’actuelle. Sinon la base courante, compatible grâce aux migrations additives, est conservée (NAT-015).
-- **V1 = mise à jour manuelle** (`pixlova-agent update apply --release <release.json> --package <paquet.tar>`, puis redémarrage du service). Les métadonnées sont signées par `scripts/release/sign-release.mjs` dans l’environnement de release. La distribution par le cloud (`GET /player/v1/releases/desired`) et l’affichage des versions souhaitée et installée relèvent d’un lot ultérieur.
+- **V1 = mise à jour manuelle** (`pixlova-agent update apply --release <release.json> --package <paquet.tar>`, puis redémarrage du service). Les métadonnées sont signées par `scripts/release/sign-release.mjs` dans l’environnement de release. La distribution par le cloud (`GET /player/v1/releases/desired`), la mise à jour automatique et la déclaration des versions sont décrites par [ADR-019](0019-registre-releases-player.md) ; l’installation manuelle reste possible.
 
 ### Sorties et diagnostic
 

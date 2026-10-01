@@ -274,8 +274,34 @@ impl Runtime {
                 Err(error) => Outcome::failed("CACHE_ERROR", error.to_string()),
             },
             "TAKE_SCREENSHOT" => self.take_screenshot(command).await,
-            // Distribution des releases et redémarrage de l’hôte absents de cette version.
+            "UPDATE_PLAYER" => {
+                let Some(release_id) = command.params.get("release_id").and_then(Value::as_str)
+                else {
+                    return Outcome::rejected("SCHEMA_INVALID");
+                };
+                self.release_outcome(self.check_release(Some(release_id), false).await)
+            }
+            "ROLLBACK_PLAYER" => self.release_outcome(self.check_release(None, true).await),
+            // Redémarrage de l’hôte absent de cette version.
             _ => Outcome::rejected("UNSUPPORTED_COMMAND"),
+        }
+    }
+
+    /// Résultat d’une mise à jour ou d’un retour arrière : succès signifie « installé ou
+    /// inscrit, redémarrage en cours » ; la promotion est déclarée ensuite (ADR-019).
+    fn release_outcome(
+        &self,
+        result: Result<super::releases::ReleaseAction, super::releases::ReleaseFailure>,
+    ) -> Outcome {
+        match result {
+            Ok(super::releases::ReleaseAction::UpToDate) => {
+                Outcome::success("version en service déjà à jour".to_owned())
+            }
+            Ok(super::releases::ReleaseAction::Restart(reason)) => {
+                self.request_restart(&reason);
+                Outcome::success(format!("{reason} ; redémarrage de l’agent"))
+            }
+            Err(failure) => Outcome::failed(&failure.code, failure.detail),
         }
     }
 

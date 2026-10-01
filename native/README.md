@@ -46,7 +46,9 @@ PIXLOVA_TEST_DATABASE_URL=… node apps/api/scripts/e2e-native-player.mjs [--web
 scripts/release/package-player.sh <dossier-des-clés-publiques> pixlova-0.2.0.tar
 PIXLOVA_RELEASE_KEY_ID=… PIXLOVA_RELEASE_SIGNING_KEY=… \
   node scripts/release/sign-release.mjs --package pixlova-0.2.0.tar --version 0.2.0 > release.json
-pixlova-agent update apply --release release.json --package pixlova-0.2.0.tar   # sur le Player
+pixlova-agent update apply --release release.json --package pixlova-0.2.0.tar   # sur le Player, à la main
 ```
+
+Distribution par le cloud ([ADR-019](../docs/architecture/adr/0019-registre-releases-player.md)) : `release.json` et le paquet sont déposés puis publiés dans la console d’administration (**Releases Player**). Sous le lanceur, l’agent contrôle la release souhaitée toutes les `release_check_interval_seconds` (3600 par défaut, minimum 60), l’installe après vérification, s’arrête pour être relancé sur la nouvelle version et déclare son état. Une release bloquée par la plateforme le fait revenir à la version précédente.
 
 Installation Linux : `packaging/linux/install.sh` (compte `pixlova`, service `pixlova-launcher`, unité utilisateur `pixlova-renderer`). La signature des releases n’a lieu que dans l’environnement de release ; aucune clé privée n’est versionnée.

@@ -343,6 +343,65 @@ fn sans_marqueur_de_sante_dans_le_delai_retour_immediat() {
 }
 
 #[test]
+fn retour_arriere_demande_par_l_agent_execute_par_le_lanceur() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().to_path_buf();
+    install_version(&data, "0.1.0", &agent_script("0.1.0", true, 0, 100));
+    install_version(&data, "0.4.0", &agent_script("0.4.0", true, 0, 100));
+    // Sans version précédente, rien n’est demandé.
+    LauncherState {
+        current: Some("0.4.0".into()),
+        ..Default::default()
+    }
+    .save(&data)
+    .unwrap();
+    assert_eq!(
+        pixlova_agent::updater::request_rollback(&data, "plateforme")
+            .unwrap_err()
+            .code(),
+        "ROLLBACK_UNAVAILABLE"
+    );
+    // Pendant un essai non plus.
+    set_state(&data, "0.1.0", "0.4.0");
+    assert_eq!(
+        pixlova_agent::updater::request_rollback(&data, "plateforme")
+            .unwrap_err()
+            .code(),
+        "UPDATE_IN_PROGRESS"
+    );
+    LauncherState {
+        current: Some("0.4.0".into()),
+        previous: Some("0.1.0".into()),
+        ..Default::default()
+    }
+    .save(&data)
+    .unwrap();
+    assert_eq!(
+        pixlova_agent::updater::request_rollback(&data, "release bloquée par la plateforme")
+            .unwrap(),
+        "0.1.0"
+    );
+    assert_eq!(launch(&data, 30), 0);
+    let state = LauncherState::load(&data).unwrap();
+    assert_eq!(
+        (state.current.as_deref(), state.previous.as_deref()),
+        (Some("0.1.0"), None)
+    );
+    assert_eq!(state.blocked, ["0.4.0"]);
+    assert_eq!(state.rollback_requested, None);
+    let last = state.history.last().unwrap();
+    assert_eq!(
+        (last.version.as_str(), last.result.as_str()),
+        ("0.4.0", "rolled_back")
+    );
+    #[cfg(unix)]
+    assert_eq!(
+        std::fs::read_link(versions_dir(&data).join("active")).unwrap(),
+        Path::new("0.1.0")
+    );
+}
+
+#[test]
 fn une_version_saine_est_promue() {
     let dir = tempfile::tempdir().unwrap();
     let data = dir.path().to_path_buf();

@@ -237,8 +237,9 @@ describe.skipIf(skipDatabaseTests)('Supervision, commandes et captures (L07)', (
     });
 
     it('refuse les commandes indisponibles, non déclarées ou hors permission', async () => {
+      // Aucune release publiée pour ce Player (ADR-019).
       const update = await command(owner, player.playerId!, { type: 'UPDATE_PLAYER' });
-      expect(update.json().error.code).toBe('COMMAND_NOT_AVAILABLE');
+      expect(update.json().error.code).toBe('NO_RELEASE_AVAILABLE');
       const reboot = await command(owner, player.playerId!, { type: 'REBOOT_HOST' });
       expect(reboot.json().error.code).toBe('CAPABILITY_UNSUPPORTED');
       const screenshot = await command(owner, player.playerId!, {

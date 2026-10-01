@@ -19,6 +19,7 @@ import { memberRoutes } from './modules/members.js';
 import { organizationRoutes } from './modules/organizations.js';
 import { playerApiRoutes } from './modules/player-api.js';
 import { supervisionPlayerRoutes } from './modules/supervision-player.js';
+import { releasePlayerRoutes } from './modules/releases-player.js';
 import { incidentRoutes } from './modules/incidents.js';
 import { supervisionRoutes } from './modules/supervision.js';
 import { localStorageRoutes } from './modules/storage.js';
@@ -88,6 +89,7 @@ async function playerV1(app: FastifyInstance, services: Services): Promise<void>
   registerPlayerCors(app, services.security.webPlayerOrigins);
   playerApiRoutes(app, services);
   supervisionPlayerRoutes(app, services);
+  releasePlayerRoutes(app, services);
 }
 
 /**
