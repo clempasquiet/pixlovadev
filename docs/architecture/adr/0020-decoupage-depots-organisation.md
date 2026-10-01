@@ -27,15 +27,14 @@ Contraintes : garder l’historique git, les PR et la traçabilité des exigence
 
 ## Décision
 
-Cinq dépôts privés, chacun déployé en continu par `build`, demandés par le responsable produit (2026-10-01), plus le profil d’organisation. Le cœur cloud reste un monorepo ; les deux Players, le site et le déploiement en sortent.
+Quatre dépôts privés, chacun déployé en continu, plus le profil d’organisation. Le responsable produit a d’abord demandé un cinquième dépôt `build` pour l’infrastructure, puis l’a retiré (2026-10-01) : l’infrastructure vit dans `platform/deploy/`. Le cœur cloud reste un monorepo ; les deux Players, le site et le déploiement en sortent.
 
 | Dépôt | Contenu | Livrable et version |
 |---|---|---|
-| `Pixlova/platform` | `apps/{api,workers,dashboard,admin-console}`, tous les `packages/*`, `docs/` (cahier des charges, ADR, planning, opérations), `scripts/`, `infra/dev` | Images `ghcr.io/pixlova/{api,worker,dashboard,admin}` taguées `vAAAA.MM.N` ; paquets npm `@pixlova/contracts`, `@pixlova/render-engine`, `@pixlova/player-core` en SemVer |
+| `Pixlova/platform` | `apps/{api,workers,dashboard,admin-console}`, tous les `packages/*`, `docs/` (cahier des charges, ADR, planning, opérations), `scripts/`, `infra/dev`, `deploy/` (infrastructure en code, voir plus bas) | Images `ghcr.io/pixlova/{api,worker,dashboard,admin}` taguées `vAAAA.MM.N` ; paquets npm `@pixlova/contracts`, `@pixlova/render-engine`, `@pixlova/player-core` en SemVer |
 | `Pixlova/player-web` | `apps/web-player` | Image statique `ghcr.io/pixlova/player-web` (Caddy), SemVer ; servie sur `player.pixlova.com` |
 | `Pixlova/player-natif` | `native/{agent,renderer,contracts}`, `Cargo.*`, `rust-toolchain.toml`, `packaging/linux`, `apps/player-shell` (page embarquée), `apps/render-lab` (comparaison Chromium / WebKitGTK) | Paquet signé du Player natif, SemVer `vX.Y.Z` (règle d’ADR-019) |
 | `Pixlova/www` | `apps/site` avec sa configuration autonome | Image `ghcr.io/pixlova/www`, déployée depuis `main` |
-| `Pixlova/build` | Infrastructure en code : Terraform (cluster, répartiteur, S3, bases), charts Helm, versions déployées par environnement, recette Compose actuelle (`infra/recette`), workflows réutilisables | Aucune image ; chaque fusion change ce qui tourne (GitOps) |
 | `Pixlova/.github` | Profil d’organisation, modèle de PR, modèles d’issues | Aucun |
 
 L’API, le worker, le dashboard, l’administration et les paquets partagés restent ensemble dans `platform` : ils partagent le schéma PostgreSQL, les migrations, les contrats et l’arbitrage des priorités, qu’`AGENTS.md` interdit de dupliquer. Chaque dépôt garde son propre `Dockerfile` ; l’image se construit là où vit le code.
@@ -66,54 +65,53 @@ Les parcours qui démarraient l’API depuis les sources la démarrent depuis le
 ### Historique git
 
 - `platform` = **transfert** de `clempasquiet/pixlovadev` vers l’organisation puis renommage. Le transfert conserve l’historique, les PR #1 à #33, les issues et les clés de déploiement, et redirige l’ancienne URL. Les dossiers partis ailleurs sont ensuite supprimés par une PR ordinaire.
-- `player-web`, `player-natif`, `www`, `build` = extraction avec `git filter-repo --path …` depuis un clone frais, en ne gardant que leurs chemins. Les commits gardent auteurs et dates ; le premier commit propre au nouveau dépôt renvoie au SHA d’origine dans `platform`.
+- `player-web`, `player-natif`, `www` = extraction avec `git filter-repo --path …` depuis un clone frais, en ne gardant que leurs chemins. Les commits gardent auteurs et dates ; le premier commit propre au nouveau dépôt renvoie au SHA d’origine dans `platform`.
 - Aucun force-push ni réécriture sur `platform` : les extractions se font sur des clones jetables poussés vers des dépôts neufs.
 
 ### CI
 
-- `platform` : format, lint, build, typecheck, tests, migrations, tests navigateur du dashboard et de l’administration ; publication des paquets npm et des images GHCR sur `main` ; recette jetable en récupérant `Pixlova/build` au ref épinglé.
+- `platform` : format, lint, build, typecheck, tests, migrations, tests navigateur du dashboard et de l’administration ; publication des paquets npm et des images GHCR sur `main` ; recette jetable depuis `deploy/recette`.
 - `player-web` : format, lint, build, tests unitaires, `test:browser` contre les images de l’API, image.
 - `player-natif` : `rust` (fmt, clippy, tests), `native-render` (banc de rendu Chromium puis WebKitGTK sous Xvfb), `native-e2e` contre les images de l’API, construction et signature du paquet hors CI publique des clés.
 - `www` : format, lint, build, tests unitaires et navigateur, image.
-- `build` : `docker compose config`, ShellCheck, recette jetable sur les derniers tags publiés. Les autres dépôts appellent ses workflows réutilisables (`uses: Pixlova/build/.github/workflows/…@<sha>`) pour ne pas recopier l’installation Node, pnpm et Rust.
-- Lecture privée entre dépôts (paquets npm, images GHCR, workflows réutilisables) : accès accordé dans les réglages des paquets et du dépôt `build` à l’organisation, `GITHUB_TOKEN` en lecture ; aucun jeton personnel large.
+- `platform/deploy/` : `docker compose config`, ShellCheck, `helm lint`, `kubeconform`, `tofu plan` et recette jetable, lancés seulement quand ce dossier change (filtre de chemins). Les workflows réutilisables (Node, pnpm, Rust, publication GHCR) vivent dans `Pixlova/.github` et sont appelés par chaque dépôt pour ne pas recopier l’installation.
+- Lecture privée entre dépôts (paquets npm, images GHCR, workflows réutilisables) : accès accordé à l’organisation dans les réglages des paquets et du dépôt `.github`, `GITHUB_TOKEN` en lecture ; aucun jeton personnel large.
 - Règle d’`AGENTS.md` conservée : toute commande de build ou de test est documentée dans le dépôt qui l’ajoute.
 
 ### Recette et VPS
 
 Aujourd’hui le VPS fait `git pull` puis `docker compose up -d --build` sur tout le dépôt. Après migration :
 
-1. Le VPS clone seulement `Pixlova/build` (nouvelle clé de déploiement en lecture seule).
+1. Le VPS garde son clone de `platform` (clé de déploiement en lecture seule) mais n’y lit plus que `deploy/recette`.
 2. `compose.yaml` référence `ghcr.io/pixlova/<service>:<tag>` au lieu de `build:`, avec un digest par livrable fixé dans `environments/recette.env`. La passerelle Caddy route `/api`, `/player`, `/webhooks` vers `api`, le dashboard vers `dashboard` et le Player Web vers `player-web`, comme aujourd’hui mais vers des conteneurs séparés.
 3. Le VPS s’authentifie une fois sur GHCR (`docker login ghcr.io`) avec un jeton en lecture seule des paquets.
-4. Les mises à jour ne se font plus à la main : l’agent de déploiement applique les digests fixés dans `build` (voir « Déploiement continu par dépôt »). Volumes, secrets, tunnel Cloudflare et sauvegardes ne bougent pas.
+4. Les mises à jour ne se font plus à la main : l’agent de déploiement applique les digests fixés dans `deploy/recette` (voir « Déploiement continu par dépôt »). Volumes, secrets, tunnel Cloudflare et sauvegardes ne bougent pas.
 
 Le guide `deployer-recette-vps.md` et `docs/operations/RECETTE.md` sont mis à jour dans la phase concernée.
 
-### Rôle de `build` : l’infrastructure décrite en code (GitOps)
+### Infrastructure en code (GitOps) : `platform/deploy/`
 
-La production cible n’est pas un serveur unique : répartition de charge, cluster Kubernetes, stockage S3, base PostgreSQL, Redis, DNS. `build` est le dépôt qui **décrit toute cette infrastructure et les versions qui y tournent**. Les dépôts applicatifs produisent des images ; `build` dit où, combien et quelle version.
+La production cible n’est pas un serveur unique : répartition de charge, cluster Kubernetes, stockage S3, base PostgreSQL, Redis, DNS. Le dossier `deploy/` de `platform` **décrit toute cette infrastructure et les versions qui y tournent**. Les dépôts produisent des images ; `deploy/` dit où, combien et quelle version. Un dépôt séparé n’apporterait qu’un contrôle d’accès distinct et un journal sans commits applicatifs, utiles à une équipe plus grande ; il pourra être extrait avec `git filter-repo` le jour venu.
 
-| Dossier de `build` | Contenu | Outil |
+| Dossier de `platform/deploy/` | Contenu | Outil |
 |---|---|---|
 | `terraform/` | Ressources du fournisseur : cluster Kubernetes, répartiteur de charge, buckets S3, PostgreSQL et Redis gérés, DNS, réseaux | OpenTofu/Terraform, état distant chiffré |
 | `charts/` | Un chart Helm par service (`api`, `worker`, `dashboard`, `admin`, `player-web`, `www`) : réplicas, ressources, sondes, `HorizontalPodAutoscaler`, `Ingress`, `NetworkPolicy` | Helm |
 | `environments/production/`, `environments/staging/` | Valeurs par environnement, dont le **digest d’image** de chaque service | Argo CD (ou Flux) |
 | `recette/` | La recette Docker Compose actuelle du VPS (ADR-015), conservée telle quelle | Docker Compose |
-| `.github/workflows/` | Workflows réutilisables (Node, pnpm, Rust, publication GHCR) appelés par les autres dépôts | GitHub Actions |
 
-Aucun secret en clair : les secrets vivent dans le gestionnaire du fournisseur ou sont chiffrés (SOPS ou Sealed Secrets) ; `build` ne contient que leurs références.
+Aucun secret en clair : les secrets vivent dans le gestionnaire du fournisseur ou sont chiffrés (SOPS ou Sealed Secrets) ; `deploy/` ne contient que leurs références.
 
 ### Déploiement continu par dépôt
 
 Demande du responsable produit (2026-10-01) : une mise à jour fusionnée dans un dépôt met à jour l’infrastructure, pour chaque dépôt.
 
-1. **Dépôt applicatif** (`platform`, `player-web`, `www`) : après fusion sur `main` et CI verte, l’image est construite, taguée avec le SHA, publiée sur GHCR, puis un `repository_dispatch` envoie à `build` le service et le **digest** (`sha256:…`). Ces dépôts ne détiennent aucun accès aux serveurs.
-2. **`build`** ouvre une PR qui met à jour le digest dans `environments/staging/` (et `recette/`). La CI de `build` valide (`helm lint`, `kubeconform`, `tofu plan`, recette jetable Compose). Verte → **fusion automatique**.
-3. **Argo CD**, installé dans le cluster, surveille `build` et applique le changement : déploiement progressif (*rolling update*), sondes de disponibilité, retour automatique si les nouveaux pods ne deviennent pas sains. Rien ne pousse vers le cluster depuis GitHub. Sur le VPS de recette, un petit agent (minuteur systemd) fait l’équivalent avec Docker Compose et les scripts de fumée.
-4. **Production** : quand `staging` est vert sur un ensemble de digests, `build` ouvre une PR qui recopie **les mêmes digests** dans `environments/production/`. Sa fusion par le responsable produit est l’autorisation de mise en production ; Argo CD l’applique. Rien n’est reconstruit entre `staging` et la production.
-5. **Infrastructure elle-même** (nouveau bucket, taille du cluster, règle du répartiteur) : PR sur `terraform/`, `tofu plan` affiché dans la PR, `tofu apply` seulement après fusion et approbation, jamais automatiquement en production.
-6. **Retour arrière** : revert de la PR dans `build`. L’historique de `build` est le journal de tous les déploiements.
+1. **Dépôt applicatif** (`platform`, `player-web`, `www`) : après fusion sur `main` et CI verte, l’image est construite, taguée avec le SHA, publiée sur GHCR, puis un `repository_dispatch` envoie à `platform` le service et le **digest** (`sha256:…`). Ces dépôts ne détiennent aucun accès aux serveurs.
+2. **`platform`** ouvre une PR qui met à jour le digest dans `deploy/environments/staging/` (et `deploy/recette/`). La CI de `deploy/` valide (`helm lint`, `kubeconform`, `tofu plan`, recette jetable Compose). Verte → **fusion automatique**.
+3. **Argo CD**, installé dans le cluster, surveille `platform/deploy/` et applique le changement : déploiement progressif (*rolling update*), sondes de disponibilité, retour automatique si les nouveaux pods ne deviennent pas sains. Rien ne pousse vers le cluster depuis GitHub. Sur le VPS de recette, un petit agent (minuteur systemd) fait l’équivalent avec Docker Compose et les scripts de fumée.
+4. **Production** : quand `staging` est vert sur un ensemble de digests, une PR recopie automatiquement **les mêmes digests** dans `deploy/environments/production/`. Sa fusion par le responsable produit est l’autorisation de mise en production ; Argo CD l’applique. Rien n’est reconstruit entre `staging` et la production.
+5. **Infrastructure elle-même** (nouveau bucket, taille du cluster, règle du répartiteur) : PR sur `deploy/terraform/`, `tofu plan` affiché dans la PR, `tofu apply` seulement après fusion et approbation, jamais automatiquement en production.
+6. **Retour arrière** : revert de la PR de version. L’historique de `deploy/` (`git log -- deploy/`) est le journal de tous les déploiements.
 
 Garde-fous :
 
@@ -130,11 +128,11 @@ Chaque phase se termine par une CI et une recette vertes et peut s’arrêter l�
 0. **Préparation** (responsable produit) : installer l’app GitHub Claude sur l’organisation Pixlova avec accès aux dépôts ; activer Actions, GHCR et GitHub Packages ; aucune PR ouverte sur `pixlovadev`.
 1. **Transfert** de `pixlovadev` vers `Pixlova/platform`. Sur le VPS : `git remote set-url origin` vers la nouvelle URL.
 2. **`www`** : extraction, CI, image ; suppression d’`apps/site` dans `platform`. Répétition à faible risque.
-3. **Images, `build` et déploiement continu de la recette** : `platform` et `www` publient leurs images (dashboard séparé de la passerelle) ; extraction d’`infra/recette` vers `build/recette` en passant de `build:` à des digests ; installation de l’agent sur le VPS (commandes lancées par le responsable produit). À partir d’ici, chaque fusion sur `main` met la recette à jour.
+3. **Images, `deploy/` et déploiement continu de la recette** : `platform` et `www` publient leurs images (dashboard séparé de la passerelle) ; `infra/recette` devient `deploy/recette` en passant de `build:` à des digests ; installation de l’agent sur le VPS (commandes lancées par le responsable produit). À partir d’ici, chaque fusion sur `main` met la recette à jour.
 4. **Paquets npm** : Changesets et publication de `contracts`, `render-engine`, `player-core` depuis `platform`.
 5. **`player-web`** : extraction, dépendances vers les paquets publiés, e2e contre les images ; image `player-web` dans la recette ; suppression dans `platform`.
 6. **`player-natif`** : extraction avec `player-shell` et `render-lab`, vecteurs lus depuis `@pixlova/contracts`, e2e contre les images, paquet signé déposé en brouillon sur tag ; suppression de `native/`, `packaging/` et des jobs Rust dans `platform`.
-7. **Production** : une fois le fournisseur choisi (lot de mise en production), `terraform/` crée cluster, répartiteur, S3 et bases ; charts Helm et Argo CD ; environnement `staging` puis PR « production ».
+7. **Production** : une fois le fournisseur choisi (lot de mise en production), `deploy/terraform/` crée cluster, répartiteur, S3 et bases ; charts Helm et Argo CD ; environnement `staging` puis PR « production ».
 
 ## Options évaluées
 
@@ -144,7 +142,7 @@ Chaque phase se termine par une CI et une recette vertes et peut s’arrêter l�
 | Un dépôt par application et par paquet (~20) | Séparation maximale | Schéma, migrations et priorités dupliqués ou publiés en lockstep ; débogage à travers des versions décalées | Écartée |
 | Quatre dépôts, Player Web dans `platform` (première version de cette proposition) | Aucun paquet npm à publier | Le Player Web n’a pas sa version propre | Remplacée à la demande du responsable produit |
 | Artefacts tar épinglés au lieu de npm | Pas de registre | Rejoue à la main ce que fait npm dès qu’un consommateur TypeScript existe | Écartée |
-| **Cinq dépôts, paquets partagés sur GitHub Packages** | Chaque Player et le site ont leur version, leur CI et leur image ; le cœur cloud reste cohérent | Publication et montée de version pour `contracts`, `render-engine`, `player-core` | **Retenue** |
+| **Quatre dépôts, infrastructure dans `platform/deploy/`, paquets partagés sur GitHub Packages** | Chaque Player et le site ont leur version, leur CI et leur image ; le cœur cloud reste cohérent | Publication et montée de version pour `contracts`, `render-engine`, `player-core` | **Retenue** |
 
 ## Conséquences et validation
 
