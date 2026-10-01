@@ -39,7 +39,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | ADR | Sujet | Condition d’acceptation |
 |---|---|---|
 | [ADR-005](adr/0005-renderer-natif-webview.md) | Moteur de rendu TypeScript unique, renderer natif sur WebView système (wry) | Mesures du [protocole de qualification](../quality/QUALIFICATION-RENDU.md) sur Linux et Windows |
-| [ADR-020](adr/0020-decoupage-depots-organisation.md) | Découpage en cinq dépôts de l’organisation Pixlova (`platform`, `player-web`, `player-natif`, `www`, `build`) : historique conservé, `contracts`, `render-engine` et `player-core` publiés sur GitHub Packages, images GHCR tirées par le VPS, migration en six phases | Validation écrite du responsable produit, puis CI et recette vertes à chaque phase |
+| [ADR-020](adr/0020-decoupage-depots-organisation.md) | Découpage en cinq dépôts de l’organisation Pixlova (`platform`, `player-web`, `player-natif`, `www`, `build`) : historique conservé, `contracts`, `render-engine` et `player-core` publiés sur GitHub Packages, déploiement continu par dépôt piloté par `build` (recette automatique, production par PR validée), migration en sept phases | Validation écrite du responsable produit, puis CI et recette vertes à chaque phase |
 
 ## À traiter par lot
 

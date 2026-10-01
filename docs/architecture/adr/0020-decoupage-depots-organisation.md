@@ -27,7 +27,7 @@ Contraintes : garder l’historique git, les PR et la traçabilité des exigence
 
 ## Décision
 
-Cinq dépôts privés demandés par le responsable produit (2026-10-01), plus le profil d’organisation. Le cœur cloud reste un monorepo ; les deux Players, le site et le déploiement en sortent.
+Cinq dépôts privés, chacun déployé en continu, demandés par le responsable produit (2026-10-01), plus le profil d’organisation. Le cœur cloud reste un monorepo ; les deux Players, le site et le déploiement en sortent.
 
 | Dépôt | Contenu | Livrable et version |
 |---|---|---|
@@ -84,11 +84,39 @@ Les parcours qui démarraient l’API depuis les sources la démarrent depuis le
 Aujourd’hui le VPS fait `git pull` puis `docker compose up -d --build` sur tout le dépôt. Après migration :
 
 1. Le VPS clone seulement `Pixlova/build` (nouvelle clé de déploiement en lecture seule).
-2. `compose.yaml` référence `ghcr.io/pixlova/<service>:<tag>` au lieu de `build:`, avec un tag par livrable dans `.env` (`PLATFORM_TAG`, `PLAYER_WEB_TAG`, `WWW_TAG`). La passerelle Caddy route `/api`, `/player`, `/webhooks` vers `api`, le dashboard vers `dashboard` et le Player Web vers `player-web`, comme aujourd’hui mais vers des conteneurs séparés.
+2. `compose.yaml` référence `ghcr.io/pixlova/<service>:<tag>` au lieu de `build:`, avec un digest par livrable fixé dans `environments/recette.env`. La passerelle Caddy route `/api`, `/player`, `/webhooks` vers `api`, le dashboard vers `dashboard` et le Player Web vers `player-web`, comme aujourd’hui mais vers des conteneurs séparés.
 3. Le VPS s’authentifie une fois sur GHCR (`docker login ghcr.io`) avec un jeton en lecture seule des paquets.
-4. Mise à jour d’un livrable = changer son tag dans `.env`, `docker compose pull`, `docker compose up -d`. Retour arrière = remettre le tag précédent. Volumes, secrets, tunnel Cloudflare et sauvegardes ne bougent pas.
+4. Les mises à jour ne se font plus à la main : l’agent de déploiement applique les digests fixés dans `build` (voir la section suivante). Volumes, secrets, tunnel Cloudflare et sauvegardes ne bougent pas.
 
 Le guide `deployer-recette-vps.md` et `docs/operations/RECETTE.md` sont mis à jour dans la phase concernée.
+
+### Déploiement continu par dépôt
+
+Demande du responsable produit (2026-10-01) : une mise à jour fusionnée dans un dépôt met à jour l’infrastructure, pour chaque dépôt. `build` est la **source de vérité des versions déployées** ; les autres dépôts ne parlent jamais directement aux serveurs.
+
+```
+platform / player-web / www            build                         serveurs
+  merge sur main                         environments/recette.env       VPS de recette
+  → CI verte                             environments/production.env    production (à choisir)
+  → image GHCR (tag = SHA, digest)  ──►  PR auto « recette »  ──►  agent de déploiement
+                                         fusion auto si CI verte        tire, démarre, vérifie
+                                         PR « production » ──────►  agent de production
+                                         fusionnée par Clément
+```
+
+1. **Sur chaque dépôt applicatif**, après fusion sur `main` et CI verte : construction de l’image, tag = SHA du commit, publication sur GHCR, puis `repository_dispatch` vers `build` avec le service, le tag et le **digest** (`sha256:…`). Aucun secret de serveur dans ces dépôts.
+2. **Dans `build`**, un workflow ouvre une PR qui met à jour `environments/recette.env` (`PLATFORM_DIGEST=…`, `PLAYER_WEB_DIGEST=…`, `WWW_DIGEST=…`) ; la recette jetable de la CI de `build` tourne sur ces images ; la PR est **fusionnée automatiquement** si elle est verte.
+3. **Sur chaque serveur**, un agent de déploiement en mode *pull* (unité systemd avec minuteur, quelques dizaines de lignes de shell dans `build/agent/`) lit `build` toutes les minutes avec une clé de déploiement en lecture seule. Si le fichier de son environnement a changé : sauvegarde de la base si une migration est annoncée, `docker compose pull`, `up -d`, scripts de fumée (`smoke.mjs`, `admin-smoke.mjs`, `site-smoke.mjs`). Échec de la fumée → retour automatique aux digests précédents et alerte. Le serveur n’ouvre aucun port entrant (tunnel Cloudflare inchangé) et GitHub ne détient aucun accès SSH.
+4. **Production** : quand la recette est verte sur un ensemble de digests, `build` ouvre automatiquement une PR « production » qui recopie **les mêmes digests** dans `environments/production.env`. La fusion de cette PR par le responsable produit est l’autorisation de déploiement ; l’agent de production fait le reste. Aucune image n’arrive en production sans être passée par la recette, et rien n’est reconstruit entre les deux.
+5. **Retour arrière** : revert de la PR dans `build` (ou fusion d’une PR qui remet les digests précédents). L’historique de `build` est le journal des déploiements.
+
+Garde-fous :
+
+- **Migrations** : en mode *expand / contract*. Une version N+1 de l’API ne casse pas la base de la version N, pour que le retour arrière d’image reste possible. Une migration destructive est découpée sur deux livraisons.
+- **Ordre entre dépôts** : chaque service est déployé séparément ; un changement qui touche l’API et un Player passe d’abord par `platform` (compatible avec les deux versions), puis par le Player. La règle de compatibilité du protocole (`@pixlova/contracts`) l’impose déjà.
+- **Player natif** : le déploiement continu ne pousse **pas** de mise à jour sur les écrans. Un tag `vX.Y.Z` de `player-natif` construit et signe le paquet puis le dépose dans le registre en **brouillon** ; la publication aux Players reste l’action de l’administration avec TOTP et périmètre (ADR-019). Les invariants 4 et 5 restent tenus.
+- **Production** : le choix de l’hébergement de production reste à décider (registre des décisions). Le mécanisme ci-dessus ne dépend pas de ce choix : il faut seulement un hôte Docker qui exécute l’agent. Tant qu’il n’existe pas, seule la recette est déployée en continu.
+- Si l’organisation passe sur un plan GitHub payant, les *Environments* protégés peuvent remplacer la PR « production » ; la PR fonctionne sur le plan gratuit.
 
 ### Ordre de migration
 
@@ -97,10 +125,11 @@ Chaque phase se termine par une CI et une recette vertes et peut s’arrêter l�
 0. **Préparation** (responsable produit) : installer l’app GitHub Claude sur l’organisation Pixlova avec accès aux dépôts ; activer Actions, GHCR et GitHub Packages ; aucune PR ouverte sur `pixlovadev`.
 1. **Transfert** de `pixlovadev` vers `Pixlova/platform`. Sur le VPS : `git remote set-url origin` vers la nouvelle URL.
 2. **`www`** : extraction, CI, image ; suppression d’`apps/site` dans `platform`. Répétition à faible risque.
-3. **Images et `build`** : `platform` publie ses images (dashboard séparé de la passerelle) ; extraction d’`infra/recette` vers `build` en passant de `build:` à `image:` ; le VPS clone `build`.
+3. **Images, `build` et déploiement continu de la recette** : `platform` et `www` publient leurs images (dashboard séparé de la passerelle) ; extraction d’`infra/recette` vers `build` en passant de `build:` à des digests ; installation de l’agent de déploiement sur le VPS (commandes lancées par le responsable produit). À partir d’ici, chaque fusion sur `main` met la recette à jour.
 4. **Paquets npm** : Changesets et publication de `contracts`, `render-engine`, `player-core` depuis `platform`.
 5. **`player-web`** : extraction, dépendances vers les paquets publiés, e2e contre les images ; image `player-web` dans la recette ; suppression dans `platform`.
-6. **`player-natif`** : extraction avec `player-shell` et `render-lab`, vecteurs lus depuis `@pixlova/contracts`, e2e contre les images ; suppression de `native/`, `packaging/` et des jobs Rust dans `platform`.
+6. **`player-natif`** : extraction avec `player-shell` et `render-lab`, vecteurs lus depuis `@pixlova/contracts`, e2e contre les images, paquet signé déposé en brouillon sur tag ; suppression de `native/`, `packaging/` et des jobs Rust dans `platform`.
+7. **Production** : quand l’hébergement de production est choisi, installation du même agent et activation de la PR « production ».
 
 ## Options évaluées
 
