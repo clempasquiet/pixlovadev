@@ -252,6 +252,25 @@ services:
     read_only: true
     cap_drop: [ALL]
 
+  # Site public (WEB-001, ADR-017) : conteneur statique séparé, sans accès à l’API ni à la
+  # base. Origines fixées au build ; jamais indexable en recette. Route du tunnel : site:8090.
+  site:
+    <<: *hardening
+    image: pixlova-site:${PIXLOVA_IMAGE_TAG:-local}
+    build:
+      <<: *app-build
+      target: site
+      args:
+        PIXLOVA_SITE_ORIGIN: ${PIXLOVA_SITE_URL:-http://127.0.0.1:8090}
+        PIXLOVA_SITE_APP_URL: ${PIXLOVA_PUBLIC_URL:?}
+        PIXLOVA_SITE_STATUS_URL: ${PIXLOVA_SITE_STATUS_URL:-}
+        PIXLOVA_SITE_INDEXABLE: 'false'
+    ports:
+      - ${PIXLOVA_SITE_BIND:-127.0.0.1}:${PIXLOVA_SITE_PORT:-8090}:8090
+    networks: [edge]
+    read_only: true
+    cap_drop: [ALL]
+
   # Administration plateforme (ADR-016, ADM-001) : conteneur distinct, rôle PostgreSQL
   # pixlova_platform, port publié sur la boucle locale du serveur uniquement. Jamais relayée
   # par la passerelle ni par un hostname public du tunnel.

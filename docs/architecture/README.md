@@ -6,7 +6,7 @@ Voir les [chapitres 14 à 17](../spec/INDEX.md) pour les règles complètes.
 
 ```text
 apps/
-  marketing/       site public dans son propre conteneur
+  site/            site public statique dans son propre conteneur (ADR-017)
   dashboard/       interface client
   admin/           interface plateforme privée
   player-web/      Player navigateur
@@ -32,7 +32,7 @@ Cette arborescence est une cible. L00 crée les workspaces réels, leurs command
 - Les APIs publiques ne portent pas les routes internes d’administration.
 - La programmation est compilée au cloud ; les Players appliquent des manifests signés et des assets vérifiés.
 - Le renderer partage le moteur visuel et ne reçoit pas les credentials de l’agent.
-- Les domaines pixlova.com et pixlova.fr sont confirmés. Domaine principal, redirections et sous-domaines restent à choisir.
+- Les domaines pixlova.com et pixlova.fr sont confirmés. L’[ADR-017](adr/0017-site-public-domaines.md) propose `pixlova.com` comme domaine canonique, le `.fr` en redirection et `app.pixlova.com` pour le dashboard ; à valider avant DNS.
 
 ## Décider avant d’implémenter
 

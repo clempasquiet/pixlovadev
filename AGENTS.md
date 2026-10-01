@@ -51,6 +51,7 @@ cargo test --workspace          # PIXLOVA_TEST_RENDERER=target/debug/pixlova-ren
 node apps/api/scripts/e2e-native-player.mjs [--webview]   # Player natif de bout en bout (voir native/README.md)
 pnpm --filter @pixlova/web-player run test:browser          # Player Web dans Chromium, API/worker réels (PIXLOVA_TEST_DATABASE_URL)
 pnpm --filter @pixlova/admin-console run test:browser       # console d’administration plateforme dans Chromium (PIXLOVA_TEST_DATABASE_URL)
+pnpm --filter @pixlova/site run test:browser                # site public dans Chromium (après pnpm --filter @pixlova/site run build)
 infra/recette/scripts/ci-recette.sh                          # recette Docker jetable : images, parcours, sauvegarde/restauration (docs/operations/RECETTE.md)
 ```
 
