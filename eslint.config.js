@@ -17,5 +17,10 @@ export default defineConfig(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Script navigateur du site public, servi tel quel.
+    files: ['apps/site/src/site.js'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
   prettier,
 );

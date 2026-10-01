@@ -394,6 +394,36 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
 
+  apps/site:
+    devDependencies:
+      '@fontsource-variable/archivo':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/instrument-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@types/react':
+        specifier: 19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      playwright-core:
+        specifier: 1.56.1
+        version: 1.56.1
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      react-dom:
+        specifier: 19.3.0
+        version: 19.3.0(react@19.3.0)
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
+
   apps/web-player:
     dependencies:
       '@noble/curves':
@@ -1198,6 +1228,12 @@ packages:
   '@fastify/proxy-addr@5.1.1':
     resolution: {integrity: sha512-zv07Y9GEuDsJPegZoDFd4SDWaZOW8N2pa0GSrYmKpId/tjt1Hgo3BjZBVjdVpfVrHaA+Qv5jawtS2O50J5xM9g==}
 
+  '@fontsource-variable/archivo@5.3.0':
+    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
+
+  '@fontsource-variable/instrument-sans@5.3.0':
+    resolution: {integrity: sha512-u4gKbDBTNFGkg997tfQn3eHOhHuquWUFTRT/rwzuKtrxX5P2ekfs2x+LgBPP4P32+cC+vUwF1Cr+IdRoPQbrGw==}
+
   '@fontsource-variable/inter@5.3.0':
     resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
 
@@ -1215,6 +1251,9 @@ packages:
 
   '@fontsource-variable/roboto@5.3.0':
     resolution: {integrity: sha512-BoaaZiQf8fgtxv07KXkTwx1bKz/EoqIlTXq2OOKKXINxp6qXWdnlChqV+hSaDANS49yyUASFl3OVBMMDTCIHFA==}
+
+  '@fontsource/ibm-plex-mono@5.3.0':
+    resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -3198,6 +3237,10 @@ snapshots:
       '@fastify/forwarded': 3.0.2
       ipaddr.js: 2.5.0
 
+  '@fontsource-variable/archivo@5.3.0': {}
+
+  '@fontsource-variable/instrument-sans@5.3.0': {}
+
   '@fontsource-variable/inter@5.3.0': {}
 
   '@fontsource-variable/montserrat@5.3.0': {}
@@ -3209,6 +3252,8 @@ snapshots:
   '@fontsource-variable/roboto-mono@5.3.0': {}
 
   '@fontsource-variable/roboto@5.3.0': {}
+
+  '@fontsource/ibm-plex-mono@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

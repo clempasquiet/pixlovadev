@@ -31,6 +31,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-016](adr/0016-administration-plateforme.md) | Administration plateforme privée : identités et rôles `platform_*` distincts des clients, TOTP obligatoire, sessions courtes, conteneur et listener dédiés (8081, jamais publics), rôle PostgreSQL `pixlova_platform` à droits par colonnes, vues motivées et auditées, actions de support bornées sans impersonation | L09-A |
 | [ADR-015](adr/0015-infrastructure-recette.md) | Recette mono-serveur Docker Compose : images épinglées non root, réseaux internes, passerelle Caddy à origine unique, stockage S3 privé (versitygw), Mailpit, Cloudflare Tunnel ; mode `recette`, SMTP, limites d’envoi bornées par le transport ; sauvegarde, restauration et retour arrière exercés | L09-I |
 | [ADR-017](adr/0017-facturation-stripe-entitlements.md) | Facturation : catalogue d’offres versionné et publiable, Checkout idempotent, webhooks signés stockés puis projetés par relecture complète du client Stripe, réconciliation périodique, droits effectifs (actif, grâce, restreint, repli) sans suppression ; valeurs commerciales à valider | L08 |
+| [ADR-018](adr/0018-site-public-domaines.md) | Site public : pages React rendues au build sans React côté client, conteneur Caddy dédié isolé de l’API, CSP stricte, `noindex` hors production, catalogue indicatif en attendant L08 ; domaines validés (www.pixlova.com canonique, .fr en redirection, app, player, api, update et status) | L09-M |
 
 ## ADR proposés (en attente de preuves)
 
@@ -46,6 +47,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
 | Matrice RBAC : confirmation produit des valeurs de l’ADR-007 | Responsable produit | Validation ou PR du catalogue |
 | Limites de médias (proposées par l’ADR-009, à valider), cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
+| Séparation des origines `app`, `player` et `api` en production ([ADR-018](adr/0018-site-public-domaines.md)) : CORS, cookies, URL d’API des clients | Lot de mise en production | Avant DNS et certificats de production |
 | Prix, quotas, grâce, downgrade et annulation sans sélection | L08 (socle : [ADR-017](adr/0017-facturation-stripe-entitlements.md)) puis responsable produit | Grille indicative, changements d’offre avec prorata et sélection des Displays en place ; reste : ratifier DEC-19/DEC-20 (hausse immédiate, baisse à l’échéance, `over_capacity` hors flux), overrides, valeurs validées avant activation payante |
 | Hébergement, stockage/CDN, relais email et secrets de **production** | Mandat de déploiement (après L09-I) | Recette : [ADR-015](adr/0015-infrastructure-recette.md) ; production à décider |
 | Rétention, DPA, sous-traitants et effacement offline | L09-R | Politique validée et recette d’effacement |

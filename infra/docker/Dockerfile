@@ -4,6 +4,7 @@
 #   worker  : worker média/manifests/alertes, avec FFmpeg
 #   gateway : passerelle Caddy (dashboard, Player Web, routage API et stockage)
 #   admin   : administration plateforme privée (listener 8081, console) — ADR-016
+#   site    : site public statique (Caddy, 8090) — ADR-018, origines fixées au build
 # Utilisateurs non root, aucune dépendance de développement dans les images finales.
 
 ARG NODE_IMAGE=node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
@@ -28,7 +29,7 @@ RUN --mount=type=cache,id=pixlova-pnpm,target=/pnpm/store \
     rm -rf node_modules apps/*/node_modules packages/*/node_modules \
  && pnpm install --frozen-lockfile --prod --offline \
       --filter "@pixlova/api..." --filter "@pixlova/workers..." \
- && rm -rf apps/dashboard apps/web-player apps/admin-console apps/render-lab apps/player-shell \
+ && rm -rf apps/dashboard apps/web-player apps/admin-console apps/render-lab apps/player-shell apps/site \
       scripts infra \
       apps/*/src apps/*/test packages/*/src packages/*/test
 
@@ -78,3 +79,21 @@ USER 65534:65534
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
   CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/gateway-health"]
+
+# Site public : pages générées au build avec les origines passées en arguments (ADR-018).
+FROM build AS site-build
+ARG PIXLOVA_SITE_ORIGIN=
+ARG PIXLOVA_SITE_APP_URL=
+ARG PIXLOVA_SITE_STATUS_URL=
+ARG PIXLOVA_SITE_INDEXABLE=false
+RUN pnpm --filter @pixlova/site run build
+
+FROM ${CADDY_IMAGE} AS site
+COPY apps/site/Caddyfile /etc/caddy/Caddyfile
+COPY --from=site-build /src/apps/site/dist /srv/site
+RUN cp /usr/bin/caddy /tmp/caddy && mv /tmp/caddy /usr/bin/caddy \
+ && chown -R 65534:65534 /data /config
+USER 65534:65534
+EXPOSE 8090
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
+  CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/site-health"]

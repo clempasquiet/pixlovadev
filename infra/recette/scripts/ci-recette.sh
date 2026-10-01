@@ -36,6 +36,9 @@ node "$recette/scripts/smoke.mjs" --worker-restart --save-state "$work/state.jso
 step "Administration plateforme (réseau privé, TOTP, révocation)"
 node "$recette/scripts/admin-smoke.mjs"
 
+step "Site public (conteneur séparé, isolé de l’API)"
+node "$recette/scripts/site-smoke.mjs"
+
 step "Arrêt propre puis redémarrage"
 compose stop
 for service in api worker admin; do

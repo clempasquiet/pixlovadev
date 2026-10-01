@@ -18,6 +18,7 @@ flowchart LR
   A -->|SMTP| M[mailpit]
   W[worker] --> P
   W --> S
+  T --> SI[site :8090]
   O[Opérateur, tunnel SSH] -->|127.0.0.1:8081| AD[admin]
   AD --> P
 ```
@@ -143,6 +144,28 @@ La console d’administration ([ADR-016](../architecture/adr/0016-administration
 - l’activation avec TOTP, les droits bornés et la révocation.
 
 Il crée puis révoque un opérateur jetable `recette-admin-…@pixlova.invalid`.
+
+## 6. Site public
+
+Le site public ([ADR-018](../architecture/adr/0018-site-public-domaines.md)) tourne dans son propre conteneur `site`, sans accès à l’API ni à la base. Ses pages sont générées à la construction de l’image :
+
+- leurs boutons « Connexion » et « Créer un compte » mènent au dashboard de `PIXLOVA_PUBLIC_URL` ;
+- elles ne sont **jamais indexables** en recette (`noindex`, `robots.txt` fermé).
+
+Pour le publier :
+
+1. Choisir une seconde adresse, par exemple `https://www-recette.example.com`, et l’ajouter à `infra/recette/.env` :
+
+   ```sh
+   PIXLOVA_SITE_URL=https://www-recette.example.com
+   ```
+
+2. Dans le tunnel Cloudflare, onglet **Public Hostname**, ajouter une route : **Subdomain** `www-recette`, **Service** `HTTP` → `site:8090`.
+3. Reconstruire le site : `docker compose -f infra/recette/compose.yaml up -d --build --wait site`.
+
+Sans tunnel, le site reste consultable depuis le serveur sur `127.0.0.1:8090` (`ssh -L 8090:127.0.0.1:8090 utilisateur@serveur`, puis `http://localhost:8090`).
+
+**Vérification** : `node infra/recette/scripts/site-smoke.mjs`. Le script contrôle les pages, les liens vers le dashboard, la CSP, la page 404, le refus d’indexation, et l’isolement du conteneur (API et base injoignables).
 
 ## Exploitation courante
 
