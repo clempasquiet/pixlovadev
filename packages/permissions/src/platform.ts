@@ -23,6 +23,8 @@ export const PLATFORM_PERMISSIONS = {
   'platform.organizations.diagnostics':
     'Consulter Players, Displays et incidents d’une organisation',
   'platform.entitlements.read': 'Consulter droits appliqués et usages',
+  'platform.billing.read':
+    'Consulter abonnements, demandes, codes promotionnels et événements Stripe (sans paiement)',
   'platform.customers.lookup': 'Rechercher un compte client par adresse exacte',
   'platform.customers.revoke_sessions': 'Révoquer les sessions d’un compte client',
   'platform.customers.reset_mfa': 'Réinitialiser le second facteur d’un compte client',
@@ -56,7 +58,11 @@ export const PLATFORM_ROLES: Record<
   },
   billing_admin: {
     label: 'BillingAdmin',
-    permissions: ['platform.organizations.read', 'platform.entitlements.read'],
+    permissions: [
+      'platform.organizations.read',
+      'platform.entitlements.read',
+      'platform.billing.read',
+    ],
   },
   operations: {
     label: 'Operator (exploitation)',

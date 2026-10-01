@@ -28,16 +28,19 @@ import {
 } from '../http/context.js';
 import type { Services } from '../http/services.js';
 import { audit } from '../lib/audit.js';
+import { subscriptionChangeRoutes } from './billing-changes.js';
 import { Strict, Uuid } from './schemas.js';
 
 type ChangeRow = typeof schema.billingChanges.$inferSelect;
 
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_.:-]{8,128}$/;
 const OPEN_STATUSES = ['requested', 'pending_payment'] as const;
+/** Demandes affichées comme en cours, y compris les baisses et annulations planifiées. */
+const VISIBLE_STATUSES = ['requested', 'pending_payment', 'scheduled'] as const;
 /** Demande sans session Checkout (appel Stripe échoué, non rejoué) considérée abandonnée. */
-const ABANDONED_REQUEST_MS = 2 * 60_000;
+export const ABANDONED_REQUEST_MS = 2 * 60_000;
 
-function requireGateway(services: Services): BillingGateway {
+export function requireGateway(services: Services): BillingGateway {
   const gateway = services.billing.gateway;
   if (!gateway) {
     throw new ApiError(
@@ -49,7 +52,7 @@ function requireGateway(services: Services): BillingGateway {
   return gateway;
 }
 
-function syncContext(services: Services, gateway: BillingGateway): BillingSyncContext {
+export function syncContext(services: Services, gateway: BillingGateway): BillingSyncContext {
   return {
     db: services.system,
     gateway,
@@ -58,7 +61,7 @@ function syncContext(services: Services, gateway: BillingGateway): BillingSyncCo
   };
 }
 
-function providerError(error: unknown): never {
+export function providerError(error: unknown): never {
   if (error instanceof ApiError) throw error;
   // Aucun détail Stripe transmis au client ; l’erreur reste dans les logs du processus.
   throw new ApiError(
@@ -69,12 +72,16 @@ function providerError(error: unknown): never {
   );
 }
 
-function publicChange(change: ChangeRow) {
+export function publicChange(change: ChangeRow) {
   return {
     id: change.id,
     kind: change.kind,
     status: change.status,
+    plan_id: change.planId,
     extra_display_slots: change.extraDisplaySlots,
+    effective_at: change.effectiveAt?.toISOString() ?? null,
+    keep_display_ids: change.keepDisplayIds ?? null,
+    selection_status: change.selectionStatus,
     // L’URL de paiement n’est utile que tant que la session est ouverte.
     checkout_url: change.status === 'pending_payment' ? change.checkoutUrl : null,
     checkout_expires_at: change.checkoutExpiresAt?.toISOString() ?? null,
@@ -84,7 +91,7 @@ function publicChange(change: ChangeRow) {
   };
 }
 
-async function lockOrganization(tx: Transaction, organizationId: string): Promise<void> {
+export async function lockOrganization(tx: Transaction, organizationId: string): Promise<void> {
   await tx
     .select({ id: schema.organizations.id })
     .from(schema.organizations)
@@ -93,7 +100,7 @@ async function lockOrganization(tx: Transaction, organizationId: string): Promis
 }
 
 /** Client Stripe canonique de l’organisation (BILL-006), créé une seule fois. */
-async function ensureCustomer(
+export async function ensureCustomer(
   services: Services,
   gateway: BillingGateway,
   organizationId: string,
@@ -126,7 +133,7 @@ async function ensureCustomer(
   });
 }
 
-function idempotencyKey(request: FastifyRequest): string {
+export function idempotencyKey(request: FastifyRequest): string {
   const header = request.headers['idempotency-key'];
   const key = typeof header === 'string' ? header : '';
   if (!IDEMPOTENCY_KEY.test(key)) {
@@ -155,7 +162,7 @@ async function subscriptionView(services: Services, member: MemberContext) {
       .where(
         and(
           eq(schema.billingChanges.environment, environment),
-          inArray(schema.billingChanges.status, [...OPEN_STATUSES]),
+          inArray(schema.billingChanges.status, [...VISIBLE_STATUSES]),
         ),
       )
       .orderBy(desc(schema.billingChanges.createdAt));
@@ -182,6 +189,7 @@ async function subscriptionView(services: Services, member: MemberContext) {
             extra_display_slots: subscription.extraDisplaySlots,
             current_period_end: subscription.currentPeriodEnd?.toISOString() ?? null,
             cancel_at_period_end: subscription.cancelAtPeriodEnd,
+            pending_update: subscription.pendingUpdate,
             grace_until: subscription.graceUntil?.toISOString() ?? null,
           }
         : null,
@@ -224,6 +232,8 @@ export function billingRoutes(app: FastifyInstance, services: Services): void {
     reply.header('access-control-allow-origin', '*');
     return catalog;
   });
+
+  subscriptionChangeRoutes(app, services);
 
   app.get('/billing/subscription', async (request) => {
     const member = await requireMember(request, services);
@@ -396,7 +406,7 @@ export function billingRoutes(app: FastifyInstance, services: Services): void {
       try {
         const customerId = await ensureCustomer(services, gateway, organizationId);
         const [price] = await withTenant(services.db, organizationId, (tx) =>
-          tx.select().from(schema.planPrices).where(eq(schema.planPrices.id, change.planPriceId)),
+          tx.select().from(schema.planPrices).where(eq(schema.planPrices.id, change.planPriceId!)),
         );
         const lineItems = [{ price: price!.baseStripePriceId!, quantity: 1 }];
         if (change.extraDisplaySlots > 0) {

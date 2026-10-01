@@ -8,6 +8,7 @@ const NAV: { to: string; label: string; permission: PlatformPermission }[] = [
   { to: '/health', label: 'Santé', permission: 'platform.health.read' },
   { to: '/organizations', label: 'Organisations', permission: 'platform.organizations.read' },
   { to: '/customers', label: 'Comptes clients', permission: 'platform.customers.lookup' },
+  { to: '/billing', label: 'Facturation', permission: 'platform.billing.read' },
   { to: '/incidents', label: 'Incidents', permission: 'platform.incidents.read' },
   { to: '/jobs', label: 'Tâches', permission: 'platform.jobs.read' },
   { to: '/templates', label: 'Templates', permission: 'platform.templates.read' },

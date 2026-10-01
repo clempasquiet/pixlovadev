@@ -29,8 +29,18 @@ export {
   type CheckoutSessionInput,
   type GatewayDiscount,
   type GatewayEvent,
+  type DesiredItem,
   type GatewaySubscription,
+  type SubscriptionItemsChange,
+  type UpgradePreview,
 } from './gateway.js';
+export {
+  OPEN_CHANGE_STATUSES,
+  checkSelection,
+  displayCapacity,
+  settleSubscriptionChanges,
+  type SelectionCheck,
+} from './changes.js';
 export {
   STRIPE_API_VERSION,
   StripeGateway,

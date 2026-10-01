@@ -46,7 +46,7 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | Racine de confiance, rotation des clés, challenge Player | L02/L05/L06 | Extension de l’ADR-003 et vecteurs croisés |
 | Matrice RBAC : confirmation produit des valeurs de l’ADR-007 | Responsable produit | Validation ou PR du catalogue |
 | Limites de médias (proposées par l’ADR-009, à valider), cache, timelines et vidéos simultanées | L03/L04/L05/L06 | Configuration bornée et résultats de qualification |
-| Prix, quotas, grâce, downgrade et annulation sans sélection | L08 (socle : [ADR-017](adr/0017-facturation-stripe-entitlements.md)) puis responsable produit | Grille indicative en place ; reste : changement d’offre et sélection des Displays, valeurs validées avant activation payante |
+| Prix, quotas, grâce, downgrade et annulation sans sélection | L08 (socle : [ADR-017](adr/0017-facturation-stripe-entitlements.md)) puis responsable produit | Grille indicative, changements d’offre avec prorata et sélection des Displays en place ; reste : ratifier DEC-19/DEC-20 (hausse immédiate, baisse à l’échéance, `over_capacity` hors flux), overrides, valeurs validées avant activation payante |
 | Hébergement, stockage/CDN, relais email et secrets de **production** | Mandat de déploiement (après L09-I) | Recette : [ADR-015](adr/0015-infrastructure-recette.md) ; production à décider |
 | Rétention, DPA, sous-traitants et effacement offline | L09-R | Politique validée et recette d’effacement |
 | SLO, PRA, support et plateformes supportées | L09-R | Mesures réelles et engagement approuvé avant lancement |

@@ -105,7 +105,117 @@ interface OrganizationDetail {
     storage_bytes: number;
     features: string[];
   } | null;
-  subscription: { available: boolean; reason: string };
+  subscription:
+    | { available: false; reason: string }
+    | {
+        available: true;
+        environment: 'test' | 'live';
+        customer: {
+          stripe_customer_id: string;
+          sync_status: string;
+          sync_error: string | null;
+          last_synced_at: string | null;
+        } | null;
+        subscriptions: {
+          stripe_subscription_id: string;
+          status: string;
+          plan: { key: string; version: number; name: string };
+          extra_display_slots: number;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          grace_until: string | null;
+          pending_update: boolean;
+        }[];
+        changes: {
+          id: string;
+          kind: string;
+          status: string;
+          plan_key: string | null;
+          extra_display_slots: number;
+          effective_at: string | null;
+          selection_status: string | null;
+          failure_reason: string | null;
+          created_at: string;
+        }[];
+        promotion_redemptions: {
+          code: string | null;
+          percent_off: number | null;
+          amount_off_minor: number | null;
+          applied_at: string | null;
+          ends_at: string | null;
+        }[];
+      };
+}
+
+type SubscriptionDetail = Extract<OrganizationDetail['subscription'], { available: true }>;
+
+/** Abonnement relu dans la projection locale (ADR-017) : aucune donnée de paiement. */
+function SubscriptionSummary({ subscription }: { subscription: SubscriptionDetail }) {
+  const current = subscription.subscriptions[0];
+  return (
+    <>
+      {!subscription.customer && <p>Aucun compte de facturation ({subscription.environment}).</p>}
+      {subscription.customer && (
+        <p className="muted">
+          Client Stripe {subscription.customer.stripe_customer_id} · synchronisation{' '}
+          {subscription.customer.sync_status}
+          {subscription.customer.last_synced_at &&
+            ` le ${formatDate(subscription.customer.last_synced_at)}`}
+          {subscription.customer.sync_error && ` · ${subscription.customer.sync_error}`}
+        </p>
+      )}
+      {current && (
+        <dl>
+          <dt>Offre</dt>
+          <dd>
+            {current.plan.name} v{current.plan.version} + {current.extra_display_slots} écran(s)
+          </dd>
+          <dt>Statut Stripe</dt>
+          <dd>
+            {current.status}
+            {current.pending_update && ' · hausse en attente de paiement'}
+            {current.cancel_at_period_end && ' · annulation à l’échéance'}
+            {current.grace_until && ` · grâce jusqu’au ${formatDate(current.grace_until)}`}
+          </dd>
+          <dt>Échéance</dt>
+          <dd>{formatDate(current.current_period_end)}</dd>
+        </dl>
+      )}
+      {subscription.changes.length > 0 && (
+        <>
+          <h3>Demandes récentes</h3>
+          <ul>
+            {subscription.changes.map((change) => (
+              <li key={change.id}>
+                {formatDate(change.created_at)} · {change.kind} {change.plan_key ?? ''} ·{' '}
+                {change.status}
+                {change.effective_at && ` (effet ${formatDate(change.effective_at)})`}
+                {change.selection_status && ` · sélection ${change.selection_status}`}
+                {change.failure_reason && ` · ${change.failure_reason}`}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {subscription.promotion_redemptions.length > 0 && (
+        <>
+          <h3>Codes promotionnels</h3>
+          <ul>
+            {subscription.promotion_redemptions.map((r, index) => (
+              <li key={index}>
+                {r.code ?? 'remise'} ·{' '}
+                {r.percent_off !== null
+                  ? `${r.percent_off} %`
+                  : `${(r.amount_off_minor ?? 0) / 100} €`}{' '}
+                · {formatDate(r.applied_at)}
+                {r.ends_at && ` → ${formatDate(r.ends_at)}`}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
 }
 
 interface Fleet {
@@ -214,7 +324,9 @@ export function OrganizationPage() {
         </div>
         <div className="card">
           <h2>Abonnement</h2>
-          {detail.subscription.available ? null : (
+          {detail.subscription.available ? (
+            <SubscriptionSummary subscription={detail.subscription} />
+          ) : (
             <Unavailable>{detail.subscription.reason}</Unavailable>
           )}
           <p className="muted">

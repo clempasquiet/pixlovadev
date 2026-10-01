@@ -43,6 +43,7 @@ const app = buildAdminApp({
       db: platform,
       environment: billingEnvironmentFromEnv(process.env),
     }),
+    billingEnvironment: billingEnvironmentFromEnv(process.env),
     config,
     now: () => new Date(),
   },

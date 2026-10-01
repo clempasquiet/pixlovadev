@@ -33,7 +33,164 @@ export function maskEmail(email: string): string {
   return `${visible}${'•'.repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
+/**
+ * Abonnement d’une organisation pour BillingAdmin (ADM-004, BILL-019) : projection locale,
+ * demandes récentes et codes utilisés. Aucun moyen de paiement ni URL de paiement.
+ */
+async function organizationSubscription(services: AdminServices, organizationId: string) {
+  const environment = services.billingEnvironment ?? 'test';
+  const [customer] = await rows(
+    services,
+    sql`SELECT stripe_customer_id, sync_status, sync_error, last_synced_at
+        FROM billing_customers WHERE organization_id = ${organizationId} AND environment = ${environment}`,
+  );
+  const subscriptions = await rows(
+    services,
+    sql`SELECT s.stripe_subscription_id, s.stripe_status, s.extra_display_slots,
+          s.current_period_end, s.cancel_at_period_end, s.grace_until, s.pending_update,
+          s.last_synced_at, p.key AS plan_key, p.version AS plan_version, p.name AS plan_name
+        FROM subscriptions s JOIN plans p ON p.id = s.plan_id
+        WHERE s.organization_id = ${organizationId} AND s.environment = ${environment}
+        ORDER BY s.stripe_created_at DESC LIMIT 5`,
+  );
+  const changes = await rows(
+    services,
+    sql`SELECT c.id, c.kind, c.status, c.extra_display_slots, c.effective_at, c.selection_status,
+          c.failure_reason, c.applied_at, c.created_at, p.key AS plan_key
+        FROM billing_changes c LEFT JOIN plans p ON p.id = c.plan_id
+        WHERE c.organization_id = ${organizationId} AND c.environment = ${environment}
+        ORDER BY c.created_at DESC LIMIT 10`,
+  );
+  const redemptions = await rows(
+    services,
+    sql`SELECT code_snapshot, stripe_promotion_code_id, percent_off, amount_off_minor, currency,
+          duration, applied_at, ends_at
+        FROM promotion_redemptions
+        WHERE organization_id = ${organizationId} AND environment = ${environment}
+        ORDER BY applied_at DESC LIMIT 10`,
+  );
+  return {
+    available: true,
+    environment,
+    customer: customer
+      ? {
+          stripe_customer_id: customer.stripe_customer_id,
+          sync_status: customer.sync_status,
+          sync_error: customer.sync_error,
+          last_synced_at: iso(customer.last_synced_at),
+        }
+      : null,
+    subscriptions: subscriptions.map((s) => ({
+      stripe_subscription_id: s.stripe_subscription_id,
+      status: s.stripe_status,
+      plan: { key: s.plan_key, version: num(s.plan_version), name: s.plan_name },
+      extra_display_slots: num(s.extra_display_slots),
+      current_period_end: iso(s.current_period_end),
+      cancel_at_period_end: s.cancel_at_period_end,
+      grace_until: iso(s.grace_until),
+      pending_update: s.pending_update,
+      last_synced_at: iso(s.last_synced_at),
+    })),
+    changes: changes.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      status: c.status,
+      plan_key: c.plan_key ?? null,
+      extra_display_slots: num(c.extra_display_slots),
+      effective_at: iso(c.effective_at),
+      selection_status: c.selection_status ?? null,
+      failure_reason: c.failure_reason ?? null,
+      applied_at: iso(c.applied_at),
+      created_at: iso(c.created_at),
+    })),
+    promotion_redemptions: redemptions.map((r) => ({
+      code: r.code_snapshot ?? null,
+      promotion_code_id: r.stripe_promotion_code_id ?? null,
+      percent_off: r.percent_off === null ? null : Number(r.percent_off),
+      amount_off_minor: r.amount_off_minor === null ? null : num(r.amount_off_minor),
+      currency: r.currency ?? null,
+      duration: r.duration ?? null,
+      applied_at: iso(r.applied_at),
+      ends_at: iso(r.ends_at),
+    })),
+  };
+}
+
 export function adminViewRoutes(app: FastifyInstance, services: AdminServices): void {
+  // --- Facturation (BillingAdmin, ADM-004, BILL-019) ---------------------------------------
+  app.get('/billing', async (request) => {
+    const context = await requirePermission(request, services, 'platform.billing.read');
+    const environment = services.billingEnvironment ?? 'test';
+    const byPlan = await rows(
+      services,
+      sql`SELECT p.key AS plan_key, s.stripe_status, count(*) AS n
+          FROM subscriptions s JOIN plans p ON p.id = s.plan_id
+          WHERE s.environment = ${environment}
+          GROUP BY p.key, s.stripe_status ORDER BY p.key, s.stripe_status`,
+    );
+    const codes = await rows(
+      services,
+      sql`SELECT coalesce(code_snapshot, stripe_coupon_id, '—') AS code, count(*) AS uses,
+            count(DISTINCT organization_id) AS organizations, max(applied_at) AS last_used_at
+          FROM promotion_redemptions WHERE environment = ${environment}
+          GROUP BY 1 ORDER BY uses DESC, code LIMIT 50`,
+    );
+    const [counts] = await rows(
+      services,
+      sql`SELECT
+          (SELECT count(*) FROM billing_customers
+             WHERE environment = ${environment} AND sync_status = 'error') AS customers_sync_error,
+          (SELECT count(*) FROM stripe_webhook_events
+             WHERE environment = ${environment} AND status = 'failed') AS events_failed,
+          (SELECT count(*) FROM stripe_webhook_events
+             WHERE environment = ${environment} AND status = 'received') AS events_pending,
+          (SELECT count(*) FROM billing_changes
+             WHERE environment = ${environment} AND status = 'scheduled') AS changes_scheduled,
+          (SELECT count(*) FROM billing_changes
+             WHERE environment = ${environment} AND selection_status = 'invalid') AS selections_invalid`,
+    );
+    const failedEvents = await rows(
+      services,
+      sql`SELECT stripe_event_id, type, stripe_customer_id, attempts, error, received_at
+          FROM stripe_webhook_events
+          WHERE environment = ${environment} AND status = 'failed'
+          ORDER BY received_at DESC LIMIT 20`,
+    );
+    await platformAudit(services.platform, request, context, {
+      action: 'platform.billing.viewed',
+      permission: 'platform.billing.read',
+      targetType: 'billing',
+      targetId: null,
+      result: 'success',
+    });
+    return {
+      environment,
+      subscriptions: byPlan.map((r) => ({
+        plan_key: r.plan_key,
+        status: r.stripe_status,
+        count: num(r.n),
+      })),
+      promotion_codes: codes.map((r) => ({
+        code: r.code,
+        uses: num(r.uses),
+        organizations: num(r.organizations),
+        last_used_at: iso(r.last_used_at),
+      })),
+      customers_sync_error: num(counts!.customers_sync_error),
+      events: { failed: num(counts!.events_failed), pending: num(counts!.events_pending) },
+      changes_scheduled: num(counts!.changes_scheduled),
+      selections_invalid: num(counts!.selections_invalid),
+      failed_events: failedEvents.map((e) => ({
+        stripe_event_id: e.stripe_event_id,
+        type: e.type,
+        stripe_customer_id: e.stripe_customer_id,
+        attempts: num(e.attempts),
+        error: e.error,
+        received_at: iso(e.received_at),
+      })),
+    };
+  });
+
   // --- Santé de la plateforme (Operator) -------------------------------------------------
   app.get('/health', async (request) => {
     await requirePermission(request, services, 'platform.health.read');
@@ -205,8 +362,9 @@ export function adminViewRoutes(app: FastifyInstance, services: AdminServices): 
           storage_reserved_bytes: num(usage!.storage_reserved),
         },
         entitlements,
-        // Abonnements Stripe : lot L08 non livré ; aucune donnée n’est inventée.
-        subscription: { available: false, reason: 'Abonnements non implémentés (L08).' },
+        subscription: platformCan(context.roles, 'platform.billing.read')
+          ? await organizationSubscription(services, id)
+          : { available: false, reason: 'Consultation de la facturation non autorisée.' },
       };
     },
   );

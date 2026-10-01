@@ -3,7 +3,7 @@
 - Statut : acceptée (socle technique) ; valeurs commerciales **à valider**
 - Date : 2026-10-01
 - Ticket / lot : [L08 #10](https://github.com/clempasquiet/pixlovadev/issues/10)
-- Exigences concernées : BILL-001 à BILL-010, BILL-013, BILL-015, BILL-017, BILL-019, DATA-007, DATA-008, API-005, PROD-004, PROD-005, SEC-016, TST-052, DEC-02, DEC-03, DEC-04
+- Exigences concernées : BILL-001 à BILL-015, BILL-017, BILL-019, ADM-004, DATA-007, DATA-008, API-005, PROD-004, PROD-005, SEC-016, TST-052, DEC-02, DEC-03, DEC-04, DEC-19, DEC-20
 - Décision remplaçant / remplacée par : complète l’[ADR-007](0007-rbac-scopes.md) (`EntitlementsProvider`) et l’[ADR-015](0015-infrastructure-recette.md) (sortie réseau vers Stripe)
 
 ## Problème et contraintes
@@ -36,7 +36,33 @@ Les quotas (Displays, utilisateurs, stockage, templates) étaient fixés à l’
   - Un index unique partiel limite à une souscription ouverte par organisation (double clic, deux onglets). Une session échue ou une demande sans session depuis 2 min libère la place.
   - Prix et quantités viennent du catalogue serveur. `allow_promotion_codes` est activé (BILL-017).
 - `GET /billing/changes/:id` relit Stripe avant de répondre au retour de Checkout. Il n’accorde rien lui-même.
-- `POST /billing/portal-session` ouvre le Billing Portal. Les changements de formule et de slots n’y sont pas configurés : ils seront pilotés par pixlova (tranche suivante).
+- `POST /billing/portal-session` ouvre le Billing Portal pour les factures et le moyen de paiement. Les changements de formule, de slots et l’annulation n’y sont pas configurés : pixlova les pilote (ci-dessous), pour imposer le choix des Displays.
+
+### Modification d’un abonnement (tranche 2)
+
+- `POST /billing/subscription/preview` montre, sans effet :
+  - l’ancien et le nouveau montant récurrent ;
+  - le montant dû immédiatement, calculé par Stripe (`invoices.createPreview`) ;
+  - la date d’effet et la prochaine échéance ;
+  - la capacité future et la nécessité de choisir des Displays ;
+  - les dépassements d’utilisateurs ou de stockage qui seront conservés (BILL-004, BILL-011, BILL-013).
+- **Hausse** : un montant supérieur sans aucune capacité réduite.
+  - Elle est immédiate, facturée au prorata (`always_invoice`) à la date de prorata de la prévisualisation (30 min de validité).
+  - Avec `pending_if_incomplete`, Stripe n’applique les nouvelles lignes qu’après paiement (SCA, refus). Les droits restent ceux payés.
+  - La demande passe `pending_payment`, puis `applied` quand la projection lit les nouvelles lignes, ou `failed` quand la mise à jour expire.
+- **Baisse** : toute autre modification. Elle prend effet à l’échéance, sans prorata, par une planification Stripe (`subscription_schedules`, phase suivante, puis relâchée).
+  - Les droits payés restent en place jusqu’à l’échéance.
+- **Annulation** (`POST /billing/subscription/cancel`) : `cancel_at_period_end`, puis retour à l’offre de repli à l’échéance (BILL-014).
+- **Choix des Displays** (BILL-012, BILL-014) :
+  - Si la capacité future est inférieure aux Displays actifs, la baisse et l’annulation exigent `keep_display_ids` : des Displays actifs de l’organisation, au plus la capacité future.
+  - Le choix reste modifiable (`PUT /billing/changes/:id/selection`) et chaque modification est auditée.
+  - À l’échéance, le worker revérifie le choix. Les Displays non retenus passent `inactive` et sont recompilés : ils ne diffusent plus, sans suppression ni perte de programmation (BILL-013).
+  - Un choix devenu invalide n’entraîne aucune désactivation (`selection_status = invalid`, audit).
+- **Renoncer** (`DELETE /billing/changes/:id`) relâche la planification ou lève l’annulation avant l’échéance.
+- **Concurrence** : une seule modification ouverte par organisation (index unique partiel). Chaque demande est enregistrée sous `Idempotency-Key` avant l’appel Stripe, qui reçoit une clé dérivée de la demande.
+- **Annulation hors parcours** (portail, tableau de bord Stripe, DEC-20) : aucun Display n’est choisi au hasard. Tous restent actifs, le dépassement est signalé (`over_capacity`) et bloque les nouvelles activations.
+  - La préférence `preferred_free_display_id` et la suspension des nouvelles publications proposées par DEC-20 restent **à ratifier**.
+- Le changement de périodicité ou de devise est refusé tant qu’aucun tarif annuel n’est validé (BILL-016).
 
 ### Projection et webhooks
 
@@ -75,11 +101,15 @@ Les quotas (Displays, utilisateurs, stockage, templates) étaient fixés à l’
 - **Appliquer directement le contenu des webhooks** : plus simple, mais exposé au désordre et aux pertes ; il exige un ordonnancement que `created` ne garantit pas (BILL-010). La relecture coûte un appel Stripe par événement, acceptable au volume V1.
 - **Une table par ligne d’abonnement (`subscription_items`)** et **`plan_entitlements` clé/valeur** (modèle de référence §16) : la V1 n’a que deux lignes (base, slot supplémentaire). Les colonnes `stripe_base_item_id` / `stripe_extra_item_id` et un JSON validé par contrat suffisent. On passera au modèle détaillé avec les add-ons.
 - **Licences par Display (`display_licenses`)** : le comptage des Displays actifs sous verrou de l’organisation (ADR-008) garantit déjà « pas de dépassement concurrent ». Les licences nominatives arrivent si des sources partenaires ou dérogatoires l’exigent.
-- **Retirer des Displays automatiquement en fin de grâce ou à l’annulation** : interdit sans sélection explicite (BILL-012). La sélection est l’objet de la tranche suivante.
+- **Retirer des Displays automatiquement en fin de grâce ou à l’annulation** : interdit sans sélection explicite (BILL-012).
+- **Baisse par mise à jour immédiate sans prorata** : plus simple que la planification, mais la projection lirait aussitôt les nouvelles lignes et retirerait des droits déjà payés. La planification Stripe porte la date d’effet.
+- **Changements dans le Billing Portal** : le portail ne demande pas quels Displays conserver ; il reste limité aux factures et au moyen de paiement.
 
 ## Conséquences et validation
 
-- Migrations additives `0017_billing` (tables, RLS, contraintes) et `0018_billing_grants` (droits par rôle). Retour arrière : arrêter l’usage (sans clé Stripe, les achats répondent 503 et l’offre de repli s’applique). Les tables peuvent rester.
+- Migrations additives :
+  - `0017_billing` (tables, RLS, contraintes) et `0018_billing_grants` (droits par rôle) ;
+  - `0019_billing_plan_changes` (types de demande, sélection, planification, hausse en attente) et `0020_billing_plan_changes_grants`. Retour arrière : arrêter l’usage (sans clé Stripe, les achats répondent 503 et l’offre de repli s’applique). Les tables peuvent rester.
 - Tests réels sur PostgreSQL 16 (`apps/api/test/billing.integration.test.ts`, `packages/billing/test/*`), avec un Stripe simulé qui vérifie les vraies signatures du SDK. Ils couvrent :
   - catalogue public, versions et repli ;
   - Free par défaut, clé d’idempotence, rejeu, conflit, double clic concurrent ;
@@ -89,12 +119,21 @@ Les quotas (Displays, utilisateurs, stockage, templates) étaient fixés à l’
   - panne Stripe et reprise, webhook perdu corrigé par réconciliation, résiliation sans effacement ;
   - prix inconnu, session expirée, portail, instance sans Stripe ;
   - synchronisations concurrentes d’un même client.
-- **Non couvert par ce lot (à suivre)** :
-  - changements d’offre et de slots avec prévisualisation du prorata (BILL-011) ;
-  - réduction à échéance avec sélection des Displays conservés (BILL-012, BILL-014) ;
-  - préférence de Display en cas d’annulation hors parcours (DEC-20) ;
-  - vues BillingAdmin (ADM-004), dérogations (`entitlement_overrides`), page Abonnement du dashboard ;
-  - tests en **sandbox Stripe réelle** (procédure : [FACTURATION.md](../../operations/FACTURATION.md)).
+- Tranche 2 (`apps/api/test/billing-changes.integration.test.ts`, `apps/dashboard/test/e2e/billing.browser.test.ts`, console d’administration). Elle couvre :
+  - prévisualisation et prorata, hausse rejouable sans double appel ;
+  - prévisualisation expirée, paiement refusé puis expiré sans changement de droits ;
+  - choix des Displays obligatoire, borné et limité à l’organisation ;
+  - baisse programmée sans perte de droits, choix modifiable ;
+  - application à l’échéance sans suppression, avec recompilation ;
+  - annulation retirée puis effective ;
+  - annulation hors parcours sans désactivation ;
+  - vue BillingAdmin et refus au rôle Support ;
+  - parcours complet dans Chromium.
+- **Non couvert (à suivre)** :
+  - dérogations (`entitlement_overrides`) et actions de facturation de l’administration ;
+  - préférence d’écran DEC-20 ;
+  - règles fines DEC-19 (édition et publication des fonctions retirées) ;
+  - tests en **sandbox Stripe réelle**, dont planification et SCA (procédure : [FACTURATION.md](../../operations/FACTURATION.md)).
 - **À valider par le responsable produit avant toute mise en vente** :
   - prix, quotas et nombre d’utilisateurs Business (100 est une valeur de travail, le cahier des charges indique « À fixer ») ;
   - durée de grâce et politique de fin d’impayé (DEC-04) ;

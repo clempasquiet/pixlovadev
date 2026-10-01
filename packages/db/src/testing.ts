@@ -84,7 +84,11 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     platform: createDatabase(platformPool),
     platformPool,
     async close() {
-      await Promise.all([owner.end(), appPool.end(), systemPool.end(), platformPool.end()]);
+      const pools = [owner, appPool, systemPool, platformPool];
+      // Une connexion encore en cours de fermeture peut être coupée par la suppression
+      // forcée de la base : erreur attendue au démontage, sans rapport avec le test.
+      for (const pool of pools) pool.on('error', () => undefined);
+      await Promise.all(pools.map((pool) => pool.end()));
       const cleanup = new pg.Client({ connectionString: adminUrl });
       await cleanup.connect();
       await cleanup.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);

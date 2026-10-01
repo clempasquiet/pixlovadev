@@ -58,7 +58,9 @@ Manifests (L05, [ADR-011](../../docs/architecture/adr/0011-programmation-compila
 | `PIXLOVA_DEV_MAX_USERS`, `PIXLOVA_DEV_DISPLAY_SLOTS`, `PIXLOVA_DEV_STORAGE_BYTES`, `PIXLOVA_DEV_FEATURES` | Quotas fixes pour les scénarios sans Stripe, par ex. `PIXLOVA_DEV_FEATURES=templates` ; prioritaires sur l’abonnement projeté, refusés en production, acceptés en recette |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Facturation (ensemble) : clé `sk_test_`/`rk_test_`, `sk_live_` refusée hors production ; sans elles, achats en `503 BILLING_UNAVAILABLE`, webhook en 404, offre de repli appliquée ([ADR-017](../../docs/architecture/adr/0017-facturation-stripe-entitlements.md), [procédure](../../docs/operations/FACTURATION.md)) |
 | `PIXLOVA_BILLING_GRACE_DAYS`, `PIXLOVA_BILLING_CHECKOUT_MINUTES` | Grâce d’un impayé (7 j **[à valider]**) et validité d’une session Checkout (60 min) ; mêmes valeurs pour le worker |
+| `PIXLOVA_STRIPE_TEST_CLOCKS` | `true` en recette : horloge de test Stripe par nouveau client ; refusé en `production` ou avec une clé live |
 | `PIXLOVA_MEDIA_IMAGE_MAX_BYTES`, `PIXLOVA_MEDIA_VIDEO_MAX_BYTES` | Abaissent la taille maximale d’envoi (50 Mio / 2 Gio) quand le transport la borne, par ex. 95 000 000 derrière un tunnel Cloudflare ; mêmes valeurs pour le worker |
+| `PIXLOVA_STRIPE_TEST_CLOCKS` | `true` en recette : horloge de test Stripe par nouveau client ; refusé en `production` ou avec une clé live |
 | `PIXLOVA_STORAGE_DRIVER` | `s3` (production) ou `local` (développement, refusé en production) |
 | `PIXLOVA_STORAGE_LOCAL_ROOT`, `PIXLOVA_STORAGE_LOCAL_SECRET`, `PIXLOVA_STORAGE_PUBLIC_URL` | Pilote local : répertoire, secret HMAC des URLs signées, origine publique facultative |
 | `PIXLOVA_S3_BUCKET`, `PIXLOVA_S3_REGION`, `PIXLOVA_S3_ENDPOINT`, `PIXLOVA_S3_PUBLIC_ENDPOINT`, `PIXLOVA_S3_FORCE_PATH_STYLE`, `PIXLOVA_S3_ACCESS_KEY_ID`, `PIXLOVA_S3_SECRET_ACCESS_KEY` | Pilote S3 compatible (fournisseur choisi avec L09-I) |
