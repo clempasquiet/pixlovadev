@@ -33,13 +33,13 @@ Source complète : [chapitre 24](../spec/chapters/24.md). Ne pas créer un secon
 | [ADR-017](adr/0017-facturation-stripe-entitlements.md) | Facturation : catalogue d’offres versionné et publiable, Checkout idempotent, webhooks signés stockés puis projetés par relecture complète du client Stripe, réconciliation périodique, droits effectifs (actif, grâce, restreint, repli) sans suppression ; valeurs commerciales à valider | L08 |
 | [ADR-019](adr/0019-registre-releases-player.md) | Releases du Player natif : registre signé hors plateforme (brouillon, publiée, bloquée sans retour), paquet vérifié au dépôt, périmètre avant publication, release souhaitée par plateforme, mise à jour et retour arrière automatiques par le lanceur A/B, rapports d’état, commandes `UPDATE_PLAYER` et `ROLLBACK_PLAYER` ; automatisme et redémarrage à valider | L09-A |
 | [ADR-018](adr/0018-site-public-domaines.md) | Site public : pages React rendues au build sans React côté client, conteneur Caddy dédié isolé de l’API, CSP stricte, `noindex` hors production, catalogue indicatif en attendant L08 ; domaines validés (www.pixlova.com canonique, .fr en redirection, app, player, api, update et status) | L09-M |
+| [ADR-020](adr/0020-decoupage-depots-organisation.md) | Découpage en quatre dépôts de l’organisation Pixlova (`platform`, `player-web`, `player-natif`, `www`) : historique conservé, `contracts`, `render-engine` et `player-core` publiés sur GitHub Packages, infrastructure en code et GitOps dans `platform/deploy/` (Terraform, Helm, Argo CD ; recette Compose conservée), déploiement continu par dépôt, production par PR validée, migration en sept phases | Organisation du code |
 
 ## ADR proposés (en attente de preuves)
 
 | ADR | Sujet | Condition d’acceptation |
 |---|---|---|
 | [ADR-005](adr/0005-renderer-natif-webview.md) | Moteur de rendu TypeScript unique, renderer natif sur WebView système (wry) | Mesures du [protocole de qualification](../quality/QUALIFICATION-RENDU.md) sur Linux et Windows |
-| [ADR-020](adr/0020-decoupage-depots-organisation.md) | Découpage en quatre dépôts de l’organisation Pixlova (`platform`, `player-web`, `player-natif`, `www`) : historique conservé, `contracts`, `render-engine` et `player-core` publiés sur GitHub Packages, infrastructure en code et GitOps dans `platform/deploy/` (Terraform, Helm, Argo CD ; recette Compose conservée), déploiement continu par dépôt, production par PR validée, migration en sept phases | Validation écrite du responsable produit, puis CI et recette vertes à chaque phase |
 
 ## À traiter par lot
 

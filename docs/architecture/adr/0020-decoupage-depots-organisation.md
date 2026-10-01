@@ -1,6 +1,6 @@
 # ADR-020 — Découpage du monorepo en dépôts de l’organisation GitHub Pixlova
 
-- Statut : proposée (aucun dépôt créé, rien déplacé avant validation écrite du responsable produit)
+- Statut : acceptée (validation écrite du responsable produit le 2026-10-01 ; migration par phases, chacune vérifiée)
 - Date : 2026-10-01
 - Ticket / lot : organisation du code (hors lot fonctionnel)
 - Exigences concernées : PROTO-021 (vecteurs communs TypeScript/Rust), NAT-013 à NAT-015 (mises à jour signées du Player), invariants 3 à 5 d’`AGENTS.md`
